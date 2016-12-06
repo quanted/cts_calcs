@@ -2,10 +2,14 @@ import logging
 import os
 import requests
 import json
-from django.http import HttpResponse
-
 from test_calculator import TestCalc
 from cts_calcs.smilesfilter import parseSmilesByCalculator
+
+import redis
+
+
+redis_hostname = os.environ.get('REDIS_HOSTNAME')
+redis_conn = redis.StrictRedis(host=redis_hostname, port=6379, db=0)
 
 
 def request_manager(request):
@@ -54,7 +58,7 @@ def request_manager(request):
 	except Exception as err:
 		logging.warning("Error filtering SMILES: {}".format(err))
 		postData.update({'error': "Cannot filter SMILES for TEST data"})
-		return HttpResponse(postData, content_type='application/json')
+		redis_conn.publish(sessionid, json.dumps(postData))
 	# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	logging.info("TEST Filtered SMILES: {}".format(filtered_smiles))
@@ -83,7 +87,8 @@ def request_manager(request):
 				else:
 					data_obj['data'] = test_data
 				
-			test_results.append(data_obj)
+			result_json = json.dumps(data_obj)
+			redis_conn.publish(sessionid, result_json)
 
 		except Exception as err:
 			logging.warning("Exception occurred getting TEST data: {}".format(err))
@@ -91,6 +96,4 @@ def request_manager(request):
 
 			logging.info("##### session id: {}".format(sessionid))
 
-			test_results.append(data_obj)
-
-	return HttpResponse(json.dumps(test_results), content_type='application/json')
+			redis_conn.publish(sessionid, json.dumps(data_obj))

@@ -2,7 +2,7 @@ import requests
 import json
 import logging
 import os
-from REST.calculator import Calculator
+from cts_calcs.calculator import Calculator
 
 headers = {'Content-Type': 'application/json'}
 

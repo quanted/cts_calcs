@@ -2,9 +2,9 @@ import requests
 import json
 import logging
 import os
-from REST.calculator import Calculator
-from REST.smilesfilter import max_weight
-from REST import smilesfilter
+from cts_calcs.calculator import Calculator
+from cts_calcs.smilesfilter import max_weight
+from cts_calcs import smilesfilter
 
 headers = {'Content-Type': 'application/json'}
 

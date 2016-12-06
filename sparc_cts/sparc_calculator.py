@@ -8,8 +8,8 @@ import os
 from enum import Enum
 import math
 
-from REST.calculator import Calculator
-from REST.calculator import CTSChemicalProperties
+from cts_calcs.calculator import Calculator
+from cts_calcs.calculator import CTSChemicalProperties
 
 
 ########################## SPARC physical properties calculator interface ###################

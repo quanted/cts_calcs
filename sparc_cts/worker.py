@@ -3,9 +3,11 @@ import requests
 import json
 import redis
 import os
-from django.http import HttpResponse
 
 from sparc_calculator import SparcCalc
+
+redis_hostname = os.environ.get('REDIS_HOSTNAME')
+redis_conn = redis.StrictRedis(host=redis_hostname, port=6379, db=0)
 
 
 def request_manager(request):
@@ -58,6 +60,7 @@ def request_manager(request):
     if run_type == 'rest':
         props = [prop]
 
+
     try:
         if 'ion_con' in props:
             response = calcObj.makeCallForPka() # response as d ict returned..
@@ -65,7 +68,7 @@ def request_manager(request):
             sparc_response.update({'data': pka_data, 'prop': 'ion_con'})
             logging.info("response: {}".format(sparc_response))
             result_json = json.dumps(sparc_response)
-            return HttpResponse(result_json, content_type='application/json')
+            redis_conn.publish(sessionid, result_json)
 
         if 'kow_wph' in props:
             ph = request.POST.get('ph') # get PH for logD calculation..
@@ -73,7 +76,7 @@ def request_manager(request):
             sparc_response.update({'data': calcObj.getLogDForPH(response, ph), 'prop': 'kow_wph'})
             logging.info("response: {}".format(sparc_response))
             result_json = json.dumps(sparc_response)
-            return HttpResponse(result_json, content_type='application/json')
+            redis_conn.publish(sessionid, result_json)
 
         multi_response = calcObj.makeDataRequest()
         if 'calculationResults' in multi_response:
@@ -83,19 +86,17 @@ def request_manager(request):
                     prop_obj.update({'node': node, 'chemical': structure, 'request_post': request.POST})
                     logging.info("response: {}".format(prop_obj))
                     result_json = json.dumps(prop_obj) 
-                    return HttpResponse(result_json, content_type='application/json')
+                    redis_conn.publish(sessionid, result_json)
 
     except Exception as err:
         logging.warning("Exception occurred getting SPARC data: {}".format(err))
 
-        results = []
-
         for prop in props:
+
             post_data.update({
                 'error': "data request timed out",
                 'prop': prop,
                 'request_post': request.POST
             })
-            results.append(post_data)
-        
-        return HttpResponse(json.dumps(results), content_type='application/json')
+
+            redis_conn.publish(sessionid, json.dumps(post_data))

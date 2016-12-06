@@ -7,6 +7,10 @@ import redis
 from cts_calcs.smilesfilter import parseSmilesByCalculator
 
 
+redis_hostname = os.environ.get('REDIS_HOSTNAME')
+redis_conn = redis.StrictRedis(host=redis_hostname, port=6379, db=0)
+
+
 def request_manager(request):
 
 	calc = request.POST.get("calc")
@@ -39,11 +43,11 @@ def request_manager(request):
 		if '[' in filtered_smiles or ']' in filtered_smiles:
 			logging.warning("EPI ignoring request due to brackets in SMILES..")
 			post_data.update({'error': "EPI Suite cannot process charged species or metals (e.g., [S+], [c+])"})
-			return HttpResponse(json.dumps(post_data), content_type='application/json')
+			redis_conn.publish(sessionid, json.dumps(post_data))
 	except Exception as err:
 		logging.warning("Error filtering SMILES: {}".format(err))
 		post_data.update({'error': "Cannot filter SMILES for Measured data"})
-		return HttpResponse(json.dumps(post_data), content_type='application/json')
+		redis_conn.publish(sessionid, json.dumps(post_data))
 
 	logging.info("Measured Filtered SMILES: {}".format(filtered_smiles))
 
@@ -63,7 +67,7 @@ def request_manager(request):
 
 			# push one result at a time if node/redis:
 			result_json = json.dumps(data_obj)
-			return HttpResponse(result_json, content_type='application/json')
+			redis_conn.publish(sessionid, result_json)
 
 	except Exception as err:
 		logging.warning("Exception occurred getting Measured data: {}".format(err))
@@ -75,4 +79,5 @@ def request_manager(request):
 				'node': node,
 				'request_post': request.POST
 			}
-			return HttpResponse(json.dumps(data_obj), content_type='application/json')
+
+			redis_conn.publish(sessionid, json.dumps(data_obj))
