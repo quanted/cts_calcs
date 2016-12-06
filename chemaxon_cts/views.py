@@ -5,7 +5,7 @@ import logging
 import json
 import redis
 from jchem_calculator import JchemProperty
-from models.gentrans import data_walks
+from cts_calcs import data_walks
 import os
 
 
