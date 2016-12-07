@@ -13,6 +13,7 @@ methods = ['KLOP', 'VG', 'PHYS']
 
 redis_hostname = os.environ.get('REDIS_HOSTNAME')
 logging.warning("CHEMAXON VIEWS REDIS HOSTNAME: {}".format(redis_hostname))
+
 redis_conn = redis.StrictRedis(host=redis_hostname, port=6379, db=0)
 
 
