@@ -5,7 +5,6 @@ import json
 import logging
 import requests
 import os
-from enum import Enum
 import math
 
 from cts_calcs.calculator import Calculator
