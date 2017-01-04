@@ -78,6 +78,9 @@ class JchemProperty(object):
             "structure": structure,
             "parameters": self.postData
         }
+
+        test = json.dumps(postData)
+
         if method:
             postData['parameters']['method'] = method
         try:
@@ -283,8 +286,8 @@ class Tautomerization(JchemProperty):
         self.name = 'tautomerization'
         self.url = '/webservices/rest-v0/util/calculate/tautomerization'
         self.postData = {
-            "calculationType": "DOMINANT",
-            # "calculationType": "MAJOR",
+            # "calculationType": "DOMINANT",
+            "calculationType": "MAJOR",
             "maxStructureCount": 1000,
             "considerPH": False,
             "enableMaxPathLength": True,
@@ -311,30 +314,30 @@ class Tautomerization(JchemProperty):
         try:
             # expecting list of result objects:
             # for taut in self.results['result']:
-            # taut = self.results['result']  # single result object
+            taut = self.results['result']  # single result object
 
-            tauts = self.results['result']  # for DOMINANT tautomers
+            # tauts = self.results['result']  # for DOMINANT tautomers
 
             # logging.warning("taut instance: {}".format(isinstance(taut, list)))
 
-            # if isinstance(taut, list):
-            #     taut = taut[0]
+            if isinstance(taut, list):
+                taut = taut[0]
                 
-            # tautStructDict = {'image': taut['image']['image'], 'key': 'taut'}
+            tautStructDict = {'image': taut['image']['image'], 'key': 'taut'}
             
-            # structInfo = getStructInfo(taut['structureData']['structure'])
-            # tautStructDict.update(structInfo)
+            structInfo = getStructInfo(taut['structureData']['structure'])
+            tautStructDict.update(structInfo)
             # tautStructDict.update({'dist': 100 * round(taut['dominantTautomerDistribution'], 4)})
-            # tautImageList.append(tautStructDict)
+            tautImageList.append(tautStructDict)
 
 
             # 10-19-16 request by Eric
-            for taut in tauts:
-                tautStructDict = {'image': taut['image']['image'], 'key': 'taut'}
-                structInfo = getStructInfo(taut['structureData']['structure'])
-                tautStructDict.update(structInfo)
-                tautStructDict.update({'dist': 100 * round(taut['dominantTautomerDistribution'], 4)})
-                tautImageList.append(tautStructDict)
+            # for taut in tauts:
+            #     tautStructDict = {'image': taut['image']['image'], 'key': 'taut'}
+            #     structInfo = getStructInfo(taut['structureData']['structure'])
+            #     tautStructDict.update(structInfo)
+            #     tautStructDict.update({'dist': 100 * round(taut['dominantTautomerDistribution'], 4)})
+            #     tautImageList.append(tautStructDict)
 
             tautDict.update({'tautStructs': tautImageList})
             return tautImageList
