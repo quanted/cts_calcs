@@ -5,7 +5,7 @@ import logging
 import json
 import redis
 from jchem_calculator import JchemProperty
-from cts_calcs import data_walks
+from cts_app.cts_calcs import data_walks
 import os
 
 
@@ -90,7 +90,7 @@ def request_manager(request):
         # TODO: Get this through jchem_rest and not the chemspec model!!!
 
         # speciation data from chemspec model, for batch via ws
-        from models.chemspec import chemspec_output
+        from cts_app.models.chemspec import chemspec_output
 
         spec_inputs = request.POST.get('speciation_inputs')
 

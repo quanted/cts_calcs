@@ -3,7 +3,7 @@ import os
 import requests
 import json
 from test_calculator import TestCalc
-from cts_calcs.smilesfilter import parseSmilesByCalculator
+from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
 
 import redis
 

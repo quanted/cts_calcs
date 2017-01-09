@@ -7,8 +7,8 @@ import requests
 import os
 import math
 
-from cts_calcs.calculator import Calculator
-from cts_calcs.calculator import CTSChemicalProperties
+from cts_app.cts_calcs.calculator import Calculator
+from cts_app.cts_calcs.calculator import CTSChemicalProperties
 
 
 ########################## SPARC physical properties calculator interface ###################

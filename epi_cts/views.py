@@ -5,7 +5,7 @@ import json
 from django.http import HttpResponse
 
 from epi_calculator import EpiCalc
-from cts_calcs.smilesfilter import parseSmilesByCalculator
+from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
 
 
 def request_manager(request):

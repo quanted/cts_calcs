@@ -4,7 +4,7 @@ import requests
 import json
 from measured_calculator import MeasuredCalc
 import redis
-from cts_calcs.smilesfilter import parseSmilesByCalculator
+from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
 
 
 def request_manager(request):

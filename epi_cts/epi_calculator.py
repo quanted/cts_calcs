@@ -2,9 +2,9 @@ import requests
 import json
 import logging
 import os
-from cts_calcs.calculator import Calculator
-from cts_calcs.smilesfilter import max_weight
-from cts_calcs import smilesfilter
+from cts_app.cts_calcs.calculator import Calculator
+from cts_app.cts_calcs.smilesfilter import max_weight
+from cts_app.cts_calcs import smilesfilter
 
 headers = {'Content-Type': 'application/json'}
 
