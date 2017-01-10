@@ -1,11 +1,14 @@
 __author__ = 'KWOLFE'
 
-from cts_app.cts_calcs.chemaxon_cts import jchem_rest
 import requests
 import logging
 import json
-from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty as JProp
-
+try:
+    from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty as JProp
+    from cts_app.cts_calcs.chemaxon_cts import jchem_rest
+except ImportError as e:
+    from cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty as JProp
+    from cts_calcs.chemaxon_cts import jchem_rest
 
 max_weight = 1500 # max weight [g/mol] for epi, test, and sparc
 

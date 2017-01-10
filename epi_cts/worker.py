@@ -5,7 +5,10 @@ import json
 import redis
 
 from epi_calculator import EpiCalc
-from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
+try:
+    from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
+except ImportError as e:
+    from cts_calcs.smilesfilter import parseSmilesByCalculator
 
 
 redis_hostname = os.environ.get('REDIS_HOSTNAME')

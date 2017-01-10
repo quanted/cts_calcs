@@ -2,7 +2,10 @@ import requests
 import json
 import logging
 import os
-from cts_app.cts_calcs.calculator import Calculator
+try:
+    from cts_app.cts_calcs.calculator import Calculator
+except ImportError as e:
+    from cts_calcs.calculator import Calculator
 
 headers = {'Content-Type': 'application/json'}
 

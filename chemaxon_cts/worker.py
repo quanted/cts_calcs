@@ -5,8 +5,13 @@ import logging
 import json
 import redis
 from jchem_calculator import JchemProperty
-from cts_app.cts_calcs import data_walks
 import os
+
+# potential fix for cts_celery and cts_app using cts_calcs and how they import
+try:
+    from cts_api.cts_calcs import data_walks
+except ImportError as e:
+    from cts_calcs import data_walks
 
 
 methods = ['KLOP', 'VG', 'PHYS']

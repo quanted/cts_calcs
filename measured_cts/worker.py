@@ -4,7 +4,10 @@ import requests
 import json
 from measured_calculator import MeasuredCalc
 import redis
-from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
+try:
+	from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
+except ImportError as e:
+	from cts_calcs.smilesfilter import parseSmilesByCalculator
 
 
 redis_hostname = os.environ.get('REDIS_HOSTNAME')
