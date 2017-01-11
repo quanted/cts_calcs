@@ -66,3 +66,9 @@ class TestCalc(Calculator):
         self.results = response
         return response
 
+    def convertWaterSolubility(self, mass, test_datum):
+        """
+        Converts water solubility from log(mol/L) => mg/L
+        """
+        return 1000 * float(mass) * 10**-(test_datum)
+

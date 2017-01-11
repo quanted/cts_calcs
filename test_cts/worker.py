@@ -85,8 +85,10 @@ def request_manager(request):
 				postData['data'] = "TEST could not process structure"
 			else:
 				test_data = response_json['properties'][calcObj.propMap[prop]['urlKey']]
-				if prop == 'water_sol':
-					data_obj['data'] = 1000 * float(mass) * 10**test_data
+				if test_data == -9999:
+					data_obj['data'] = "N/A"
+				elif prop == 'water_sol':
+					data_obj['data'] = calcObj.convertWaterSolubility(mass, test_data)
 				else:
 					data_obj['data'] = test_data
 				
