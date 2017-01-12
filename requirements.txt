@@ -1,4 +1,4 @@
 django
 requests
 redis
-enum34==0.9.19
+enum34
