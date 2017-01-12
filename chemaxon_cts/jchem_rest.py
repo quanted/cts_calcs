@@ -239,10 +239,23 @@ def filterSMILES(request_obj):
 	# 2. Use that result for jchem to get back major tautomer.
 	# 3. Use major tautomer for smiles with CTSWS "neutralize" action. 
 	# 4. Final result is filtered SMILES.
+	url = Urls.standardizerUrlEFS
+	# post_data = {
+	# 	'structure': smiles,
+	# 	'actions': [
+	# 		"removeExplicitH",
+	# 		"transform"
+	# 	]
+	# }
+	# response = web_call_new(url, post_data)  # 1.
+
+	# filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
 	
+	# #2. Get major tautomer from jchem:
+	# post_data = {
+		
+	# }
 
-
-	url = Urls.standardizerUrlEFS # http://server/efsws/rest/standardizer
 	return web_call_new(url, post_data)
 
 
