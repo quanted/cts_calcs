@@ -219,6 +219,10 @@ def filterSMILES(request_obj):
 	"""
 	smiles = request_obj.get('smiles')
 
+	# Original, working filter.
+	# Uses CTSWS to perform all filters in one statement,
+	# but CTSWS returns canonical tautomer instead of
+	# major tautomer for the "tautomerize" action.
 	# POST data for efs standardizer ws:
 	post_data = {
 		"structure": smiles,
@@ -229,6 +233,15 @@ def filterSMILES(request_obj):
 			"neutralize"
 		]
 	}
+
+	# Updated approach:
+	# 1. CTSWS actions "removeExplicitH" and "transform".
+	# 2. Use that result for jchem to get back major tautomer.
+	# 3. Use major tautomer for smiles with CTSWS "neutralize" action. 
+	# 4. Final result is filtered SMILES.
+	
+
+
 	url = Urls.standardizerUrlEFS # http://server/efsws/rest/standardizer
 	return web_call_new(url, post_data)
 
