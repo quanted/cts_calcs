@@ -217,6 +217,8 @@ def filterSMILES(request_obj):
 	smiles processing before being sent to
 	p-chem calculators
 	"""
+	from jchem_calculator import JchemProperty
+
 	smiles = request_obj.get('smiles')
 
 	# Original, working filter.
@@ -224,39 +226,53 @@ def filterSMILES(request_obj):
 	# but CTSWS returns canonical tautomer instead of
 	# major tautomer for the "tautomerize" action.
 	# POST data for efs standardizer ws:
+	# post_data = {
+	# 	"structure": smiles,
+	# 	"actions": [
+	# 		"removeExplicitH",
+	# 		"transform",
+	# 		"tautomerize",
+	# 		"neutralize"
+	# 	]
+	# }
+
+	# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
+	# 1. CTSWS actions "removeExplicitH" and "transform".
+	url = Urls.standardizerUrlEFS
 	post_data = {
-		"structure": smiles,
-		"actions": [
+		'structure': smiles,
+		'actions': [
 			"removeExplicitH",
-			"transform",
-			"tautomerize",
+			"transform"
+		]
+	}
+	response = web_call_new(url, post_data)  # 1.
+
+	filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
+	
+	# 2. Get major tautomer from jchem:
+	tautObj = JchemProperty.getPropObject('tautomerization')
+	tautObj.setPostDataValues({"calculationType": "MAJOR"})
+	tautObj.makeDataRequest(filtered_smiles)
+
+	# todo: verify this is major taut result smiles, not original smiles for major taut request...
+	major_taut_smiles = tautObj.results['result']['structureData']['structure']
+
+	logging.warning("MAJOR TAUT SMILES: {}".format(major_taut_smiles))
+
+	# 3. Using major taut smiles for final "neutralize" filter:
+	post_data = {
+		'structure': major_taut_smiles,
+		'actions': [
 			"neutralize"
 		]
 	}
+	response = web_call_new(url, post_data)
 
-	# Updated approach:
-	# 1. CTSWS actions "removeExplicitH" and "transform".
-	# 2. Use that result for jchem to get back major tautomer.
-	# 3. Use major tautomer for smiles with CTSWS "neutralize" action. 
-	# 4. Final result is filtered SMILES.
-	url = Urls.standardizerUrlEFS
-	# post_data = {
-	# 	'structure': smiles,
-	# 	'actions': [
-	# 		"removeExplicitH",
-	# 		"transform"
-	# 	]
-	# }
-	# response = web_call_new(url, post_data)  # 1.
+	final_smiles = response['results'][-1]
+	logging.warning("FINAL FITERED SMILES: {}".format(final_smiles))
 
-	# filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
-	
-	# #2. Get major tautomer from jchem:
-	# post_data = {
-		
-	# }
-
-	return web_call_new(url, post_data)
+	return response
 
 
 def web_call_new(url, data):
