@@ -61,7 +61,7 @@ def request_manager(request):
 		filtered_smiles = parseSmilesByCalculator(chemical, calc) # call smilesfilter
 	except Exception as err:
 		logging.warning("Error filtering SMILES: {}".format(err))
-		postData.update({'error': "Cannot filter SMILES for TEST data"})
+		postData.update({'data': "Cannot filter SMILES for TEST data"})
 		redis_conn.publish(sessionid, json.dumps(postData))
 	# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -104,7 +104,7 @@ def request_manager(request):
 
 		except Exception as err:
 			logging.warning("Exception occurred getting TEST data: {}".format(err))
-			data_obj.update({'error': "data request timed out", 'request_post': request.POST})
+			data_obj.update({'data': "timed out", 'request_post': request.POST})
 
 			logging.info("##### session id: {}".format(sessionid))
 
