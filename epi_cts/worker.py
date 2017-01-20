@@ -27,6 +27,7 @@ def request_manager(request):
 
     EPI_URL = os.environ["CTS_EPI_SERVER"]
 
+    chemical = request.POST.get("chemical")
     calc = request.POST.get("calc")
     prop = request.POST.get("prop")
     structure = request.POST.get("chemical")
@@ -82,6 +83,7 @@ def request_manager(request):
     for prop in props:
 
         data_obj = {
+            "chemical": chemical,
             "calc": "epi",
             "prop": prop,
             'node': node,

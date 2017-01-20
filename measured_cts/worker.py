@@ -25,24 +25,25 @@ def request_manager(request):
 	except AttributeError:
 		props = request.POST.get("props")
 
-	structure = request.POST.get("chemical")
+	chemical = request.POST.get("chemical")
 	sessionid = request.POST.get('sessionid')
 	node = request.POST.get('node')
 	run_type = request.POST.get('run_type')
 	prop = request.POST.get('prop')
 
-	logging.info("Incoming data to Measured: {}, {}, {} (calc, props, chemical)".format(calc, props, structure))
+	logging.info("Incoming data to Measured: {}, {}, {} (calc, props, chemical)".format(calc, props, chemical))
 
 	post_data = {
+		"chemical": chemical,
 		"calc": calc,
 		"props": props,
 	    'node': node
 	}
 
-	logging.info("Measured receiving SMILES: {}".format(structure))
+	logging.info("Measured receiving SMILES: {}".format(chemical))
 
 	try:
-		filtered_smiles = parseSmilesByCalculator(structure, "epi") # call smilesfilter
+		filtered_smiles = parseSmilesByCalculator(chemical, "epi") # call smilesfilter
 		if '[' in filtered_smiles or ']' in filtered_smiles:
 			logging.warning("EPI ignoring request due to brackets in SMILES..")
 			post_data.update({'error': "EPI Suite cannot process charged species or metals (e.g., [S+], [c+])"})
@@ -76,7 +77,7 @@ def request_manager(request):
 		logging.warning("Exception occurred getting Measured data: {}".format(err))
 		for prop in props:
 			data_obj = {
-				'data': "error - cannot find measured data for structure",
+				'data': "error - cannot find measured data for chemical",
 				'calc': "measured",
 				'prop': prop,
 				'node': node,

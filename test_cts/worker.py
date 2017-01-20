@@ -39,7 +39,7 @@ def request_manager(request):
 		props = request.POST.get("props")
 
 	calc_data = request.POST.get('checkedCalcsAndProps')
-	structure = request.POST.get("chemical")
+	chemical = request.POST.get("chemical")
 	sessionid = request.POST.get('sessionid')
 	node = request.POST.get('node')
 	mass = request.POST.get('mass')  # for water solubility
@@ -49,6 +49,7 @@ def request_manager(request):
 		props = calc_data['test']  # list of props
 
 	postData = {
+		"chemical": chemical,
 		"calc": calc,
 		# "prop": prop
 		# "props": props
@@ -57,7 +58,7 @@ def request_manager(request):
 	# filter smiles before sending to TEST:
 	# ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
 	try:
-		filtered_smiles = parseSmilesByCalculator(structure, calc) # call smilesfilter
+		filtered_smiles = parseSmilesByCalculator(chemical, calc) # call smilesfilter
 	except Exception as err:
 		logging.warning("Error filtering SMILES: {}".format(err))
 		postData.update({'error': "Cannot filter SMILES for TEST data"})
@@ -70,7 +71,13 @@ def request_manager(request):
 	test_results = []
 	for prop in props:
 
-		data_obj = {'calc': calc, 'prop':prop, 'node': node, 'request_post': request.POST}
+		data_obj = {
+			'chemical': chemical,
+			'calc': calc,
+			'prop':prop,
+			'node': node,
+			'request_post': request.POST
+		}
 
 		try:
 			logging.info("Calling TEST for {} data...".format(prop))
@@ -82,7 +89,7 @@ def request_manager(request):
 
 			# sometimes TEST data successfully returns but with an error:
 			if response.status_code != 200:
-				postData['data'] = "TEST could not process structure"
+				postData['data'] = "TEST could not process chemical"
 			else:
 				test_data = response_json['properties'][calcObj.propMap[prop]['urlKey']]
 				if test_data == -9999:
