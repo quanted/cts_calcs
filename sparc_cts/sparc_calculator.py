@@ -18,7 +18,7 @@ except ImportError as e:
 ########################## SPARC physical properties calculator interface ###################
 headers = {'Content-Type': 'application/json'}
 class SparcCalc(Calculator):
-    def __init__(self, smiles=None, pressure=760.0, meltingpoint=0.0, temperature=25.0):
+    def __init__(self, smiles=None, meltingpoint=0.0, pressure=760.0, temperature=25.0):
 
         self.base_url = os.environ['CTS_SPARC_SERVER']
         self.multiproperty_url = '/sparc-integration/rest/calc/multiProperty'
@@ -200,13 +200,15 @@ class SparcCalc(Calculator):
             pka_results = results['macroPkaResults'] # list of pka..
             pka_data = [] # return list of pka values..
             for pka in pka_results:
-                if 'macroPka' in pka:
+                if 'macroPka' in pka and pka['macroPka'] != -1000:
                     pka_data.append(pka['macroPka'])
+                else:
+                    pka_data.append("out of range")
         except Exception as e:
             logging.warning("Error getting pka from SPARC response: {}".format(e))
             raise Exception("error parsing sparc request")
-        else:
-            return {"pKa": pka_data}
+        
+        return {"pKa": pka_data}
 
 
     def makeCallForLogD(self):

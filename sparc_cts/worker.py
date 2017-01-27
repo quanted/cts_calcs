@@ -6,6 +6,10 @@ import os
 
 from sparc_calculator import SparcCalc
 
+from epi_cts import views as epi_views
+from measured_cts import views as measured_views
+
+
 redis_hostname = os.environ.get('REDIS_HOSTNAME')
 redis_conn = redis.StrictRedis(host=redis_hostname, port=6379, db=0)
 
@@ -37,6 +41,25 @@ def request_manager(request):
     ############### Filtered SMILES stuff!!! ###########################
     # filtered_smiles = parseSmilesByCalculator(structure, "sparc") # call smilesfilter
     ###########################################################################################
+
+
+
+
+    # # need to get melting point for sparc calculations.
+    # # Try Measured, but what about EPI? I wouldn't mess with TEST..
+    # melting_point_request = {
+    #     'calc': "measured",  # should prob be measured
+    #     'props': ['melting_point'],
+    #     'chemical': structure,
+    #     'sessionid': sessionid
+    # }
+    # request = NotDjangoRequest(melting_point_request)
+    # melting_point_response = measured_views.request_manager(request)
+    # logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
+    # logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
+
+
+
 
     calcObj = SparcCalc(structure)
 
@@ -94,9 +117,15 @@ def request_manager(request):
         for prop in props:
 
             post_data.update({
-                'error': "data request timed out",
+                'data': "data request timed out",
                 'prop': prop,
                 'request_post': request.POST
             })
 
             redis_conn.publish(sessionid, json.dumps(post_data))
+
+# patch for freeing celery from django while calc views
+# are still relying on django.http Request...
+class NotDjangoRequest(object):
+    def __init__(self, post_obj):
+        self.POST = post_obj
