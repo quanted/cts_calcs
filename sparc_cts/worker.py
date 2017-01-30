@@ -142,7 +142,7 @@ def getMass(structure, sessionid):
         try:
             melting_point_request['calc'] = 'test'
             request = NotDjangoRequest(melting_point_request)
-            test_melting_point_reponse = test_views.request_manager(request)
+            test_melting_point_response = test_views.request_manager(request)
             logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
             melting_point = json.loads(test_melting_point_response.content)['data']
             logging.warning("TEST MP VALUE: {}".format(melting_point))
