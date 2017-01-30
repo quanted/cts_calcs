@@ -126,8 +126,6 @@ def getMass(structure, sessionid):
     # todo: catch measured errors, then try epi melting point..
     request = NotDjangoRequest(melting_point_request)
     melting_point_response = measured_views.request_manager(request)
-    logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
-    logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
 
     # # convert to python dict
     try:
@@ -136,13 +134,17 @@ def getMass(structure, sessionid):
         logging.warning("Error in sparc_cts/worker.py: {}".format(e))
         melting_point = 0.0
 
+    logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
+    logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
+
     if not isinstance(melting_point, float):
+        logging.warning("Trying to get MP from TEST..")
         try:
             melting_point_request['calc'] = 'test'
             request = NotDjangoRequest(melting_point_request)
-            melting_point_reponse = test_views.request_manager(request)
-            logging.warning("TEST MP RESPONSE: {}".format(melting_point_response))
-            melting_point = json.loads(melting_point_response.content)['data']
+            test_melting_point_reponse = test_views.request_manager(request)
+            logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
+            melting_point = json.loads(test_melting_point_response.content)['data']
             logging.warning("TEST MP VALUE: {}".format(melting_point))
         except Exception as e:
             logging.warning("Error in sparc_cts/worker.py: {}".format(e))
