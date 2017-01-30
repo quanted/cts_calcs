@@ -141,10 +141,14 @@ def getMass(structure, sessionid):
             melting_point_request['calc'] = 'test'
             request = NotDjangoRequest(melting_point_request)
             melting_point_reponse = test_views.request_manager(request)
+            logging.warning("TEST MP RESPONSE: {}".format(melting_point_response))
             melting_point = json.loads(melting_point_response.content)['data']
+            logging.warning("TEST MP VALUE: {}".format(melting_point))
         except Exception as e:
             logging.warning("Error in sparc_cts/worker.py: {}".format(e))
             melting_point = 0.0
+
+        logging.warning("TEST MP TYPE: {}:".format(type(melting_point)))
 
         if not isinstance(melting_point, float):
             melting_point = 0.0
