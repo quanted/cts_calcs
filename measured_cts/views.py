@@ -4,6 +4,7 @@ import requests
 import json
 from measured_calculator import MeasuredCalc
 import redis
+from django.http import HttpResponse
 try:
 	from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
 except ImportError as e:

@@ -6,7 +6,7 @@ import os
 
 from sparc_calculator import SparcCalc
 
-from cts_calcs.epi_cts import views as epi_views
+from cts_calcs.test_cts import views as test_views
 from cts_calcs.measured_cts import views as measured_views
 
 
@@ -42,26 +42,12 @@ def request_manager(request):
     # filtered_smiles = parseSmilesByCalculator(structure, "sparc") # call smilesfilter
     ###########################################################################################
 
+    # Get melting point for sparc calculations.
+    # Try Measured, then TEST..although it'll be slow
+    melting_point = getMass(structure, sessionid)
+    logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
 
-
-
-    # # need to get melting point for sparc calculations.
-    # # Try Measured, but what about EPI? I wouldn't mess with TEST..
-    # melting_point_request = {
-    #     'calc': "measured",  # should prob be measured
-    #     'props': ['melting_point'],
-    #     'chemical': structure,
-    #     'sessionid': sessionid
-    # }
-    # request = NotDjangoRequest(melting_point_request)
-    # melting_point_response = measured_views.request_manager(request)
-    # logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
-    # logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
-
-
-
-
-    calcObj = SparcCalc(structure)
+    calcObj = SparcCalc(structure, meltingpoint=melting_point)
 
     ion_con_response, kow_wph_response, multi_response = None, None, None
     sparc_results = []
@@ -124,8 +110,58 @@ def request_manager(request):
 
             redis_conn.publish(sessionid, json.dumps(post_data))
 
-# patch for freeing celery from django while calc views
-# are still relying on django.http Request...
+
+def getMass(structure, sessionid):
+    """
+    Gets mass of structure from Measured, tries
+    TEST if not available in Measured. Returns 0.0
+    if neither have mp value.
+    """
+    melting_point_request = {
+        'calc': "measured",  # should prob be measured
+        'props': ['melting_point'],
+        'chemical': structure,
+        'sessionid': sessionid
+    }
+    # todo: catch measured errors, then try epi melting point..
+    request = NotDjangoRequest(melting_point_request)
+    melting_point_response = measured_views.request_manager(request)
+    logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
+    logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
+
+    # # convert to python dict
+    try:
+        melting_point = json.loads(melting_point_response.content)['data']
+    except Exception as e:
+        logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+        melting_point = 0.0
+
+    if not isinstance(melting_point, float):
+        try:
+            melting_point_request['calc'] = 'test'
+            request = NotDjangoRequest(melting_point_request)
+            melting_point_reponse = test_views.request_manager(request)
+            melting_point = json.loads(melting_point_response.content)['data']
+        except Exception as e:
+            logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+            melting_point = 0.0
+
+        if not isinstance(melting_point, float):
+            melting_point = 0.0
+    # else:
+    #     melting_point = melting_point_obj['data']
+
+    logging.warning("MELTING POINT VALUE: {}".format(melting_point))
+
+    return melting_point
+    
+
 class NotDjangoRequest(object):
+    """
+    patch for freeing celery from django while calc views
+    are still relying on django.http Request...
+    """
     def __init__(self, post_obj):
         self.POST = post_obj
+
+
