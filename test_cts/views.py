@@ -87,7 +87,8 @@ def request_manager(request):
 					data_obj['data'] = calcObj.convertWaterSolubility(mass, test_data)
 				else:
 					data_obj['data'] = test_data
-				
+			
+			logging.warning("Appending data object: {} to test_results".format(data_obj))
 			test_results.append(data_obj)
 
 		except Exception as err:
@@ -98,4 +99,5 @@ def request_manager(request):
 
 			test_results.append(data_obj)
 
+	logging.warning("Returning TEST results: {}".format(test_results))
 	return HttpResponse(json.dumps(test_results), content_type='application/json')
