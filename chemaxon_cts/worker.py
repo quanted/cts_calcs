@@ -223,7 +223,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
     return
 
 
-def getJchemPropData(chemical, prop, phForLogD=None, method=None, sessionid=None, node=None, session=None):
+def getJchemPropData(chemical, prop, phForLogD=7.4, method=None, sessionid=None, node=None, session=None):
     """
     Calls jchem web services from chemaxon and
     wraps data in a CTS data object (keys: calc, prop, method, data)
