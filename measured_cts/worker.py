@@ -81,7 +81,8 @@ def request_manager(request):
 				'calc': "measured",
 				'prop': prop,
 				'node': node,
-				'request_post': request.POST
+				'request_post': request.POST,
+				'chemical': chemical,
 			}
 
 			redis_conn.publish(sessionid, json.dumps(data_obj))
