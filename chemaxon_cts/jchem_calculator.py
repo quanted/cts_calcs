@@ -96,7 +96,6 @@ class JchemProperty(object):
         except requests.exceptions.RequestException as err:
             raise err
 
-    @classmethod
     def booleanize(self, value):
         """
         django checkbox comes back as 'on' or 'off',
@@ -135,35 +134,37 @@ class JchemProperty(object):
         else:
             raise ValueError("Error initializing jchem property class..")
 
-    def getSpeciationResults(self):
+    def getSpeciationResults(self, jchemResultObjects):
         """
         Loops jchemPropObjects (speciation results) from chemaxon,
         grabs the results and creates an object, jchemDictResults, that's
         used for chemspec_tables and data downloads.
         """
-        for key, value in self.jchemPropObjects.items():
+        jchem_results_obj = {}
+        for key, value in jchemResultObjects.items():
             if value:
                 if key == 'pKa':
-                    self.jchemDictResults.update({
-                        'pka': pkaObj.getMostAcidicPka(),
-                        'pkb': pkaObj.getMostBasicPka(),
-                        'pka_parent': pkaObj.getParent(),
-                        'pka_microspecies': pkaObj.getMicrospecies(),
-                        'pka_chartdata': pkaObj.getChartData()
+                    jchem_results_obj.update({
+                        'pka': jchemResultObjects['pKa'].getMostAcidicPka(),
+                        'pkb': jchemResultObjects['pKa'].getMostBasicPka(),
+                        'pka_parent': jchemResultObjects['pKa'].getParent(),
+                        'pka_microspecies': jchemResultObjects['pKa'].getMicrospecies(),
+                        'pka_chartdata': jchemResultObjects['pKa'].getChartData()
                     })
                 elif key == 'majorMicrospecies':
-                    self.jchemDictResults.update({key: majorMsObj.getMajorMicrospecies()})
+                    jchem_results_obj.update({key: jchemResultObjects['majorMicrospecies'].getMajorMicrospecies()})
                 elif key == 'isoelectricPoint':
-                    self.jchemDictResults.update({
-                        key: isoPtObj.getIsoelectricPoint(),
-                        'isopt_chartdata': isoPtObj.getChartData()
+                    jchem_results_obj.update({
+                        key: jchemResultObjects['isoelectricPoint'].getIsoelectricPoint(),
+                        'isopt_chartdata': jchemResultObjects['isoelectricPoint'].getChartData()
                     })
                 elif key == 'tautomerization':
-                    self.jchemDictResults.update({'tautomers': tautObj.getTautomers()})
+                    jchem_results_obj.update({'tautomers': jchemResultObjects['tautomerization'].getTautomers()})
                 elif key == 'stereoisomers':
-                    self.jchemDictResults.update({key: stereoObj.getStereoisomers()})
+                    jchem_results_obj.update({key: jchemResultObjects['stereoisomers'].getStereoisomers()})
 
-        self.run_data.update(self.jchemDictResults)
+        # self.run_data.update(self.jchemDictResults)
+        return jchem_results_obj
 
 
 class Pka(JchemProperty):
