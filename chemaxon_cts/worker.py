@@ -151,6 +151,7 @@ def request_manager(request):
             'workflow': 'chemaxon',
             'run_type': 'batch'
         }
+        # data_obj.update(speciation_data)
 
         result_json = json.dumps(data_obj)
         redis_conn.publish(sessionid, result_json)
