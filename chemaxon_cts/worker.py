@@ -136,7 +136,7 @@ def request_manager(request):
         # TODO: CTS API URL has env var somewhere...
         # chemspec_obj = chemspec_output.chemspecOutputPage(request)
         # speciation_response = requests.post('http://localhost:8000/cts/rest/speciation/run', data=json.dumps(model_params))
-        speciation_response = requests.post(os.environ.get('CTS_REST_SERVER') + '/cts/rest/speciation/run', data=json.dumps(model_params))
+        speciation_response = requests.post(os.environ.get('CTS_REST_SERVER') + '/cts/rest/speciation/run', data=json.dumps(model_params), verify=False)
 
         speciation_data = json.loads(speciation_response.content)
 
