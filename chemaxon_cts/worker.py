@@ -46,7 +46,7 @@ def request_manager(request):
     workflow = request.POST.get('workflow')
     request_post = request.POST
 
-    logging.info("REQUEST: {}".format(request.POST))
+    logging.warning("REQUEST: {}".format(request.POST))
 
     try:
         props = request.POST.get("props[]")
@@ -95,12 +95,14 @@ def request_manager(request):
         # TODO: Get this through jchem_rest and not the chemspec model!!!
 
         # speciation data from chemspec model, for batch via ws
-        from cts_app.models.chemspec import chemspec_output
+        # from cts_app.models.chemspec import chemspec_output
 
         spec_inputs = request.POST.get('speciation_inputs')
 
         model_params = {
             'run_type': 'single',
+            # 'run_type': 'rest',
+            # 'run_type': 'batch',
             'chem_struct': None,
             'smiles': chemical,
             'orig_smiles': None,
@@ -126,17 +128,25 @@ def request_manager(request):
                 model_params.update({key: spec_inputs[key]})
 
 
-        request = HttpRequest()
-        request.POST = model_params
-        request.method = "POST"  # required because of chemspec_output @request_POST???
+        # request = HttpRequest()
+        # request.POST = model_params
+        # request.method = "POST"  # required because of chemspec_output @request_POST???
 
-        chemspec_obj = chemspec_output.chemspecOutputPage(request)
+
+        # TODO: CTS API URL has env var somewhere...
+        # chemspec_obj = chemspec_output.chemspecOutputPage(request)
+        speciation_response = requests.post('http://localhost:8000/cts/rest/speciation/run', data=json.dumps(model_params))
+
+        speciation_data = json.loads(speciation_response.content)
+
+        logging.warning("SPECIATION DATA RECEIVED: {}".format(speciation_data))
 
         data_obj = {
             'calc': "chemaxon", 
             'prop': "speciation_results",
             'node': node,
-            'data': chemspec_obj.jchemDictResults,
+            # 'data': chemspec_obj.jchemDictResults,
+            'data': speciation_data,
             'chemical': chemical,
             'workflow': 'chemaxon',
             'run_type': 'batch'

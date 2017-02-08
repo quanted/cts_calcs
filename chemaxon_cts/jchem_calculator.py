@@ -97,6 +97,20 @@ class JchemProperty(object):
             raise err
 
     @classmethod
+    def booleanize(self, value):
+        """
+        django checkbox comes back as 'on' or 'off',
+        or True/False depending on version, so this
+        makes sure they're True/False
+        """
+        if value == 'on' or value == 'true':
+            return True
+        if value == 'off' or value == 'false':
+            return False
+        if isinstance(value, bool):
+            return value
+
+    @classmethod
     def getPropObject(self, prop):
         """
 		For getting prop objects in a general,
@@ -120,6 +134,36 @@ class JchemProperty(object):
             return LogD()
         else:
             raise ValueError("Error initializing jchem property class..")
+
+    def getSpeciationResults(self):
+        """
+        Loops jchemPropObjects (speciation results) from chemaxon,
+        grabs the results and creates an object, jchemDictResults, that's
+        used for chemspec_tables and data downloads.
+        """
+        for key, value in self.jchemPropObjects.items():
+            if value:
+                if key == 'pKa':
+                    self.jchemDictResults.update({
+                        'pka': pkaObj.getMostAcidicPka(),
+                        'pkb': pkaObj.getMostBasicPka(),
+                        'pka_parent': pkaObj.getParent(),
+                        'pka_microspecies': pkaObj.getMicrospecies(),
+                        'pka_chartdata': pkaObj.getChartData()
+                    })
+                elif key == 'majorMicrospecies':
+                    self.jchemDictResults.update({key: majorMsObj.getMajorMicrospecies()})
+                elif key == 'isoelectricPoint':
+                    self.jchemDictResults.update({
+                        key: isoPtObj.getIsoelectricPoint(),
+                        'isopt_chartdata': isoPtObj.getChartData()
+                    })
+                elif key == 'tautomerization':
+                    self.jchemDictResults.update({'tautomers': tautObj.getTautomers()})
+                elif key == 'stereoisomers':
+                    self.jchemDictResults.update({key: stereoObj.getStereoisomers()})
+
+        self.run_data.update(self.jchemDictResults)
 
 
 class Pka(JchemProperty):
