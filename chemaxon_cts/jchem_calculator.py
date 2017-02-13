@@ -309,7 +309,7 @@ class MajorMicrospecies(JchemProperty):
         self.name = 'majorMicrospecies'
         self.url = '/webservices/rest-v0/util/calculate/majorMicrospecies'
         self.postData = {
-            "pH": 7.4,
+            "pH": 7.0,
             "takeMajorTautomericForm": False
         }
 
