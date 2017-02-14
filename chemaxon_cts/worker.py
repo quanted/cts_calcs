@@ -139,8 +139,8 @@ def request_manager(request):
         speciation_response = requests.post(
                                 os.environ.get('CTS_REST_SERVER') + '/cts/rest/speciation/run', 
                                 data=json.dumps(model_params), 
-                                allow_redirects=True)
-                                # verify=False)
+                                allow_redirects=True,
+                                verify=False)
 
         speciation_data = json.loads(speciation_response.content)
 
