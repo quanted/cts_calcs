@@ -67,7 +67,11 @@ def request_manager(request):
 		# get requested properties from results:
 		for prop in props:
 			data_obj = calcObj.getPropertyValue(prop, measured_data)
-			data_obj.update({'node': node, 'request_post': request.POST})
+			data_obj.update({
+				'node': node, 
+				'request_post': request.POST,
+				'chemical': chemical
+			})
 
 			# push one result at a time if node/redis:
 			result_json = json.dumps(data_obj)
