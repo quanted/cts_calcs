@@ -430,7 +430,7 @@ class Solubility(JchemProperty):
             "unit": "MGPERML"
         }
 
-    def getSolubility(self):
+    def getIntrinsicSolubility(self):
         """
 		Gets water solubility for chemaxon
 		"""
@@ -440,6 +440,29 @@ class Solubility(JchemProperty):
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
+
+    def getPHDependentSolubility(self, ph=7.0):
+        """
+        Gets ph-dependent water solubility
+        """
+        try:
+            logging.info("getting solubility from: {}".format(self.results))
+            ws_list = self.results['pHDependentSolubility']['values']
+            ph = float(ph)
+            for item in ws_list:
+                item_ph = item['pH']
+                item_ws = item['solubility']
+                logging.info("ph: {}, ws: {}".format(item_ph, item_ws))
+                # logging.info("types for ph: {}, ws: {}".format(type(item_ph), type(item_ws)))
+                if item_ph == ph:
+                    logging.info("getting solubility: {} at ph: {}".format(item_ws, item_ph))
+                    return 1000.0 * item_ws
+            return "N/A"
+            # return 1000.0 * self.results['intrinsicSolubility']
+        except KeyError as ke:
+            logging.warning("key error: {}".format(ke))
+            return None
+
 
 
 class LogP(JchemProperty):

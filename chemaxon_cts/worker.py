@@ -239,7 +239,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
     return
 
 
-def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None, node=None, session=None):
+def getJchemPropData(chemical, prop, ph=7.0, method=None, sessionid=None, node=None, session=None):
     """
     Calls jchem web services from chemaxon and
     wraps data in a CTS data object (keys: calc, prop, method, data)
@@ -251,7 +251,7 @@ def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None,
     if prop == 'water_sol':
         propObj = JchemProperty.getPropObject('solubility')
         propObj.makeDataRequest(chemical, None, session)
-        result = propObj.getSolubility()
+        result = propObj.getIntrinsicSolubility()
     elif prop == 'ion_con':
         propObj = JchemProperty.getPropObject('pKa')
         propObj.makeDataRequest(chemical, None, session)
@@ -268,7 +268,11 @@ def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None,
     elif prop == 'kow_wph':
         propObj = JchemProperty.getPropObject('logD')
         propObj.makeDataRequest(chemical, method, session)
-        result = propObj.getLogD(phForLogD)
+        result = propObj.getLogD(ph)
+    elif prop == 'water_sol_ph':
+        propObj = JchemProperty.getPropObject('solubility')
+        propObj.makeDataRequest(chemical, method, session)
+        result = propObj.getPHDependentSolubility(ph)
     else:
         result = None
 

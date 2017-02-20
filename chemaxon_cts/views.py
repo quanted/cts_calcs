@@ -132,7 +132,7 @@ def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None,
     if prop == 'water_sol':
         propObj = JchemProperty.getPropObject('solubility')
         propObj.makeDataRequest(chemical, None, session)
-        result = propObj.getSolubility()
+        result = propObj.getIntrinsicSolubility()
     elif prop == 'ion_con':
         propObj = JchemProperty.getPropObject('pKa')
         propObj.makeDataRequest(chemical, None, session)
