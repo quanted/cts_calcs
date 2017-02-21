@@ -88,6 +88,7 @@ def request_manager(request):
             redis_conn.publish(sessionid, result_json)
 
         multi_response = calcObj.makeDataRequest()
+        logging.info("MULTI RESPONSE: {}".format(multi_response))
         if 'calculationResults' in multi_response:
             multi_response = calcObj.parseMultiPropResponse(multi_response['calculationResults'])
             for prop_obj in multi_response:

@@ -45,6 +45,7 @@ def request_manager(request):
     run_type = request.POST.get('run_type')
     workflow = request.POST.get('workflow')
     request_post = request.POST
+    mass = request.POST.get('mass')
 
     logging.warning("REQUEST: {}".format(request.POST))
 
@@ -162,11 +163,11 @@ def request_manager(request):
         redis_conn.publish(sessionid, result_json)
 
     else:
-        getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, props, session, request_post)
+        getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, props, session, request_post, mass)
 
 
 
-def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, props, session, request_post=None):
+def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, props, session, request_post=None, mass=None):
 
     postData = {
         'calc': calc,
@@ -216,7 +217,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
                         redis_conn.publish(sessionid, result_json)
 
                 else:
-                    results = getJchemPropData(chemical, prop, ph, None, sessionid, node, session)
+                    results = getJchemPropData(chemical, prop, ph, None, sessionid, node, session, mass)
                     data_obj.update({'data': results['data']})
 
                     logging.info("chemaxon results: {}".format(results))
@@ -239,7 +240,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
     return
 
 
-def getJchemPropData(chemical, prop, ph=7.0, method=None, sessionid=None, node=None, session=None):
+def getJchemPropData(chemical, prop, ph=7.0, method=None, sessionid=None, node=None, session=None, mass=None):
     """
     Calls jchem web services from chemaxon and
     wraps data in a CTS data object (keys: calc, prop, method, data)
@@ -273,6 +274,7 @@ def getJchemPropData(chemical, prop, ph=7.0, method=None, sessionid=None, node=N
         propObj = JchemProperty.getPropObject('solubility')
         propObj.makeDataRequest(chemical, method, session)
         result = propObj.getPHDependentSolubility(ph)
+        result = propObj.convertLogToMGPERL(result, mass)
     else:
         result = None
 

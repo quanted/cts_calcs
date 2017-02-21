@@ -456,12 +456,21 @@ class Solubility(JchemProperty):
                 # logging.info("types for ph: {}, ws: {}".format(type(item_ph), type(item_ws)))
                 if item_ph == ph:
                     logging.info("getting solubility: {} at ph: {}".format(item_ws, item_ph))
-                    return 1000.0 * item_ws
+                    return item_ws
             return "N/A"
             # return 1000.0 * self.results['intrinsicSolubility']
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
+
+    def convertLogToMGPERL(self, log_val, mass):
+        """
+        Converts WS values of Log into mg/L.
+        Units of mass in mol/g
+        """
+        logging.info("MASS FOR CONVERSION: {}".format(mass))
+        logging.info("LOG VAL FOR CONVERSION: {}".format(log_val))
+        return 1000 * float(mass) * 10**(log_val)
 
 
 
