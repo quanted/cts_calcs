@@ -44,7 +44,7 @@ def request_manager(request):
 	node = request.POST.get('node')
 	mass = request.POST.get('mass')  # for water solubility
 	run_type = request.POST.get('run_type')
-    workflow = request.POST.get('workflow')
+	workflow = request.POST.get('workflow')
 
 	if calc_data:
 		calc = "test"
