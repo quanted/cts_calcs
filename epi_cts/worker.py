@@ -34,6 +34,7 @@ def request_manager(request):
     sessionid = request.POST.get('sessionid')
     node = request.POST.get('node')
     run_type = request.POST.get('run_type')
+    workflow = request.POST.get('workflow')
 
     try:
         props = request.POST.get("props[]")
@@ -87,11 +88,13 @@ def request_manager(request):
             "calc": "epi",
             "prop": prop,
             'node': node,
-            'request_post': request.POST
+            'request_post': request.POST,
+            'run_type': run_type,
+            'workflow': workflow
         }
 
-        if run_type:
-            data_obj['run_type'] = run_type
+        # if run_type:
+        #     data_obj['run_type'] = run_type
 
         try:
             response = calcObj.makeDataRequest(filtered_smiles, calc, prop) # make call for data!

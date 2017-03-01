@@ -43,6 +43,8 @@ def request_manager(request):
 	sessionid = request.POST.get('sessionid')
 	node = request.POST.get('node')
 	mass = request.POST.get('mass')  # for water solubility
+	run_type = request.POST.get('run_type')
+    workflow = request.POST.get('workflow')
 
 	if calc_data:
 		calc = "test"
@@ -51,6 +53,8 @@ def request_manager(request):
 	postData = {
 		"chemical": chemical,
 		"calc": calc,
+		'run_type': run_type,
+		'workflow': workflow,
 		# "prop": prop
 		# "props": props
 	}
@@ -76,7 +80,9 @@ def request_manager(request):
 			'calc': calc,
 			'prop':prop,
 			'node': node,
-			'request_post': request.POST
+			'request_post': request.POST,
+			'run_type': run_type,
+			'workflow': workflow,
 		}
 
 		try:

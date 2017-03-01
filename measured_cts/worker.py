@@ -37,7 +37,9 @@ def request_manager(request):
 		"chemical": chemical,
 		"calc": calc,
 		"props": props,
-	    'node': node
+	    'node': node,
+	    'run_type': run_type,
+		'workflow': workflow,
 	}
 
 	logging.info("Measured receiving SMILES: {}".format(chemical))
@@ -70,7 +72,9 @@ def request_manager(request):
 			data_obj.update({
 				'node': node, 
 				'request_post': request.POST,
-				'chemical': chemical
+				'chemical': chemical,
+				'run_type': run_type,
+				'workflow': workflow,
 			})
 
 			# push one result at a time if node/redis:
@@ -87,6 +91,8 @@ def request_manager(request):
 				'node': node,
 				'request_post': request.POST,
 				'chemical': chemical,
+				'run_type': run_type,
+				'workflow': workflow,
 			}
 
 			redis_conn.publish(sessionid, json.dumps(data_obj))

@@ -29,6 +29,7 @@ def request_manager(request):
     node = request.POST.get('node')
     prop = request.POST.get('prop')
     run_type = request.POST.get('run_type')
+    workflow = request.POST.get('workflow')
 
     # logging.info("Incoming data to SPARC: {}, {}, {} (calc, props, chemical)".format(calc, props, structure))
 
@@ -63,7 +64,9 @@ def request_manager(request):
         # 'prop': prop,
         'node': node,
         'chemical': structure,
-        'request_post': request.POST
+        'request_post': request.POST,
+        'run_type': run_type,
+        'workflow': workflow
     }
 
     if run_type == 'rest':
@@ -75,7 +78,7 @@ def request_manager(request):
             response = calcObj.makeCallForPka() # response as d ict returned..
             pka_data = calcObj.getPkaResults(response)
             sparc_response.update({'data': pka_data, 'prop': 'ion_con'})
-            logging.info("response: {}".format(sparc_response))
+            logging.info("ion_con response: {}".format(sparc_response))
             result_json = json.dumps(sparc_response)
             redis_conn.publish(sessionid, result_json)
 
@@ -83,7 +86,7 @@ def request_manager(request):
             ph = request.POST.get('ph') # get PH for logD calculation..
             response = calcObj.makeCallForLogD() # response as dict returned..
             sparc_response.update({'data': calcObj.getLogDForPH(response, ph), 'prop': 'kow_wph'})
-            logging.info("response: {}".format(sparc_response))
+            logging.info("kow_wph response: {}".format(sparc_response))
             result_json = json.dumps(sparc_response)
             redis_conn.publish(sessionid, result_json)
 
@@ -91,10 +94,16 @@ def request_manager(request):
         logging.info("MULTI RESPONSE: {}".format(multi_response))
         if 'calculationResults' in multi_response:
             multi_response = calcObj.parseMultiPropResponse(multi_response['calculationResults'])
+            logging.info("Parsed Multi Response: {}".format(multi_response))
             for prop_obj in multi_response:
-                if prop_obj['prop'] in props and prop_obj != 'ion_con' and prop_obj != 'kow_wph':
-                    prop_obj.update({'node': node, 'chemical': structure, 'request_post': request.POST})
-                    logging.info("response: {}".format(prop_obj))
+                logging.info("PROP OBJECT: {}".format(prop_obj))
+                logging.info("requested props: {}".format(props))
+                logging.info("prop in props: {}".format(prop_obj['prop'] in props))
+                logging.info("prop: {}".format(prop_obj['prop']))
+                if prop_obj['prop'] in props and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
+                    prop_obj.update({'node': node, 'chemical': structure, 'request_post': request.POST, 'workflow': workflow, 'run_type': run_type})
+                    # prop_obj.update(sparc_response)
+                    logging.info("multiprop response: {}".format(prop_obj))
                     result_json = json.dumps(prop_obj) 
                     redis_conn.publish(sessionid, result_json)
 

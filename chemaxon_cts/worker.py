@@ -163,11 +163,11 @@ def request_manager(request):
         redis_conn.publish(sessionid, result_json)
 
     else:
-        getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, props, session, request_post, mass)
+        getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, workflow, props, session, request_post, mass)
 
 
 
-def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, props, session, request_post=None, mass=None):
+def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, workflow, props, session, request_post=None, mass=None):
 
     postData = {
         'calc': calc,
@@ -186,11 +186,13 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
                 'calc': calc,
                 'prop':prop,
                 'node': node,
-                'chemical': chemical
+                'chemical': chemical,
+                'run_type': run_type,
+                'workflow': workflow
             }
 
-            if run_type:
-                data_obj.update({'run_type': run_type})
+            # if run_type:
+            #     data_obj.update({'run_type': run_type})
 
             try:
 
@@ -205,7 +207,9 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
                             'prop': prop,
                             'chemical': chemical,
                             'node': node,
-                            'request_post': request_post
+                            'request_post': request_post,
+                            'run_type': run_type,
+                            'workflow': workflow
                         })
 
                         results = getJchemPropData(chemical, prop, ph, method, sessionid, node, session)
