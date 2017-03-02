@@ -29,6 +29,7 @@ def request_manager(request):
 	sessionid = request.POST.get('sessionid')
 	node = request.POST.get('node')
 	run_type = request.POST.get('run_type')
+	workflow = request.POST.get('workflow')
 	prop = request.POST.get('prop')
 
 	logging.info("Incoming data to Measured: {}, {}, {} (calc, props, chemical)".format(calc, props, chemical))
