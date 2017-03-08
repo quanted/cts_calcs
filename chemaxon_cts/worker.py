@@ -1,16 +1,28 @@
+# from __future__ import absolute_import
 from django.http import HttpResponse, HttpRequest
 import requests
-import jchem_rest
+import jchem_rest  # __future__ import importerror for this...
+# from cts_app.cts_calcs.chemaxon_cts import jchem_rest
 import logging
 import json
 import redis
-from jchem_calculator import JchemProperty
+import jchem_calculator as JchemProperty
+# from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty
 import os
+
+logging.warning("chemaxon worker importing data_walks...")
+
+from cts_app import cts_calcs
+logging.warning("cts_calcs dir: {}".format(dir(cts_calcs)))
+
+# from .cts_api import cts_calcs
 
 # potential fix for cts_celery and cts_app using cts_calcs and how they import
 try:
+    logging.warning("trying cts_api.cts_calcs data_walks import...")
     from cts_api.cts_calcs import data_walks
 except ImportError as e:
+    logging.warning("trying cts_calcs data_walks import...")
     from cts_calcs import data_walks
 
 

@@ -46,6 +46,21 @@ class Calculator(object):
             'data': None
         }
 
+        self.calc_request = {
+            'service': None,
+            'chemical': None,
+            'prop': None,
+            'sessionid': None,
+            'method': None,
+            'ph': 7.4,
+            'node': None,
+            'calc': None,
+            'run_type': None,
+            'workflow': None,
+            'request_post': None,
+            'mass': None,
+        }
+
     # self.postData =
 
     # @classmethod
@@ -74,6 +89,13 @@ class Calculator(object):
 
     def isValidSMILES(self, smiles):
         return smilesfilter.is_valid_smiles(smiles)
+
+    def process_ws_request(self, request):
+        """
+        Fills request dict from message.content object
+        """
+        for key,val in self.calc_request.items():
+            self.calc_request[key] = request.get(key)  # defaults to None
 
     # def getPostData(self, calc, prop, method=None):
     #     postData = {"smiles": ""}
