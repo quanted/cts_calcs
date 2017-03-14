@@ -6,14 +6,15 @@ import jchem_rest  # __future__ import importerror for this...
 import logging
 import json
 import redis
-import jchem_calculator as JchemProperty
+# import jchem_calculator as JchemProperty
 # from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty
+from jchem_calculator import JchemProperty
 import os
 
-logging.warning("chemaxon worker importing data_walks...")
+# logging.warning("chemaxon worker importing data_walks...")
 
-from cts_app import cts_calcs
-logging.warning("cts_calcs dir: {}".format(dir(cts_calcs)))
+# from cts_app import cts_calcs
+# logging.warning("cts_calcs dir: {}".format(dir(cts_calcs)))
 
 # from .cts_api import cts_calcs
 

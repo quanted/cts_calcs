@@ -6,10 +6,10 @@ import os
 
 from sparc_calculator import SparcCalc
 
-# from cts_calcs.test_cts import views as test_views
-# from cts_calcs.measured_cts import views as measured_views
-from cts_app.cts_calcs.test_cts import views as test_views
-from cts_app.cts_calcs.measured_cts import views as measured_views
+from cts_calcs.test_cts import views as test_views
+from cts_calcs.measured_cts import views as measured_views
+# from cts_app.cts_calcs.test_cts import views as test_views
+# from cts_app.cts_calcs.measured_cts import views as measured_views
 
 
 redis_hostname = os.environ.get('REDIS_HOSTNAME')
