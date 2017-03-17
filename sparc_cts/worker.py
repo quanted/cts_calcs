@@ -11,6 +11,11 @@ from cts_calcs.measured_cts import views as measured_views
 # from cts_app.cts_calcs.test_cts import views as test_views
 # from cts_app.cts_calcs.measured_cts import views as measured_views
 
+try:
+    from cts_app.cts_calcs.smilesfilter import parseSmilesByCalculator
+except ImportError as e:
+    from cts_calcs.smilesfilter import parseSmilesByCalculator
+
 
 redis_hostname = os.environ.get('REDIS_HOSTNAME')
 redis_conn = redis.StrictRedis(host=redis_hostname, port=6379, db=0)
@@ -42,7 +47,7 @@ def request_manager(request):
     }
 
     ############### Filtered SMILES stuff!!! ###########################
-    # filtered_smiles = parseSmilesByCalculator(structure, "sparc") # call smilesfilter
+    filtered_smiles = parseSmilesByCalculator(structure, "sparc") # call smilesfilter
     ###########################################################################################
 
     # Get melting point for sparc calculations.
@@ -50,7 +55,8 @@ def request_manager(request):
     melting_point = getMass(structure, sessionid)
     logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
 
-    calcObj = SparcCalc(structure, meltingpoint=melting_point)
+    # calcObj = SparcCalc(structure, meltingpoint=melting_point)
+    calcObj = SparcCalc(filtered_smiles, meltingpoint=melting_point)
 
     ion_con_response, kow_wph_response, multi_response = None, None, None
     sparc_results = []
