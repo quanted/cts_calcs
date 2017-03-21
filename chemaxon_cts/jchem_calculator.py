@@ -96,6 +96,7 @@ class JchemProperty(object):
                     self.results = json.loads(response.content)
                     logging.info("Response from jchem server: {}".format(response))
                     break
+                _retries += 1
             except Exception as e:
                 logging.warning("Exception in jchem_calculator.py: {}".format(e))
                 _retries += 1

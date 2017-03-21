@@ -153,7 +153,7 @@ def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None,
     else:
         result = None
 
-    # ADD METHOD KEY:VALUE IF LOGD OR LOGP...
+    # ADD DATA and METHOD KEY:VALUE IF LOGD OR LOGP...
     resultDict['data'] = result
     if method:
         resultDict['method'] = method
