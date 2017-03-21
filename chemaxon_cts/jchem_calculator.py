@@ -24,6 +24,8 @@ class JchemProperty(object):
         self.baseUrl = os.environ['CTS_JCHEM_SERVER']
         self.name = ''
         self.url = ''
+        self.max_retries = 3  # request retries if error
+        self.timeout = 10  # request timeout in seconds
         self.structure = ''  # cas, smiles, iupac, etc.
         self.postData = {}
         self.results = ''
@@ -79,22 +81,24 @@ class JchemProperty(object):
             "parameters": self.postData
         }
 
-        test = json.dumps(postData)
+        _valid_result = True  # for retry logic
+        _retries = 0
 
         if method:
             postData['parameters']['method'] = method
-        try:
-            response = requests.post(url, data=json.dumps(postData), headers=headers, timeout=60)
 
-            # async call to jchem, callback at asyncResult():
-            # future = session.post(url, data=json.dumps(postData), headers=headers, timeout=60, background_callback=asyncResult)
-            self.results = json.loads(response.content)
-            # return
-        except ValueError as ve:
-            logging.warning("> error decoding json: {}".format(ve))
-            raise ValueError("error decoding json")
-        except requests.exceptions.RequestException as err:
-            raise err
+        # retry data request to chemaxon server until max retries or a valid result is returned
+        while not _valid_result or _retries < self.max_retries:
+            try:
+                response = requests.post(url, data=json.dumps(postData), headers=headers, timeout=self.timeout)
+                _valid_result = self.validate_response(response)
+                if _valid_result:
+                    self.results = json.loads(response.content)
+                    logging.info("Response from jchem server: {}".format(response))
+                    break
+            except Exception as e:
+                logging.warning("Exception in jchem_calculator.py: {}".format(e))
+                _retries += 1
 
     def booleanize(self, value):
         """
@@ -108,6 +112,23 @@ class JchemProperty(object):
             return False
         if isinstance(value, bool):
             return value
+
+    def validate_response(self, response):
+        """
+        Validates jchem response.
+        Returns False if data is null, or any other
+        values that indicate an error
+        """
+        if response.status_code != 200:
+            logging.warning("jchem server response status not 200, but: {}".format(response.status_code))
+            # raise Exception("non 200 response from jchem: {}".format(response))
+            return False
+        
+        # successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
+        # json_obj = json.loads(response.content)
+
+        # TODO: verify if blank data, finding the source of the empty water sol values...
+        return True
 
     @classmethod
     def getPropObject(self, prop):

@@ -228,7 +228,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, work
                         results = getJchemPropData(chemical, prop, ph, method, sessionid, node, session)
                         new_data_obj.update({'data': results['data'], 'method': method})
 
-                        logging.info("chemaxon results: {}".format(results))
+                        logging.info("chemaxon results for {}: {}".format(chemical, results))
 
                         result_json = json.dumps(new_data_obj)
                         redis_conn.publish(sessionid, result_json)
@@ -237,7 +237,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, work
                     results = getJchemPropData(chemical, prop, ph, None, sessionid, node, session, mass)
                     data_obj.update({'data': results['data']})
 
-                    logging.info("chemaxon results: {}".format(results))
+                    logging.info("chemaxon results for {}: {}".format(chemical, results))
 
                     result_json = json.dumps(data_obj)
                     redis_conn.publish(sessionid, result_json)
