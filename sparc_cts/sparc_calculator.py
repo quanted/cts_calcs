@@ -1,18 +1,14 @@
 __author__ = 'KWOLFE'
 
-import sys
 import json
 import logging
 import requests
 import os
-import math
 
 try:
     from cts_app.cts_calcs.calculator import Calculator
-    from cts_app.cts_calcs.calculator import CTSChemicalProperties
 except ImportError as e:
     from cts_calcs.calculator import Calculator
-    from cts_calcs.calculator import CTSChemicalProperties
 
 
 ########################## SPARC physical properties calculator interface ###################

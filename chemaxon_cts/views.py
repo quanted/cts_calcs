@@ -4,7 +4,7 @@ import jchem_rest
 import logging
 import json
 import redis
-from jchem_calculator import JchemProperty
+from jchem_calculator import ChemaxonCalc
 from cts_app.cts_calcs import data_walks
 import os
 
@@ -82,6 +82,8 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
 
             data_obj.update({'request_post': request_post})
 
+            jchem_prop_obj = ChemaxonCalc.getPropObject(prop)
+
             if prop == 'kow_wph' or prop == 'kow_no_ph':
                 for method in methods:
                     
@@ -94,7 +96,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
                         'request_post': request_post
                     })
 
-                    results = getJchemPropData(chemical, prop, ph, method, sessionid, node, session)
+                    results = jchem_prop_obj.getJchemPropData(chemical, prop, ph, method, sessionid, node, session)
                     new_data_obj.update({'data': results['data'], 'method': method})
 
                     logging.info("chemaxon results: {}".format(results))
@@ -103,7 +105,7 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
                     return HttpResponse(result_json, content_type='application/json')
 
             else:
-                results = getJchemPropData(chemical, prop, ph, None, sessionid, node, session)
+                results = jchem_prop_obj.getJchemPropData(chemical, prop, ph, None, sessionid, node, session)
                 data_obj.update({'data': results['data']})
 
                 logging.info("chemaxon results: {}".format(results))
@@ -120,42 +122,42 @@ def getPchemPropData(chemical, sessionid, method, ph, node, calc, run_type, prop
             return HttpResponse(json.dumps(data_obj), content_type='application/json')
 
 
-def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None, node=None, session=None):
-    """
-    Calls jchem web services from chemaxon and
-    wraps data in a CTS data object (keys: calc, prop, method, data)
-    """
+# def getJchemPropData(chemical, prop, phForLogD=7.0, method=None, sessionid=None, node=None, session=None):
+#     """
+#     Calls jchem web services from chemaxon and
+#     wraps data in a CTS data object (keys: calc, prop, method, data)
+#     """
 
-    resultDict = {"calc": "chemaxon", "prop": prop}
+#     resultDict = {"calc": "chemaxon", "prop": prop}
 
-    result = ""
-    if prop == 'water_sol':
-        propObj = JchemProperty.getPropObject('solubility')
-        propObj.makeDataRequest(chemical, None, session)
-        result = propObj.getIntrinsicSolubility()
-    elif prop == 'ion_con':
-        propObj = JchemProperty.getPropObject('pKa')
-        propObj.makeDataRequest(chemical, None, session)
+#     result = ""
+#     if prop == 'water_sol':
+#         propObj = ChemaxonCalc.getPropObject('solubility')
+#         propObj.makeDataRequest(chemical, None, session)
+#         result = propObj.getIntrinsicSolubility()
+#     elif prop == 'ion_con':
+#         propObj = ChemaxonCalc.getPropObject('pKa')
+#         propObj.makeDataRequest(chemical, None, session)
 
-        pkas = propObj.getMostAcidicPka() + propObj.getMostBasicPka()
-        pkas.sort()
+#         pkas = propObj.getMostAcidicPka() + propObj.getMostBasicPka()
+#         pkas.sort()
 
-        result = {'pKa': pkas}
-        # result = {'pKa': propObj.getMostAcidicPka(), 'pKb': propObj.getMostBasicPka()}
-    elif prop == 'kow_no_ph':
-        propObj = JchemProperty.getPropObject('logP')
-        propObj.makeDataRequest(chemical, method, session)
-        result = propObj.getLogP()
-    elif prop == 'kow_wph':
-        propObj = JchemProperty.getPropObject('logD')
-        propObj.makeDataRequest(chemical, method, session)
-        result = propObj.getLogD(phForLogD)
-    else:
-        result = None
+#         result = {'pKa': pkas}
+#         # result = {'pKa': propObj.getMostAcidicPka(), 'pKb': propObj.getMostBasicPka()}
+#     elif prop == 'kow_no_ph':
+#         propObj = ChemaxonCalc.getPropObject('logP')
+#         propObj.makeDataRequest(chemical, method, session)
+#         result = propObj.getLogP()
+#     elif prop == 'kow_wph':
+#         propObj = ChemaxonCalc.getPropObject('logD')
+#         propObj.makeDataRequest(chemical, method, session)
+#         result = propObj.getLogD(phForLogD)
+#     else:
+#         result = None
 
-    # ADD DATA and METHOD KEY:VALUE IF LOGD OR LOGP...
-    resultDict['data'] = result
-    if method:
-        resultDict['method'] = method
+#     # ADD DATA and METHOD KEY:VALUE IF LOGD OR LOGP...
+#     resultDict['data'] = result
+#     if method:
+#         resultDict['method'] = method
 
-    return resultDict
+#     return resultDict

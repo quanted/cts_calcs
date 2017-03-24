@@ -4,11 +4,11 @@ import requests
 import logging
 import json
 try:
-    from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty as JProp
+    # from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import ChemaxonCalc as JProp
     from cts_app.cts_calcs.chemaxon_cts import jchem_rest
     logging.warning("smilesfilter.py -- using cts_app.cts_calcs importing...")
 except ImportError as e:
-    from cts_calcs.chemaxon_cts.jchem_calculator import JchemProperty as JProp
+    # from cts_calcs.chemaxon_cts.jchem_calculator import ChemaxonCalc as JProp
     from cts_calcs.chemaxon_cts import jchem_rest
     logging.warning("smilesfilter.py -- using cts_calcs. importing...")
 
@@ -148,5 +148,21 @@ def parseSmilesByCalculator(structure, calculator):
         except Exception as e:
             logging.warning("!!! Error in parseSmilesByCalculator() {} !!!".format(e))
             raise e
+
+    # 4. Check for metals and stuff (square brackets):
+    if calculator == 'epi' or calculator == 'measured':
+        if '[' in filtered_smiles or ']' in filtered_smiles:
+            # bubble up to calc for handling error
+            raise Exception("{} cannot process metals...".format(calculator))
+            # logging.warning("EPI ignoring request due to brackets in SMILES..")
+            # postData.update({'data': "EPI Suite cannot process charged species or metals (e.g., [S+], [c+])"})
+            # if redis_conn and sessionid:
+            #     for prop in props:
+            #         postData['prop'] = prop
+            #         postData['node'] = node
+            #         if run_type:
+            #             postData['run_type'] = run_type
+            #         redis_conn.publish(sessionid, json.dumps(postData))
+            #     return
 
     return filtered_smiles

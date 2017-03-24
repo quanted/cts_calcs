@@ -29,43 +29,36 @@ class EpiCalc(Calculator):
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
         self.propMap = {
             'melting_point': {
-                # 'urlKey': 'meltingPtDegCEstimated',
                 'urlKey': 'meltingPoint',
                 'propKey': 'Melting Pt (deg C)(estimated)',
                 'resultKey': 'meltingPtDegCEstimated'
             },
             'boiling_point': {
-                # 'urlKey': 'boilingPtDegCEstimated',,
                 'urlKey': 'boilingPoint',
                 'propKey': '',
                 'resultKey': 'boilingPtDegCEstimated'
             },
             'water_sol': {
-                # 'urlKey': 'waterSolMgLEstimated',,
                 'urlKey': 'waterSolubility',
                 'propKey': '',
                 'resultKey': 'waterSolMgLEstimated'
             },
             'vapor_press': {
-                # 'urlKey': 'vaporPressMmHgEstimated',,
                 'urlKey': 'vaporPressure',
                 'propKey': '',
                 'resultKey': 'vaporPressMmHgEstimated'
             },
             'henrys_law_con': {
-                # 'urlKey': 'henryLcBondAtmM3Mole',,
                 'urlKey': 'henrysLawConstant',
                 'propKey': '',
                 'resultKey': 'henryLcBondAtmM3Mole'
             },
             'kow_no_ph': {
-                # 'urlKey': 'logKowEstimate',,
                 'urlKey': 'logKow',
                 'propKey': '',
                 'resultKey': 'logKowEstimate'
             },
             'koc': {
-                # 'urlKey': 'soilAdsorptionCoefKoc',,
                 'urlKey': 'soilAdsorptionCoefficientKoc',
                 'propKey': '',
                 'resultKey': 'soilAdsorptionCoefKoc'
@@ -73,14 +66,10 @@ class EpiCalc(Calculator):
         }
 
     def getPostData(self, calc, prop, method=None):
-        # return {"smiles": ""} # the old way..
-        # return {"identifiers":{"SMILES": ""}} # the new way..
         return {'structure': ""}
 
     def makeDataRequest(self, structure, calc, prop, method=None):
         post = self.getPostData(calc, prop)
-        # post['smiles'] = structure # the old way..
-        # post['identifiers']['SMILES'] = structure # set smiles, the new way..
         post['structure'] = structure
 
         url = self.baseUrl + self.getUrl(prop)
