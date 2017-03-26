@@ -105,9 +105,9 @@ class ChemaxonCalc(Calculator):
 
         logging.info("Incoming request to ChemAxon's data_request_handler: {}".format(request_dict))
 
-        filtered_smiles = ''
+        _filtered_smiles = ''
         try:
-            filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+            _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
             # _request_dict['chemical'] = smilesfilter.parseSmilesByCalculator(_request_dict['chemical'], _request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
@@ -116,14 +116,14 @@ class ChemaxonCalc(Calculator):
 
 
         logging.info("Original CTS filtered SMILES: {}".format(request_dict['chemical']))
-        logging.info("SMILES after filtering for ChemAxon calculator: {}".format(filtered_smiles))
+        logging.info("SMILES after filtering for ChemAxon calculator: {}".format(_filtered_smiles))
 
-        # request_dict['chemical'] = filtered_smiles  # use calc-filtered smiles for cts-filtered for all calcs in output????
+        # request_dict['chemical'] = _filtered_smiles  # use calc-filtered smiles for cts-filtered for all calcs in output????
 
         if request_dict['service'] == 'getTransProducts':
             # getTransProducts chemaxon service via ws..
             request = {
-                'structure': filtered_smiles,
+                'structure': _filtered_smiles,
                 'generationLimit': 1,  # make sure to get this from front end
                 'populationLimit': 0,
                 'likelyLimit': 0.001,
@@ -158,7 +158,7 @@ class ChemaxonCalc(Calculator):
                 'calc': "chemaxon", 
                 'prop': "speciation_results",
                 'node': request_dict['node'],
-                'chemical': request_dict['chemical'],
+                'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
                 'run_type': 'batch'
             }
@@ -196,8 +196,8 @@ class ChemaxonCalc(Calculator):
             data_obj = {
                 'calc': "chemaxon", 
                 'prop': "speciation_results",
-                'node': node,
-                'chemical': chemical,
+                'node': request_dict['node'],
+                'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
                 'run_type': 'batch'
             }
