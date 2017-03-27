@@ -301,7 +301,7 @@ class ChemaxonCalc(Calculator):
             post_data['parameters']['method'] = method
 
 
-        _valid_result = True  # for retry logic
+        _valid_result = False  # for retry logic
         _retries = 0
         while not _valid_result and _retries < self.max_retries:
             # retry data request to chemaxon server until max retries or a valid result is returned
