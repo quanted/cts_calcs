@@ -246,8 +246,7 @@ class Stereoisomer(object):
         self.name = 'stereoisomer'
         self.url = '/webservices/rest-v0/util/calculate/stereoisomer'
         self.postData = {
-            "stereoisomerismType"
-            # "stereobjecte": "TETRAHEDRAL",
+            "stereoisomerismType": "TETRAHEDRAL",
             "maxStructureCount": 100,
             "protectDoubleBondStereo": False,
             "protectTetrahedralStereo": False,
@@ -256,6 +255,7 @@ class Stereoisomer(object):
 
     def getStereoisomers(self):
         stereoList = []
+        logging.warning("stereo results: {}".format(self.results))
         try:
             for stereo in self.results['result']:
                 stereoDict = {'image': stereo['image']['image'], 'key': 'stereo'}
