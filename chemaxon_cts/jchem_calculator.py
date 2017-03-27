@@ -200,7 +200,7 @@ class ChemaxonCalc(object):
         values that indicate an error
         """
         if response.status_code != 200:
-            logging.warning("jchem server response status not 200, but: {}".format(response.status_code))
+            logging.warning("cts_celery jchem_calculator -- jchem server response status not 200, but: {}".format(response.status_code))
             # raise Exception("non 200 response from jchem: {}".format(response))
             return False
         

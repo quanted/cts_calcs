@@ -180,6 +180,10 @@ class ChemaxonCalc(Calculator):
                 if key in _spec_inputs:
                     _model_params.update({key: _spec_inputs[key]})
 
+            _model_params.update({'smiles': _filtered_smiles, 'run_type': 'single'})
+
+            logging.warning("MAKING REQUEST TO SPECIATION: {}".format(_model_params))
+
             # TODO: CTS API URL has env var somewhere...
             # chemspec_obj = chemspec_output.chemspecOutputPage(request)
             # speciation_response = requests.post('http://localhost:8000/cts/rest/speciation/run', data=json.dumps(_model_params))
@@ -189,9 +193,14 @@ class ChemaxonCalc(Calculator):
                                     allow_redirects=True,
                                     verify=False)
 
+            
+
+            logging.warning("Speciation Response: {}".format(speciation_response.content))
+            logging.warning("Response Type: {}".format(type(speciation_response.content)))
+
             speciation_data = json.loads(speciation_response.content)
 
-            logging.warning("SPECIATION DATA RECEIVED: {}".format(speciation_data))
+            # logging.warning("SPECIATION DATA RECEIVED: {}".format(speciation_data))
 
             data_obj = {
                 'calc': "chemaxon", 
@@ -288,18 +297,14 @@ class ChemaxonCalc(Calculator):
         logging.info("JCHEM REQUEST URL: {}".format(url))
         logging.info("JCHEM REQUEST POST: {}".format(post_data))
 
-        _valid_result = True  # for retry logic
-        _retries = 0
-
-        logging.info("METHOD (make_data_request): {}".format(method))
-
         if method:
             post_data['parameters']['method'] = method
 
-        logging.info("After method post_data (make_data_request): {}".format(post_data))
 
-        # retry data request to chemaxon server until max retries or a valid result is returned
-        while not _valid_result or _retries < self.max_retries:
+        _valid_result = True  # for retry logic
+        _retries = 0
+        while not _valid_result and _retries < self.max_retries:
+            # retry data request to chemaxon server until max retries or a valid result is returned
             try:
                 response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
                 _valid_result = self.validate_response(response)
@@ -312,6 +317,8 @@ class ChemaxonCalc(Calculator):
             except Exception as e:
                 logging.warning("Exception in jchem_calculator.py: {}".format(e))
                 _retries += 1
+
+            logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
 
     def booleanize(self, value):
         """
@@ -333,7 +340,7 @@ class ChemaxonCalc(Calculator):
         values that indicate an error
         """
         if response.status_code != 200:
-            logging.warning("jchem server response status not 200, but: {}".format(response.status_code))
+            logging.warning("cts_celery calculator_chemaxon -- jchem server response status not 200, but: {}".format(response.status_code))
             # raise Exception("non 200 response from jchem: {}".format(response))
             return False
         
