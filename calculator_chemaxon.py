@@ -113,6 +113,7 @@ class ChemaxonCalc(Calculator):
             logging.warning("Error filtering SMILES: {}".format(err))
             request_dict.update({'data': 'Cannot filter SMILES for EPI data'})
             self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
+            return
 
 
         logging.info("Original CTS filtered SMILES: {}".format(request_dict['chemical']))
@@ -348,6 +349,7 @@ class ChemaxonCalc(Calculator):
         # json_obj = json.loads(response.content)
 
         # TODO: verify if blank data, finding the source of the empty water sol values...
+        
         return True
 
     @classmethod

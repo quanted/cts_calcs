@@ -114,16 +114,17 @@ class SparcCalc(Calculator):
             # _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['smiles'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
-            request_dict.update({'data': 'Cannot filter SMILES for EPI data'})
+            request_dict.update({'data': 'Cannot filter SMILES'})
             self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
+            return
 
 
         self.smiles = _filtered_smiles  # set smiles attribute to filtered smiles
 
         # Get melting point for sparc calculations.
         # Try Measured, then TEST..although it'll be slow
-        # melting_point = self.getMass(_filtered_smiles, request_dict['sessionid'])
-        melting_point = 0.0  # TODO: add getMass back after Measured and TEST refactor
+        # melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
+        melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
         logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
 
         # calcObj = SparcCalc(_filtered_smiles, meltingpoint=melting_point)
@@ -402,7 +403,7 @@ class SparcCalc(Calculator):
             logging.warning("Error getting logD at PH from SPARC: {}".format(e))
             raise
 
-    # def getMass(self, structure, sessionid):
+    # def getMeltingPoint(self, structure, sessionid):
     #     """
     #     Gets mass of structure from Measured, tries
     #     TEST if not available in Measured. Returns 0.0
