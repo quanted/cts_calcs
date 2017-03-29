@@ -108,7 +108,7 @@ class ChemaxonCalc(Calculator):
         _filtered_smiles = ''
         try:
             _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-            # _request_dict['chemical'] = smilesfilter.parseSmilesByCalculator(_request_dict['chemical'], _request_dict['calc']) # call smilesfilter
+            # _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['smiles'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             request_dict.update({'data': 'Cannot filter SMILES for EPI data'})
@@ -141,7 +141,7 @@ class ChemaxonCalc(Calculator):
                 'prop': "products",
                 'node': request_dict['node'],
                 'data': json.loads(results),
-                'chemical': filtered_smiles,
+                'chemical': _filtered_smiles,
                 'workflow': 'gentrans',
                 'run_type': 'batch'
             }

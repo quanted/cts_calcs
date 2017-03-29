@@ -3,6 +3,7 @@ import logging
 import requests
 import os
 from calculator import Calculator
+import smilesfilter
 
 
 class SparcCalc(Calculator):
@@ -18,13 +19,7 @@ class SparcCalc(Calculator):
         self.pressure = pressure
         self.meltingpoint = meltingpoint
         self.temperature = temperature
-        self.propMap = {
-            "water_sol" : "SOLUBILITY",
-            "vapor_press" : "VAPOR_PRESSURE",
-            "henrys_law_con" : "HENRYS_CONSTANT",
-            "mol_diss" : "DIFFUSION",
-            "boiling_point": "BOILING_POINT"
-        }
+        self.props = ["water_sol", "vapor_press", "henrys_law_con", "mol_diss", "boiling_point"]
         self.sparc_props = {
             "SOLUBILITY": "water_sol",
             "VAPOR_PRESSURE": "vapor_press",
@@ -111,127 +106,172 @@ class SparcCalc(Calculator):
                 logging.info("request key {} not in request, using default value: {}".format(key, val))
                 request_dict.update({key: val})
 
-        logging.info("Incoming request to ChemAxon's data_request_handler: {}".format(request_dict))
+        # logging.info("Incoming request to SPARC's data_request_handler: {}".format(request_dict))
 
         _filtered_smiles = ''
         try:
             _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+            # _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['smiles'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             request_dict.update({'data': 'Cannot filter SMILES for EPI data'})
             self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
 
 
+        self.smiles = _filtered_smiles  # set smiles attribute to filtered smiles
+
         # Get melting point for sparc calculations.
         # Try Measured, then TEST..although it'll be slow
-        melting_point = getMass(_filtered_smiles, request_dict['sessionid'])
+        # melting_point = self.getMass(_filtered_smiles, request_dict['sessionid'])
+        melting_point = 0.0  # TODO: add getMass back after Measured and TEST refactor
         logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
 
-        calcObj = SparcCalc(_filtered_smiles, meltingpoint=melting_point)
+        # calcObj = SparcCalc(_filtered_smiles, meltingpoint=melting_point)
         
-        multi_response = None
+        _multi_response = None
         sparc_results = []
 
-        # synchronous calls for ion_con, kow_wph, and the rest:
-        # don't need this loop, just do "if 'ion_con' in prop: make request"
 
-        logging.warning("sparc props: {}".format(props))
-
-        # sparc_response = {
-        #     'calc': 'sparc',
-        #     # 'prop': prop,
-        #     'node': node,
-        #     'chemical': structure,
-        #     'request_post': request.POST,
-        #     'run_type': run_type,
-        #     'workflow': workflow
-        # }
-
-        if run_type == 'rest':
-            props = [prop]
-
-
+        if request_dict['run_type'] == 'rest':
+            request_dict['props'] = [request_dict['prop']]
 
         _response_dict = {}
         for key in request_dict.keys():
             _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
 
         _response_dict.update({'request_post': request_dict})
-        _response_dict.update({'prop': prop})
-
-        logging.info("response dict: {}".format(_response_dict))
+        # logging.info("response dict: {}".format(_response_dict))
 
 
         try:
-            if 'ion_con' in props:
-                response = calcObj.makeCallForPka() # response as d ict returned..
-                pka_data = calcObj.getPkaResults(response)
+            if 'ion_con' in request_dict['props']:
+                response = self.makeCallForPka() # response as d ict returned..
+                pka_data = self.getPkaResults(response)
                 _response_dict.update({'data': pka_data, 'prop': 'ion_con'})
-                logging.info("ion_con response: {}".format(_response_dict))
+                # logging.info("ion_con response: {}".format(_response_dict))
                 result_json = json.dumps(_response_dict)
-                redis_conn.publish(request_dict['sessionid'], result_json)
+                self.redis_conn.publish(request_dict['sessionid'], result_json)
 
-            if 'kow_wph' in props:
-                ph = request.POST.get('ph') # get PH for logD calculation..
-                response = calcObj.makeCallForLogD() # response as dict returned..
-                _response_dict.update({'data': calcObj.getLogDForPH(response, ph), 'prop': 'kow_wph'})
-                logging.info("kow_wph response: {}".format(_response_dict))
+            if 'kow_wph' in request_dict['props']:
+                response = self.makeCallForLogD() # response as dict returned..
+                _response_dict.update({'data': self.getLogDForPH(response, request_dict['ph']), 'prop': 'kow_wph'})
+                # logging.info("kow_wph response: {}".format(_response_dict))
                 result_json = json.dumps(_response_dict)
-                redis_conn.publish(request_dict['sessionid'], result_json)
+                self.redis_conn.publish(request_dict['sessionid'], result_json)
 
-            multi_response = calcObj.makeDataRequest()
-            logging.info("MULTI RESPONSE: {}".format(multi_response))
-            if 'calculationResults' in multi_response:
-                multi_response = calcObj.parseMultiPropResponse(multi_response['calculationResults'])
-                logging.info("Parsed Multi Response: {}".format(multi_response))
-                for prop_obj in multi_response:
-                    logging.info("PROP OBJECT: {}".format(prop_obj))
-                    logging.info("requested props: {}".format(props))
-                    logging.info("prop in props: {}".format(prop_obj['prop'] in props))
-                    logging.info("prop: {}".format(prop_obj['prop']))
-                    if prop_obj['prop'] in props and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
-                        prop_obj.update({'node': node, 'chemical': structure, 'request_post': request.POST, 'workflow': workflow, 'run_type': run_type})
-                        # prop_obj.update(sparc_response)
-                        logging.info("multiprop response: {}".format(prop_obj))
-                        result_json = json.dumps(prop_obj) 
-                        redis_conn.publish(request_dict['sessionid'], result_json)
+            _post = self.get_sparc_query()
+            _url = self.base_url + self.multiproperty_url
+            _multi_response = self.makeDataRequest()
+
+            if 'calculationResults' in _multi_response:
+                _multi_response = self.parseMultiPropResponse(_multi_response['calculationResults'], request_dict)
+                # logging.info("Parsed Multi Response: {}".format(_multi_response))
+                for prop_obj in _multi_response:
+                    # logging.info("PROP OBJ: {}".format(prop_obj))
+                    if prop_obj['prop'] in request_dict['props'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
+                        _prop = prop_obj['prop']
+                        _data = prop_obj['data']
+                        prop_obj.update(_response_dict)
+                        prop_obj.update({'prop': _prop, 'data': _data})
+                        result_json = json.dumps(prop_obj)
+                        # logging.info("multi-prop response: {}".format(prop_obj))
+                        self.redis_conn.publish(request_dict['sessionid'], result_json)
 
         except Exception as err:
-            logging.warning("Exception occurred getting SPARC data: {}".format(err))
+            logging.warning("!!! Exception occurred getting SPARC data: {} !!!".format(err))
 
-            for prop in props:
+            for prop in request_dict['props']:
 
-                post_data.update({
+                _response_dict.update({
                     'data': "data request timed out",
-                    'prop': prop,
-                    'request_post': request.POST
+                    'prop': prop
                 })
 
-                redis_conn.publish(request_dict['sessionid'], json.dumps(post_data))
+                self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
 
 
     def makeDataRequest(self):
+        _post = self.get_sparc_query()
+        _url = self.base_url + self.multiproperty_url
 
-        post = self.get_sparc_query()
-        url = self.base_url + self.multiproperty_url
+        # logging.info("SPARC URL: {}".format(_url))
+        # logging.info("SPARC POST: {}".format(_post))
 
-        logging.info("SPARC URL: {}".format(url))
-        logging.info("SPARC POST: {}".format(post))
+        return self.request_logic(_url, _post)
 
+        # try:
+        #     response = requests.post(url, data=json.dumps(post), headers=self.headers, timeout=20)
+        #     self.results = json.loads(response.content)
+        # except requests.exceptions.ConnectionError as ce:
+        #     logging.info("connection exception: {}".format(ce))
+        #     raise
+        # except requests.exceptions.Timeout as te:
+        #     logging.info("timeout exception: {}".format(te))
+        #     raise
+        # else:
+        #     return self.results
+
+
+    def request_logic(self, url, post_data):
+        """
+        Handles retries and validation of responses
+        """
+
+        _valid_result = False  # for retry logic
+        _retries = 0
+        while not _valid_result and _retries < self.max_retries:
+            # retry data request to chemaxon server until max retries or a valid result is returned
+            try:
+                response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
+                _valid_result = self.validate_response(response)
+                if _valid_result:
+                    self.results = json.loads(response.content)
+                    break
+                _retries += 1
+            except Exception as e:
+                logging.warning("Exception in calculator_sparc.py: {}".format(e))
+                _retries += 1
+
+            logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
+        return self.results
+
+
+    def validate_response(self, response):
+        """
+        Validates sparc response.
+        Returns False if data is null, or any other
+        values that indicate an error
+        """
+        if response.status_code != 200:
+            logging.warning("sparc server response status: {}".format(response.status_code))
+            return False
+        
         try:
-            response = requests.post(url, data=json.dumps(post), headers=headers, timeout=20)
-            self.results = json.loads(response.content)
-        except requests.exceptions.ConnectionError as ce:
-            logging.info("connection exception: {}".format(ce))
-            raise
-        except requests.exceptions.Timeout as te:
-            logging.info("timeout exception: {}".format(te))
-            raise
-        else:
-            return self.results
+            response_obj = json.loads(response.content)
+        except Exception as e:
+            logging.warning("Could not convert response to json object, sparc validate_response: {}".format(e))
+            return False
+
+        response_type = response_obj.get('type')  # get SPARC property name
+
+        logging.info("Validating {} property".format(response_type))
+
+        # prop specific validation:
+        if response_type == 'LOGD':
+            # check 'plotCoordinates' key, should be list and not None
+            if not isinstance(response_obj.get('plotCoordinates'), list):
+                # retry if no 'plotCoordinates' key or 'plotCoordinates' is None
+                logging.warning("SPARC LOGD 'plotCoordinates' not list as expected...Retrying request...")
+                return False
+
+        # successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
+        # json_obj = json.loads(response.content)
+
+        # TODO: verify if blank data, finding the source of the empty water sol values...
+        return True
 
 
-    def parseMultiPropResponse(self, results):
+    def parseMultiPropResponse(self, results, request_dict):
         """
         Loops through data grabbing the results
         and building {calc, prop, data} objects
@@ -243,26 +283,46 @@ class SparcCalc(Calculator):
             raise Exception("(sparc) no results given to parse or not a list..")
 
         sparc_response = []
+        sparc_response_props = []  # list of multi response props to make sure all props made it
+        # logging.info("parsing results: {}".format(results))
         for prop_data in results:
+            # logging.info("PROP DATA: {}".format(prop_data))
             sparc_prop = prop_data['type']
-            if sparc_prop in self.sparc_props:
-                cts_prop = self.sparc_props[sparc_prop]
-                data = prop_data['result']
-                sparc_response.append({'calc': 'sparc', 'prop': cts_prop, 'data': data})
+            logging.info("sparc prop: {}".format(sparc_prop))
+            cts_prop_name = self.sparc_props.get(sparc_prop)
+            data = prop_data['result']
+            logging.info("cts prop name: {}".format(cts_prop_name))
+            if cts_prop_name:
+                data_obj = {'calc': 'sparc', 'prop': cts_prop_name, 'data': data}
+                logging.info("data obj: {}".format(data_obj))
+                sparc_response.append(data_obj)
+                sparc_response_props.append(cts_prop_name)
+                # logging.info("sparc response: {}".format(sparc_response))
 
+        # logging.info("sparc multi response props list: {}".format(sparc_response_props))
+        # logging.info("user request props list: {}".format(request_dict['props']))
+
+        for prop in request_dict['props']:
+            if not prop in sparc_response_props and prop != 'ion_con' and prop != 'kow_wph':
+                # if sparc response doesn't have user request prop from multi-response, PANIC!
+                logging.info("requested prop {} missing from sparc multi response...".format(prop))
+
+                # add data obj for missing prop with error message for user:
+                data_obj = {'calc': 'sparc', 'prop': prop, 'data': "prop not found"}
+                sparc_response.append(data_obj)
+
+        # logging.info("SPARC RESPONSE: {}".format(sparc_response))
         return sparc_response
 
 
     def makeCallForPka(self):
         """
-        Separate call for pKa. Not sure why but
-        what what I'm told it needs to be done 
-        separately for now
+        Separate call for SPARC pKa
         """
-        pka_url = "/sparc-integration/rest/calc/fullSpeciation"
-        url = self.base_url + pka_url
-        logging.info("URL: {}".format(url))
-        sparc_post = {
+        _pka_url = "/sparc-integration/rest/calc/fullSpeciation"
+        _url = self.base_url + _pka_url
+        logging.info("URL: {}".format(_url))
+        _sparc_post = {
             "type":"FULL_SPECIATION",
             "temperature":25.0,
             "minPh":0,
@@ -273,19 +333,9 @@ class SparcCalc(Calculator):
             "elimBase":[],
             "considerMethylAsAcid": True
         }
-        post_string = json.dumps(sparc_post)
-        logging.info("POST: {}".format(sparc_post))
-        logging.info("POST (string): {}".format(post_string))
-        try:
-            response = requests.post(url, data=post_string, headers=headers, timeout=20)
-            logging.info("response: {}".format(response.content))
-            cleaned_json = response.content.replace(" ", "") # remove whitespace precaution..
-            results = json.loads(cleaned_json)
-        except Exception as e:
-            logging.warning("SPARC PKA CALL ERROR: {}".format(e))
-            raise
-        else:
-            return results
+        _post_string = json.dumps(_sparc_post)
+
+        return self.request_logic(_url, _sparc_post)
 
 
     def getPkaResults(self, results):
@@ -312,9 +362,9 @@ class SparcCalc(Calculator):
         Seprate call for octanol/water partition
         coefficient with pH (logD?)
         """
-        logd_url = "/sparc-integration/rest/calc/logd"
-        url = self.base_url + logd_url
-        post = {
+        _logd_url = "/sparc-integration/rest/calc/logd"
+        _url = self.base_url + _logd_url
+        _post = {
            "type":"LOGD",
            "solvent": {
               "solvents": None,
@@ -328,15 +378,11 @@ class SparcCalc(Calculator):
            "ionic_strength": 0.0,
            "smiles": self.smiles
         }
-        try:
-            response = requests.post(url, data=json.dumps(post), headers=headers, timeout=20)
-            results = json.loads(response.content)
-            logging.info("{}".format(results))
-        except Exception as e:
-            logging.warning("SPARC LOGD CALL ERROR: {}".format(e))
-            raise
-        else:
-            return results
+
+        logd_results = self.request_logic(_url, _post)
+        # logging.info("LOGD RESULTs: {}".format(logd_results))
+        return logd_results
+
 
     def getLogDForPH(self, results, ph=7.0):
         """
@@ -344,13 +390,64 @@ class SparcCalc(Calculator):
         logD response data
         TODO: add ph functionality
         """
-        logging.info("getting sparc logd at ph: {}".format(ph))
+        # logging.info("getting sparc logd at ph: {}".format(ph))
         try:
             plot_data = results['plotCoordinates'] # list of [x,y]..
-            logging.info("plot data: {}".format(plot_data))
+            # logging.info("plot data: {}".format(plot_data))
             for xypair in plot_data:
                 if xypair[0] == float(ph):
                     return xypair[1]
         except Exception as e:
+            logging.warning("LOGD ERROR RESULTS: {}".format(results))
             logging.warning("Error getting logD at PH from SPARC: {}".format(e))
             raise
+
+    # def getMass(self, structure, sessionid):
+    #     """
+    #     Gets mass of structure from Measured, tries
+    #     TEST if not available in Measured. Returns 0.0
+    #     if neither have mp value.
+    #     """
+    #     melting_point_request = {
+    #         'calc': "measured",  # should prob be measured
+    #         'props': ['melting_point'],
+    #         'chemical': structure,
+    #         'sessionid': sessionid
+    #     }
+    #     # todo: catch measured errors, then try epi melting point..
+    #     request = NotDjangoRequest(melting_point_request)
+    #     melting_point_response = measured_views.request_manager(request)
+
+    #     # # convert to python dict
+    #     try:
+    #         melting_point = json.loads(melting_point_response.content)['data']
+    #     except Exception as e:
+    #         logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+    #         melting_point = 0.0
+
+    #     logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
+    #     logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
+
+    #     if not isinstance(melting_point, float):
+    #         logging.warning("Trying to get MP from TEST..")
+    #         try:
+    #             melting_point_request['calc'] = 'test'
+    #             request = NotDjangoRequest(melting_point_request)
+    #             test_melting_point_response = test_views.request_manager(request)
+    #             logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
+    #             melting_point = json.loads(test_melting_point_response.content)[0]['data']
+    #             logging.warning("TEST MP VALUE: {}".format(melting_point))
+    #         except Exception as e:
+    #             logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+    #             melting_point = 0.0
+
+    #         logging.warning("TEST MP TYPE: {}:".format(type(melting_point)))
+
+    #         if not isinstance(melting_point, float):
+    #             melting_point = 0.0
+    #     # else:
+    #     #     melting_point = melting_point_obj['data']
+
+    #     logging.warning("MELTING POINT VALUE: {}".format(melting_point))
+
+    #     return melting_point

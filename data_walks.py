@@ -1,7 +1,11 @@
 import logging
 import json
+import requests
+import os
 from django.http import HttpRequest
 from django.template import Context, Template, defaultfilters
+from cts_calcs.calculator import Calculator
+import smilesfilter
 try:
     from cts_app.cts_calcs.chemaxon_cts import jchem_rest
 except ImportError as e:
@@ -55,8 +59,10 @@ def traverse(root, gen_limit):
         newDict['data'].update(popupBuilder({"smiles": parent, "generation": "0"}, metabolite_keys, "{}".format(metID),
                                             "Metabolite Information"))
 
-        request_obj = {'chemical': parent}
-        mol_info = jchem_rest.getChemDetails(request_obj)
+        # request_obj = {'chemical': parent}  # chemical info request object
+        # mol_info = jchem_rest.getChemDetails(request_obj)
+        filtered_smiles = smilesfilter.filterSMILES(parent)
+        mol_info = jchem_rest.getChemDetails({'chemical': filtered_smiles})
         
         if 'data' in mol_info:
             for key, val in mol_info['data'][0].items():
@@ -76,8 +82,10 @@ def traverse(root, gen_limit):
             # newDict.update({"id": metID, "name": nodeWrapper(root['smiles'], None, 100, 28), "data": {}, "children": []})
             newDict['data'].update(popupBuilder(root, metabolite_keys, "{}".format(metID), "Metabolite Information"))
 
-            request_obj = {'chemical': root['smiles']}
-            mol_info = jchem_rest.getChemDetails(request_obj)
+            # request_obj = {'chemical': root['smiles']}
+            # mol_info = jchem_rest.getChemDetails(request_obj)
+            filtered_smiles = smilesfilter.filterSMILES(root['smiles'])
+            mol_info = jchem_rest.getChemDetails({'chemical': filtered_smiles})
             
             if 'data' in mol_info:
                 for key, val in mol_info['data'][0].items():

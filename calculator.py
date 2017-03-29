@@ -54,7 +54,7 @@ class Calculator(object):
             'kow'
         ]
 
-        # chemical information dict
+        # cts chemical information dict
         self.chemical_information = {
             'chemical': None,  # user-entered chemical (as-entered or drawn)
             'orig_smiles': None,  # original conversion to SMILES
@@ -64,6 +64,12 @@ class Calculator(object):
             'mass': None,
             'structureData': None,  # drawn chemical structure format for MarvinSketch
             'exactMass': None,
+        }
+
+        # cts chemical information request
+        self.chemical_information_request = {
+            'chemical': None,
+            'get_structure_data': False,
         }
 
         # cts api data object for p-chem data request
