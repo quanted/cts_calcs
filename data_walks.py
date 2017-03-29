@@ -4,7 +4,6 @@ import requests
 import os
 from django.http import HttpRequest
 from django.template import Context, Template, defaultfilters
-from cts_calcs.calculator import Calculator
 import smilesfilter
 try:
     from cts_app.cts_calcs.chemaxon_cts import jchem_rest
