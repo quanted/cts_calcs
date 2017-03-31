@@ -1,8 +1,5 @@
 import logging
 import json
-import requests
-import os
-from django.http import HttpRequest
 from django.template import Context, Template, defaultfilters
 import smilesfilter
 import jchem_rest
@@ -252,69 +249,3 @@ def popupBuilder(root, paramKeys, molKey=None, header=None, isProduct=False):
     dataProps["html"] = html
 
     return dataProps
-
-
-htmlList = []
-def buildTableValues(nodeList, checkedCalcsAndProps, mol_info, nRound):
-    """
-    Builds list of dictionary items with
-    nodes' key:values for pdf
-    """
-    for node in nodeList:
-        htmlListItem = {}
-        for key in mol_info:
-            # molecular information conditional
-            if key in node:
-                htmlListItem.update({key: roundValue(node[key], nRound)})
-            # elif 'data' in node and key in node['data']:
-            #     htmlListItem.update({key: roundValue(node['data'][key], nRound)})
-            # elif 'data' in node and 'pchemprops' in node['data']:
-            #     for prop in node['data']['pchemprops']:
-            #         if key in prop['prop']:
-            #             htmlListItem.update({key: roundValue(prop['data'], nRound)})
-            else:
-                htmlListItem.update({key: ''})
-
-
-    for calc, props in checkedCalcsAndProps.items():
-        for prop in props:
-            for node in nodeList:
-                for chem_data in node['pchemprops']:
-                    if prop == 'ion_con':
-                        j = 1
-                        for pka in chem_data['data']['pKa']:
-                            header = "pka_{} ({})".format(j, calc)
-                            htmlListItem.update({header: pka})
-                            j += 1
-                    else:
-                        
-                        if 'method' in chem_data:
-                            header = "{} ({}, {})".format(prop, calc, chem_data['method'])
-                        else:
-                            header = "{} ({})".format(prop, calc)
-
-                        htmlListItem.update({header: chem_data['data']})
-
-        htmlList.append(htmlListItem)
-    logging.info("TABLE VALUES FOR PDF: {}".format(htmlList))
-    return htmlList
-
-
-def roundValue(val, n):
-    try:
-        val = float(val)
-        return round(val, n)
-    except ValueError:
-        return val  # not num, don't round
-    except TypeError:
-        # accounting for if val is not string or number:
-        if isinstance(val, dict):
-            # assuming pKa dict
-            roundedDict = {}
-            for key, values in val.items():
-                if isinstance(values, list):
-                    pkaList = []
-                    for pka in values:
-                        pkaList.append(round(pka, n))
-                    roundedDict[key] = pkaList
-            return roundedDict
