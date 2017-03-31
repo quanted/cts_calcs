@@ -5,10 +5,8 @@ import os
 from django.http import HttpRequest
 from django.template import Context, Template, defaultfilters
 import smilesfilter
-try:
-    from cts_app.cts_calcs.chemaxon_cts import jchem_rest
-except ImportError as e:
-    from cts_calcs.chemaxon_cts import jchem_rest
+import jchem_rest
+
 
 """
 10-31-14 (np)
@@ -320,14 +318,3 @@ def roundValue(val, n):
                         pkaList.append(round(pka, n))
                     roundedDict[key] = pkaList
             return roundedDict
-
-
-# def collapseNest(nestedJson):
-    # """
-    # walks through n-nested results from
-    # recursive function and returns a list
-    # of products with a genKey for keeping
-    # track of position in tree (e.g., 1.3.1)
-    # """
-    
-    

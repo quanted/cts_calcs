@@ -217,7 +217,7 @@ def filterSMILES(request_obj):
 	smiles processing before being sent to
 	p-chem calculators
 	"""
-	from jchem_calculator import ChemaxonCalc
+	# from jchem_calculator import ChemaxonCalc
 
 	smiles = request_obj.get('smiles')
 
@@ -246,7 +246,7 @@ def filterSMILES(request_obj):
 			"transform"
 		]
 	}
-	response = web_call_new(url, post_data)  # 1.
+	response = web_call_new(url, post_data)
 
 	filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
 	

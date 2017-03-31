@@ -3,14 +3,7 @@ __author__ = 'KWOLFE'
 import requests
 import logging
 import json
-try:
-    # from cts_app.cts_calcs.chemaxon_cts.jchem_calculator import ChemaxonCalc as JProp
-    from cts_app.cts_calcs.chemaxon_cts import jchem_rest
-    logging.warning("smilesfilter.py -- using cts_app.cts_calcs importing...")
-except ImportError as e:
-    # from cts_calcs.chemaxon_cts.jchem_calculator import ChemaxonCalc as JProp
-    from cts_calcs.chemaxon_cts import jchem_rest
-    logging.warning("smilesfilter.py -- using cts_calcs. importing...")
+import jchem_rest
 
 max_weight = 1500 # max weight [g/mol] for epi, test, and sparc
 

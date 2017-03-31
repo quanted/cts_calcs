@@ -6,15 +6,6 @@ import logging
 import os
 import redis
 
-import smilesfilter
-# from chemaxon_cts import jchem_properties
-# from chemaxon_cts import jchem_calculator
-# from epi_cts import epi_calculator
-# from sparc_cts import sparc_calculator
-# import calculator_chemaxon
-
-
-headers = {'Content-Type': 'application/json'}
 
 class Calculator(object):
     """
@@ -110,26 +101,6 @@ class Calculator(object):
             'data': None,
             'error': False,  # ehh?
         }
-
-        if calc:
-            self.getCalcObject(calc)
-
-
-    @classmethod
-    def getCalcObject(self, calc):
-        """
-        Returns instance of calculator:
-        chemaxon, epi, test, sparc, or measured
-        """
-        if calc == 'chemaxon':
-            # return calculator_chemaxon.ChemaxonCalc()
-            return None
-        # elif calc == 'epi':
-            # return EpiCalc()
-        # elif calc == 'sparc':
-        #     return sparc_calculator.SparcCalc()
-        else:
-            return None
 
 
     def getUrl(self, prop):

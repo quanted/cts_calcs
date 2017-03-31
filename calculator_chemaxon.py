@@ -6,7 +6,7 @@ import redis
 
 import smilesfilter
 import jchem_properties
-import jchem_rest
+# import jchem_rest
 import data_walks
 from calculator import Calculator
 
@@ -123,7 +123,7 @@ class ChemaxonCalc(Calculator):
 
         if request_dict['service'] == 'getTransProducts':
             # getTransProducts chemaxon service via ws..
-            request = {
+            trans_products_request = {
                 'structure': _filtered_smiles,
                 'generationLimit': 1,  # make sure to get this from front end
                 'populationLimit': 0,
@@ -132,16 +132,26 @@ class ChemaxonCalc(Calculator):
                 'excludeCondition': ""  # 'generateImages': False
             }
 
-            response = jchem_rest.getTransProducts(request)
-            data_walks.j = 0
-            data_walks.metID = 0
-            results = data_walks.recursive(response, 1)
+            # response = jchem_rest.getTransProducts(request)
+            # data_walks.j = 0
+            # data_walks.metID = 0
+            # results = data_walks.recursive(response, 1)
+
+            # TODO: Still need to decide if calc files are lowest level, or jchem_rest.
+            # If jchem_rest, then this calc imports it, if this is the lowest then jchem_rest imports it.
+            # Currently, I'm bypassing a circular import by calling the metabolizer endpoint.
+
+            # metabolizer endpoint gets trans products and runs them through data_walks
+            trans_products_response = requests.post(
+                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/metabolizer/run', 
+                                    data=json.dumps(trans_products_request), 
+                                    verify=False)
 
             data_obj = {
                 'calc': "chemaxon", 
                 'prop': "products",
                 'node': request_dict['node'],
-                'data': json.loads(results),
+                'data': json.loads(trans_products_response),
                 'chemical': _filtered_smiles,
                 'workflow': 'gentrans',
                 'run_type': 'batch'
