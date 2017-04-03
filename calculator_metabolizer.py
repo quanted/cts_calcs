@@ -5,9 +5,6 @@ import os
 import redis
 
 import smilesfilter
-# import jchem_properties
-# import jchem_rest
-# import data_walks
 from calculator import Calculator
 
 
@@ -15,7 +12,7 @@ class MetabolizerCalc(Calculator):
     """
     Calc class for CTSWS (formerly EFS) Metabolizer.
 
-    This was originally handled by ChemaxonCalc and data_walks,
+    This was originally handled by JchemCalc and data_walks,
     but now this'll be the replacement for data_walks.
 
     Also put the spacetree stuff here, like image size, keys, etc.
@@ -38,6 +35,15 @@ class MetabolizerCalc(Calculator):
         self.props = ['water_sol', 'ion_con', 'kow_no_ph', 'kow_wph', 'water_sol_ph']  # available pchem props
         self.prop_name = prop_name  # prop name for MetabolizerCalc instance
 
+        self.metID = 0  # unique id for each node
+        self.metabolite_keys = ['smiles', 'formula', 'iupac', 'mass', 'accumulation', 'production', 'transmissivity', 'generation', 'routes', 'exactMass']
+        self.image_scale = 50
+
+        self.tree_image_height = 114  # height of molecule in gentrans spacetree
+        self.tree_image_width = 100  # width of molecule in gentrans spacetree
+
+        self.gen_limit = 2
+
         # CTSWS Transformation Products Request
         self.transformation_request = {
             'structure': None,
@@ -47,14 +53,6 @@ class MetabolizerCalc(Calculator):
             'transformationLibraries': ["hydrolysis", "abiotic_reduction"],  # NOTE: no transformationLibraries key:val for mammalian metabolism
             'excludeCondition': ""
         }
-
-
-    # def data_request_handler(self, request_dict, message=None):
-    #     """
-    #     This will basically be data_walks main code.
-    #     """
-
-
 
 
     def recursive(self, jsonDict, gen_limit):
@@ -67,65 +65,54 @@ class MetabolizerCalc(Calculator):
         root = jsonDict['results']
         reDict = {}
         parent = root.keys()[0]
-        reDict.update(traverse(root, gen_limit))
+        reDict.update(self.traverse(root, gen_limit))
         return json.dumps(reDict)
 
-
-    metID = 0  # unique id for each node
-    metabolite_keys = ['smiles', 'formula', 'iupac', 'mass', 'accumulation', 'production', 'transmissivity', 'generation', 'routes', 'exactMass']
-    image_scale = 50
 
     def traverse(self, root, gen_limit):
         """
         For gentrans model output - metabolites tree
         """
 
-        global metID
-        metID += 1
+        # global metID
+        self.metID += 1
         newDict = {}
 
-        logging.info("metabolites: {}".format(metID))
+        logging.info("metabolites: {}".format(self.metID))
 
-        tblID = "{}_table".format(metID)  # id for node's tooltip table
+        tblID = "{}_table".format(self.metID)  # id for node's tooltip table
 
-        if metID == 1:
+        if self.metID == 1:
             parent = root.keys()[0]
-            newDict.update({"id": metID, "name": nodeWrapper(parent, 114, 100, image_scale, metID, 'svg', True), "data": {}, "children": []})
-            # newDict.update({"id": metID, "name": nodeWrapper(parent, None, 100, 28), "data": {}, "children": []})
-            newDict['data'].update(popupBuilder({"smiles": parent, "generation": "0"}, metabolite_keys, "{}".format(metID),
+            newDict.update({"id": self.metID, "name": self.nodeWrapper(parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
+            newDict['data'].update(self.popupBuilder({"smiles": parent, "generation": "0"}, self.metabolite_keys, "{}".format(self.metID),
                                                 "Metabolite Information"))
 
-            # request_obj = {'chemical': parent}  # chemical info request object
-            # mol_info = jchem_rest.getChemDetails(request_obj)
-            filtered_smiles = smilesfilter.filterSMILES(parent)
-            mol_info = jchem_rest.getChemDetails({'chemical': filtered_smiles})
+            _filtered_smiles = smilesfilter.filterSMILES(parent)
+            _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
             
-            if 'data' in mol_info:
-                for key, val in mol_info['data'][0].items():
-                    if key in metabolite_keys:
+            if 'data' in _mol_info:
+                for key, val in _mol_info['data'][0].items():
+                    if key in self.metabolite_keys:
                         newDict['data'].update({key: val})
 
             # skipping 2nd parent metabolite:
             second_parent = root[parent]['metabolites'].keys()[0]
             root = root[parent]['metabolites'][second_parent]
-
             # not-skipping version without 2nd parent problem:
             # root = root[parent]
             
         else:
             if root['generation'] > 0 and root['generation'] <= gen_limit:
-                newDict.update({"id": metID, "name": nodeWrapper(root['smiles'], 114, 100, image_scale, metID, 'svg', True), "data": {}, "children": []})
-                # newDict.update({"id": metID, "name": nodeWrapper(root['smiles'], None, 100, 28), "data": {}, "children": []})
-                newDict['data'].update(popupBuilder(root, metabolite_keys, "{}".format(metID), "Metabolite Information"))
+                newDict.update({"id": self.metID, "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
+                newDict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
 
-                # request_obj = {'chemical': root['smiles']}
-                # mol_info = jchem_rest.getChemDetails(request_obj)
-                filtered_smiles = smilesfilter.filterSMILES(root['smiles'])
-                mol_info = jchem_rest.getChemDetails({'chemical': filtered_smiles})
+                _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])
+                _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
                 
-                if 'data' in mol_info:
-                    for key, val in mol_info['data'][0].items():
-                        if key in metabolite_keys:
+                if 'data' in _mol_info:
+                    for key, val in _mol_info['data'][0].items():
+                        if key in self.metabolite_keys:
                             newDict['data'].update({key: val})
 
         for key, value in root.items():
@@ -134,7 +121,7 @@ class MetabolizerCalc(Calculator):
                     root2 = root[key][key2]
                     if len(root2) > 0 and 'children' in newDict and root['generation'] < gen_limit:
                     # if len(root2) > 0 and 'children' in newDict and root2['generation'] < gen_limit:
-                        newDict['children'].append(traverse(root2, gen_limit))
+                        newDict['children'].append(self.traverse(root2, gen_limit))
 
         return newDict
 
@@ -155,8 +142,8 @@ class MetabolizerCalc(Calculator):
             "parameters": prop_obj.postData
         }
 
-        logging.info("JCHEM REQUEST URL: {}".format(url))
-        logging.info("JCHEM REQUEST POST: {}".format(post_data))
+        logging.info("EFS REQUEST URL: {}".format(url))
+        logging.info("EFS REQUEST POST: {}".format(post_data))
 
         if method:
             post_data['parameters']['method'] = method
@@ -176,7 +163,7 @@ class MetabolizerCalc(Calculator):
                     break
                 _retries += 1
             except Exception as e:
-                logging.warning("Exception in jchem_calculator.py: {}".format(e))
+                logging.warning("Exception in metabolizer_calculator.py: {}".format(e))
                 _retries += 1
 
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
@@ -199,3 +186,11 @@ class MetabolizerCalc(Calculator):
         # TODO: verify if blank data, finding the source of the empty water sol values...
         
         return True
+
+
+    def getTransProducts(self, request_obj):
+        """
+        Makes request to metabolizer
+        """
+        url = self.efs_server_url + self.efs_metabolizer_endpoint
+        return self.web_call(url, request_obj)

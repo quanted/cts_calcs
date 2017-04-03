@@ -3,7 +3,11 @@ __author__ = 'KWOLFE'
 import requests
 import logging
 import json
-import jchem_rest
+# import jchem_rest
+from calculator import Calculator
+import jchem_properties
+# from calculator_chemaxon import JchemProperty
+# from calculator_chemaxon import Tautomerization
 
 max_weight = 1500 # max weight [g/mol] for epi, test, and sparc
 
@@ -36,20 +40,98 @@ def is_valid_smiles(smiles):
     return return_val
 
 
+# def filterSMILES(smiles):
+#     """
+#     calculator-independent SMILES processing.
+#     uses jchem web services through jchem_rest
+#     """
+#     response = jchem_rest.filterSMILES({'smiles': smiles})
+#     logging.warning("FILTER RESPONSE: {}".format(response))
+#     try:
+#         filtered_smiles = response['results'][-1] # picks out smiles from efs???
+#         logging.warning("NEW SMILES: {}".format(filtered_smiles))
+#         return filtered_smiles
+#     except Exception as e:
+#         logging.warning("> error in filterSMILES: {}".format(e))
+#         raise e
+def singleFilter( request_obj):
+    """
+    Calls single EFS Standardizer filter
+    for filtering SMILES
+    """
+    try:
+        smiles = request_obj.get('smiles')
+        action = request_obj.get('action')
+    except Exception as e:
+        logging.info("Exception retrieving mass from jchem: {}".format(e))
+        raise
+    post_data = {
+        "structure": smiles,
+        "actions": [
+            action
+        ]
+    }
+    url = Calculator().efs_server_url + Calculator().efs_standardizer_endpoint
+    return Calculator().web_call(url, post_data)
+
+
+# def filterSMILES(request_obj):
 def filterSMILES(smiles):
     """
-    calculator-independent SMILES processing.
-    uses jchem web services through jchem_rest
+    cts ws call to jchem to perform various
+    smiles processing before being sent to
+    p-chem calculators
     """
-    response = jchem_rest.filterSMILES({'smiles': smiles})
-    logging.warning("FILTER RESPONSE: {}".format(response))
-    try:
-        filtered_smiles = response['results'][-1] # picks out smiles from efs???
-        logging.warning("NEW SMILES: {}".format(filtered_smiles))
-        return filtered_smiles
-    except Exception as e:
-        logging.warning("> error in filterSMILES: {}".format(e))
-        raise e
+
+    # smiles = request_obj.get('smiles')
+
+    # Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
+    # 1. CTSWS actions "removeExplicitH" and "transform".
+    url = Calculator().efs_server_url + Calculator().efs_standardizer_endpoint
+    post_data = {
+        'structure': smiles,
+        'actions': [
+            "removeExplicitH",
+            "transform"
+        ]
+    }
+    response = Calculator().web_call(url, post_data)
+
+    filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
+    
+    # 2. Get major tautomer from jchem:
+    # tautObj = JchemCalc.getPropObject('tautomerization')
+    # tautObj.setPostDataValues({"calculationType": "MAJOR"})
+    taut_obj = jchem_properties.Tautomerization()
+    taut_obj.postData.update({'calculationType': 'MAJOR'})
+    # taut_obj.makeDataRequest(filtered_smiles)
+    taut_obj.make_data_request(filtered_smiles, taut_obj)
+
+    # try:
+    #     _taut_response = Calculator().web_call(taut_obj.url, taut_obj.postData)
+    #     major_taut_smiles = _taut_response['result']['structureData']['structure']
+    # except Exception as e:
+    #     logging.warning("filterSMILES excpetion: {}".format(e))
+
+
+    # todo: verify this is major taut result smiles, not original smiles for major taut request...
+    major_taut_smiles = taut_obj.results['result']['structureData']['structure']
+
+    # logging.warning("MAJOR TAUT SMILES: {}".format(major_taut_smiles))
+
+    # 3. Using major taut smiles for final "neutralize" filter:
+    post_data = {
+        'structure': major_taut_smiles, 
+        'actions': [
+            "neutralize"
+        ]
+    }
+    response = Calculator().web_call(url, post_data)
+
+    final_smiles = response['results'][-1]
+    logging.warning("FINAL FITERED SMILES: {}".format(final_smiles))
+
+    return response
 
 
 def checkMass(chemical):
@@ -59,7 +141,7 @@ def checkMass(chemical):
     """
     logging.info("checking mass..")
     try:
-        json_obj = jchem_rest.getMass({'chemical': chemical}) # get mass from jchem ws
+        json_obj = Calculator().getMass({'chemical': chemical}) # get mass from jchem ws
     except Exception as e:
         logging.warning("!!! Error in checkMass() {} !!!".format(e))
         raise e
@@ -78,7 +160,7 @@ def clearStereos(smiles):
     clears stereoisomers from smiles
     """
     try:
-        response = jchem_rest.singleFilter({'smiles':smiles, 'action': "clearStereo"})
+        response = singleFilter({'smiles':smiles, 'action': "clearStereo"})
         filtered_smiles = response['results'] # get stereoless structure
     except Exception as e:
         logging.warning("!!! Error in clearStereos() {} !!!".format(e))
@@ -91,7 +173,7 @@ def transformSMILES(smiles):
     N(=O)=O >> [N+](=O)[O-]
     """
     try:
-        response = jchem_rest.singleFilter({'smiles':smiles, 'action': "transform"})
+        response = singleFilter({'smiles':smiles, 'action': "transform"})
         filtered_smiles = response['results'] # get stereoless structure
     except Exception as e:
         logging.warning("!!! Error in transformSMILES() {} !!!".format(e))
@@ -104,7 +186,7 @@ def untransformSMILES(smiles):
     [N+](=O)[O-] >> N(=O)=O
     """
     try:
-        response = jchem_rest.singleFilter({'smiles':smiles, 'action': "untransform"})
+        response = singleFilter({'smiles':smiles, 'action': "untransform"})
         filtered_smiles = response['results'] # get stereoless structure
     except Exception as e:
         logging.warning("!!! Error in untransformSMILES() {} !!!".format(e))
