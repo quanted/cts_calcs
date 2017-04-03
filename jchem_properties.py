@@ -34,7 +34,11 @@ class JchemProperty(object):
         # resultDict = {"calc": "chemaxon", "prop": prop}
 
         prop_obj = self.getPropObject(request_dict.get('prop'))
-        self.make_data_request(request_dict.get('chemical'), prop_obj, request_dict.get('method'))
+        prop_obj.results = self.make_data_request(request_dict.get('chemical'), prop_obj, request_dict.get('method'))
+        
+        logging.warning("MADE REQUEST AT GETJCHEMPROPDATA")
+        logging.warning("Prop Obj: {}".format(dir(prop_obj)))
+
         prop_obj.results = prop_obj.get_data(request_dict)
 
         logging.warning("!!!!! RESULTS: {}".format(prop_obj.results))
@@ -107,10 +111,13 @@ class JchemProperty(object):
             # retry data request to chemaxon server until max retries or a valid result is returned
             try:
                 response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
+                logging.warning("RESPONSE: {}".format(response))
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     # self.results = json.loads(response.content)
-                    prop_obj.results = json.loads(response.content)
+                    # prop_obj.results = json.loads(response.content)
+                    logging.warning("RETURNING: {}".format(response.content))
+                    return json.loads(response.content)
                     # logging.info("Response from jchem server: {}".format(prop_obj.results))
                     break
                 _retries += 1
@@ -119,6 +126,7 @@ class JchemProperty(object):
                 _retries += 1
 
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
+        return None
 
     def validate_response(self, response):
         """
@@ -227,6 +235,23 @@ class Pka(JchemProperty):
             return microDistData
         else:
             return None
+
+    def get_data(self, request_dict, data_type=None):
+        """
+        Gets pKa data based on type.
+        Types:
+          +  pchem - most acidic and most basic),
+          +  speciation - acidic/basic, major microspecies, isoelectric point
+        """
+        
+        # initially just getting acidic/basic pka values,
+        # after all, there are classes for microspecies and isoelectr point
+
+        # self.make_data_request(request_dict.get('chemical'), self, None)
+        _pkas = self.getMostAcidicPka() + self.getMostBasicPka()
+        _pkas.sort()
+
+        return {'pKa': _pkas}
 
 
 class IsoelectricPoint(JchemProperty):
@@ -421,7 +446,7 @@ class Solubility(JchemProperty):
 
     def get_data(self, request_dict):
         logging.warning("REQUEST DICT AT WS GET_DATA: {}".format(request_dict))
-        self.make_data_request(request_dict.get('chemical'), self, None)
+        # self.make_data_request(request_dict.get('chemical'), self, None)
         logging.warning("PH: {}".format(request_dict.get('ph')))
         if request_dict.get('prop') == 'water_sol_ph':
             # pH dependent water solubility
@@ -464,6 +489,10 @@ class LogP(JchemProperty):
             logging.warning("ker error: {}".format(ke))
             return None
 
+    def get_data(self, request_dict):
+        # self.make_data_request(request_dict.get('chemical'), self, request_dict('method'))
+        return self.getLogP()
+
 
 class LogD(JchemProperty):
     def __init__(self):
@@ -498,3 +527,7 @@ class LogD(JchemProperty):
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
+
+    def get_data(self, request_dict):
+        # self.make_data_request(request_dict.get('chemical'), self, request_dict('method'))
+        return self.getLogD(request_dict.get('ph'))
