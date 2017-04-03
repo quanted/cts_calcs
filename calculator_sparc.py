@@ -127,15 +127,6 @@ class SparcCalc(Calculator):
         melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
         logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
 
-        # calcObj = SparcCalc(_filtered_smiles, meltingpoint=melting_point)
-        
-        _multi_response = None
-        sparc_results = []
-
-
-        if request_dict['run_type'] == 'rest':
-            request_dict['props'] = [request_dict['prop']]
-
         _response_dict = {}
         for key in request_dict.keys():
             _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
