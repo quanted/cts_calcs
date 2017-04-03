@@ -110,12 +110,10 @@ class JchemCalc(Calculator):
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             request_dict.update({'data': 'Cannot filter SMILES for EPI data'})
-            
-            if not ws_protocol:
-                return request_dict  # if not WS, just send object (for http/rest)
-
-            self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
-            return
+            # if not ws_protocol:
+            return request_dict  # if not WS, just send object (for http/rest)
+            # self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
+            # return
 
 
         logging.info("Original CTS filtered SMILES: {}".format(request_dict['chemical']))

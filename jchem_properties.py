@@ -115,7 +115,7 @@ class JchemProperty(object):
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     # self.results = json.loads(response.content)
-                    # prop_obj.results = json.loads(response.content)
+                    prop_obj.results = json.loads(response.content)
                     logging.warning("RETURNING: {}".format(response.content))
                     return json.loads(response.content)
                     # logging.info("Response from jchem server: {}".format(prop_obj.results))

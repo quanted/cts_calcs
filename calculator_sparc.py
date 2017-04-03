@@ -115,8 +115,8 @@ class SparcCalc(Calculator):
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             request_dict.update({'data': 'Cannot filter SMILES'})
-            self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
-            return
+            # self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
+            return request_dict
 
 
         self.smiles = _filtered_smiles  # set smiles attribute to filtered smiles
@@ -150,15 +150,17 @@ class SparcCalc(Calculator):
                 pka_data = self.getPkaResults(response)
                 _response_dict.update({'data': pka_data, 'prop': 'ion_con'})
                 # logging.info("ion_con response: {}".format(_response_dict))
-                result_json = json.dumps(_response_dict)
-                self.redis_conn.publish(request_dict['sessionid'], result_json)
+                # result_json = json.dumps(_response_dict)
+                # self.redis_conn.publish(request_dict['sessionid'], result_json)
+                return _response_dict
 
             if 'kow_wph' in request_dict['props']:
                 response = self.makeCallForLogD() # response as dict returned..
                 _response_dict.update({'data': self.getLogDForPH(response, request_dict['ph']), 'prop': 'kow_wph'})
                 # logging.info("kow_wph response: {}".format(_response_dict))
-                result_json = json.dumps(_response_dict)
-                self.redis_conn.publish(request_dict['sessionid'], result_json)
+                # result_json = json.dumps(_response_dict)
+                # self.redis_conn.publish(request_dict['sessionid'], result_json)
+                return _response_dict
 
             _post = self.get_sparc_query()
             _url = self.base_url + self.multiproperty_url
@@ -174,21 +176,29 @@ class SparcCalc(Calculator):
                         _data = prop_obj['data']
                         prop_obj.update(_response_dict)
                         prop_obj.update({'prop': _prop, 'data': _data})
-                        result_json = json.dumps(prop_obj)
+                        # result_json = json.dumps(prop_obj)
                         # logging.info("multi-prop response: {}".format(prop_obj))
-                        self.redis_conn.publish(request_dict['sessionid'], result_json)
+                        # self.redis_conn.publish(request_dict['sessionid'], result_json)
+                        return prop_obj
 
         except Exception as err:
             logging.warning("!!! Exception occurred getting SPARC data: {} !!!".format(err))
 
-            for prop in request_dict['props']:
+            _response_dict.update({
+                'data': "request timed out",
+                'prop': request_dict.get('prop')
+            })
 
-                _response_dict.update({
-                    'data': "data request timed out",
-                    'prop': prop
-                })
+            return _response_dict
+            # for prop in request_dict['props']:
 
-                self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
+            #     _response_dict.update({
+            #         'data': "data request timed out",
+            #         'prop': prop
+            #     })
+
+                # self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
+
 
 
     def makeDataRequest(self):
