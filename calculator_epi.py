@@ -6,14 +6,14 @@ import os
 from calculator import Calculator
 import smilesfilter
 
-try:
-    from cts_app.cts_calcs.calculator import Calculator
-    from cts_app.cts_calcs.smilesfilter import max_weight
-    from cts_app.cts_calcs import smilesfilter
-except ImportError as e:
-    from cts_calcs.calculator import Calculator
-    from cts_calcs.smilesfilter import max_weight
-    from cts_calcs import smilesfilter
+# try:
+#     # from cts_app.cts_calcs.calculator import Calculator
+#     from cts_app.cts_calcs.smilesfilter import max_weight
+#     # from cts_app.cts_calcs import smilesfilter
+# except ImportError as e:
+#     # from cts_calcs.calculator import Calculator
+#     from cts_calcs.smilesfilter import max_weight
+#     # from cts_calcs import smilesfilter
 
 headers = {'Content-Type': 'application/json'}
 
@@ -158,35 +158,20 @@ class EpiCalc(Calculator):
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             _response_dict.update({'data': "Cannot filter SMILES for EPI data"})
-            for prop in request_dict['props']:
-                _response_dict.update({'prop': prop})
-                self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
-            return
+            return _response_dict
 
-        if request_dict['run_type'] == 'rest':
-            request_dict['props'] = [request_dict['prop']]
+        try:
+            _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
-        for prop in request_dict['props']:
+            if 'propertyvalue' in _result_obj:
+                _response_dict.update({'data': _result_obj['propertyvalue']})
+            else:
+                _response_dict.update({'data': _result_obj})
 
-            _response_dict.update({'prop': prop})
+            return _response_dict
 
-            try:
-                _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], prop) # make call for data!
-                # result_obj = json.loads(response.content)
-
-                if 'propertyvalue' in _result_obj:
-                    _response_dict.update({'data': _result_obj['propertyvalue']})
-                else:
-                    _response_dict.update({"data": json.loads(response.content)}) # add that data
-
-                result_json = json.dumps(_response_dict)
-                self.redis_conn.publish(request_dict['sessionid'], result_json)
-
-            except Exception as err:
-                logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
-                _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
-
-                logging.info("##### session id: {}".format(request_dict['sessionid']))
-
-                # node/redis stuff:
-                self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
+        except Exception as err:
+            logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
+            _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
+            logging.info("##### session id: {}".format(request_dict['sessionid']))
+            return _response_dict
