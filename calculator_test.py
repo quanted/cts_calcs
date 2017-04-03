@@ -78,93 +78,53 @@ class TestCalc(Calculator):
 
     def data_request_handler(self, request_dict):
         
-        TEST_URL = os.environ["CTS_TEST_SERVER"]
-        postData = {}
 
-        calc = request.get("calc")
-        # prop = request.get("prop")
+        _filtered_smiles = ''
+        _response_dict = {}
 
-        try:
-            props = request.get("props[]")
-            if not props:
-                props = request.getlist("props")
-        except AttributeError:
-            props = request.get("props")
+        # fill any overlapping keys from request:
+        for key in request_dict.keys():
+            _response_dict[key] = request_dict.get(key)
+        _response_dict.update({'request_post': request_dict})
 
-        calc_data = request.get('checkedCalcsAndProps')
-        chemical = request.get("chemical")
-        sessionid = request.get('sessionid')
-        node = request.get('node')
-        mass = request.get('mass')  # for water solubility
-        run_type = request.get('run_type')
-        workflow = request.get('workflow')
-
-        if calc_data:
-            calc = "test"
-            props = calc_data['test']  # list of props
-
-        postData = {
-            "chemical": chemical,
-            "calc": calc,
-            'run_type': run_type,
-            'workflow': workflow,
-            # "prop": prop
-            # "props": props
-        }
 
         # filter smiles before sending to TEST:
         # ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
         try:
-            filtered_smiles = parseSmilesByCalculator(chemical, calc) # call smilesfilter
+            _filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
-            postData.update({'data': "Cannot filter SMILES for TEST data"})
-            self.redis_conn.publish(sessionid, json.dumps(postData))
+            _response_dict.update({'data': "Cannot filter SMILES for TEST data"})
+            return _response_dict
         # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        logging.info("TEST Filtered SMILES: {}".format(filtered_smiles))
+        logging.info("TEST Filtered SMILES: {}".format(_filtered_smiles))
 
-        self = TestCalc()
-        test_results = []
-        for prop in props:
+        try:
+            logging.info("Calling TEST for {} data...".format(request_dict['prop']))
 
-            data_obj = {
-                'chemical': filtered_smiles,
-                'calc': calc,
-                'prop':prop,
-                'node': node,
-                'request_post': request.POST,
-                'run_type': run_type,
-                'workflow': workflow,
-            }
+            _response = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop'])
+            # response_json = json.loads(_response.content)
+            # _response_dict.update({'data': _response})
 
-            try:
-                logging.info("Calling TEST for {} data...".format(prop))
+            logging.info("TEST response data for {}: {}".format(request_dict['prop'], response_json))
 
-                response = self.makeDataRequest(filtered_smiles, calc, prop)
-                response_json = json.loads(response.content)
-
-                logging.info("TEST response data for {}: {}".format(prop, response_json))
-
-                # sometimes TEST data successfully returns but with an error:
-                if response.status_code != 200:
-                    postData['data'] = "TEST could not process chemical"
+            # sometimes TEST data successfully returns but with an error:
+            if _response.status_code != 200:
+                _response_dict['data'] = "TEST could not process chemical"
+            else:
+                _test_data = response_json['properties'][self.propMap[request_dict['prop']]['urlKey']]
+                if _test_data == -9999:
+                    _response_dict['data'] = "N/A"
+                elif prop == 'water_sol':
+                    _response_dict['data'] = self.convertWaterSolubility(request_dict['mass'], _test_data)
                 else:
-                    test_data = response_json['properties'][self.propMap[prop]['urlKey']]
-                    if test_data == -9999:
-                        data_obj['data'] = "N/A"
-                    elif prop == 'water_sol':
-                        data_obj['data'] = self.convertWaterSolubility(mass, test_data)
-                    else:
-                        data_obj['data'] = test_data
-                    
-                result_json = json.dumps(data_obj)
-                self.redis_conn.publish(sessionid, result_json)
+                    _response_dict['data'] = _test_data
 
-            except Exception as err:
-                logging.warning("Exception occurred getting TEST data: {}".format(err))
-                data_obj.update({'data': "timed out", 'request_post': request.POST})
+            return _response_dict
 
-                logging.info("##### session id: {}".format(sessionid))
-
-                self.redis_conn.publish(sessionid, json.dumps(data_obj))
+        except Exception as err:
+            logging.warning("Exception occurred getting TEST data: {}".format(err))
+            _response_dict.update({'data': "timed out", 'request_post': request.POST})
+            logging.info("##### session id: {}".format(sessionid))
+            return _response_dict
