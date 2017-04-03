@@ -145,41 +145,34 @@ class SparcCalc(Calculator):
 
 
         try:
-            if 'ion_con' in request_dict['props']:
+            # if 'ion_con' in request_dict['props']:
+            if request_dict.get('prop') == 'ion_con':
                 response = self.makeCallForPka() # response as d ict returned..
                 pka_data = self.getPkaResults(response)
                 _response_dict.update({'data': pka_data, 'prop': 'ion_con'})
-                # logging.info("ion_con response: {}".format(_response_dict))
-                # result_json = json.dumps(_response_dict)
-                # self.redis_conn.publish(request_dict['sessionid'], result_json)
                 return _response_dict
 
-            if 'kow_wph' in request_dict['props']:
+            # if 'kow_wph' in request_dict['props']:
+            elif request_dict.get('prop') == 'kow_wph':
                 response = self.makeCallForLogD() # response as dict returned..
                 _response_dict.update({'data': self.getLogDForPH(response, request_dict['ph']), 'prop': 'kow_wph'})
-                # logging.info("kow_wph response: {}".format(_response_dict))
-                # result_json = json.dumps(_response_dict)
-                # self.redis_conn.publish(request_dict['sessionid'], result_json)
                 return _response_dict
 
-            _post = self.get_sparc_query()
-            _url = self.base_url + self.multiproperty_url
-            _multi_response = self.makeDataRequest()
+            else:
+                _post = self.get_sparc_query()
+                _url = self.base_url + self.multiproperty_url
+                _multi_response = self.makeDataRequest()
 
-            if 'calculationResults' in _multi_response:
-                _multi_response = self.parseMultiPropResponse(_multi_response['calculationResults'], request_dict)
-                # logging.info("Parsed Multi Response: {}".format(_multi_response))
-                for prop_obj in _multi_response:
-                    # logging.info("PROP OBJ: {}".format(prop_obj))
-                    if prop_obj['prop'] in request_dict['props'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
-                        _prop = prop_obj['prop']
-                        _data = prop_obj['data']
-                        prop_obj.update(_response_dict)
-                        prop_obj.update({'prop': _prop, 'data': _data})
-                        # result_json = json.dumps(prop_obj)
-                        # logging.info("multi-prop response: {}".format(prop_obj))
-                        # self.redis_conn.publish(request_dict['sessionid'], result_json)
-                        return prop_obj
+                if 'calculationResults' in _multi_response:
+                    _multi_response = self.parseMultiPropResponse(_multi_response['calculationResults'], request_dict)
+                    for prop_obj in _multi_response:
+                        # if prop_obj['prop'] in request_dict['props'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
+                        if prop_obj['prop'] == request_dict['prop'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
+                            _prop = prop_obj['prop']
+                            _data = prop_obj['data']
+                            prop_obj.update(_response_dict)
+                            prop_obj.update({'prop': _prop, 'data': _data})
+                            return prop_obj
 
         except Exception as err:
             logging.warning("!!! Exception occurred getting SPARC data: {} !!!".format(err))
@@ -190,37 +183,16 @@ class SparcCalc(Calculator):
             })
 
             return _response_dict
-            # for prop in request_dict['props']:
-
-            #     _response_dict.update({
-            #         'data': "data request timed out",
-            #         'prop': prop
-            #     })
-
-                # self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
-
 
 
     def makeDataRequest(self):
         _post = self.get_sparc_query()
         _url = self.base_url + self.multiproperty_url
 
-        # logging.info("SPARC URL: {}".format(_url))
-        # logging.info("SPARC POST: {}".format(_post))
+        logging.info("SPARC URL: {}".format(_url))
+        logging.info("SPARC POST: {}".format(_post))
 
         return self.request_logic(_url, _post)
-
-        # try:
-        #     response = requests.post(url, data=json.dumps(post), headers=self.headers, timeout=20)
-        #     self.results = json.loads(response.content)
-        # except requests.exceptions.ConnectionError as ce:
-        #     logging.info("connection exception: {}".format(ce))
-        #     raise
-        # except requests.exceptions.Timeout as te:
-        #     logging.info("timeout exception: {}".format(te))
-        #     raise
-        # else:
-        #     return self.results
 
 
     def request_logic(self, url, post_data):
