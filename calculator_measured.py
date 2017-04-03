@@ -136,14 +136,7 @@ class MeasuredCalc(Calculator):
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
 			_response_dict.update({'data': "Cannot filter SMILES"})
-			for prop in request_dict['props']:
-				_response_dict.update({'prop': prop})
-				self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
-			return
-
-
-		if request_dict['run_type'] == 'rest':
-			request_dict['props'] = [request_dict['prop']]
+			return _response_dict
 
 
 		try:
@@ -154,31 +147,23 @@ class MeasuredCalc(Calculator):
 		except Exception as e:
 			logging.warning("Exception making request to Measured: {}".format(e))
 			_response_dict.update({'data': "data not found"})
-			for prop in request_dict['props']:
-				_response_dict.update({'prop': prop})
-				self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
-			return
+			return _response_dict
 
 		logging.info("Measured Data: {}".format(_measured_data))
-		logging.info("Request props: {}".format(request_dict['props']))
+		# logging.info("Request props: {}".format(request_dict['props']))
 			
 
 		# get requested properties from results:
-		for prop in request_dict['props']:
-			try:
-				_data_obj = self.getPropertyValue(prop, _measured_data)
-				logging.info("data object: {}".format(_data_obj))
-				_response_dict.update(_data_obj)
-				
-				# push one result at a time if node/redis:
-				_result_json = json.dumps(_response_dict)
-				self.redis_conn.publish(request_dict['sessionid'], _result_json)
+		# for prop in request_dict['props']:
+		try:
+			_data_obj = self.getPropertyValue(request_dict['prop'], _measured_data)
+			logging.info("data object: {}".format(_data_obj))
+			_response_dict.update(_data_obj)
 
-			except Exception as err:
-				logging.warning("Exception occurred getting Measured data: {}".format(err))
-				_response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
+			return _response_dict
 
-				logging.info("##### session id: {}".format(request_dict['sessionid']))
-
-				# node/redis stuff:
-				self.redis_conn.publish(request_dict['sessionid'], json.dumps(_response_dict))
+		except Exception as err:
+			logging.warning("Exception occurred getting Measured data: {}".format(err))
+			_response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
+			logging.info("##### session id: {}".format(request_dict['sessionid']))
+			return _response_dict
