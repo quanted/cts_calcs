@@ -24,6 +24,7 @@ class EpiCalc(Calculator):
 	"""
     def __init__(self):
         Calculator.__init__(self)
+        self.method = None
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
@@ -101,13 +102,15 @@ class EpiCalc(Calculator):
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     self.results = json.loads(response.content)
-                    break
+                    # break
+                    return self.results
                 _retries += 1
             except Exception as e:
-                logging.warning("Exception in calculator_sparc.py: {}".format(e))
+                logging.warning("Exception in calculator_epi.py: {}".format(e))
                 _retries += 1
 
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
+        self.results = "calc server not found"
         return self.results
 
 
@@ -134,13 +137,12 @@ class EpiCalc(Calculator):
     # def request_manager(request):
     def data_request_handler(self, request_dict):
         """
-          less_simple_proxy takes a request and
-          makes the proper call to the TEST web services.
-          it relies on the epi_calculator to do such.
-
-          input: {"calc": [calculator], "prop": [property]}
-          output: returns data from TEST server
-          """
+        less_simple_proxy takes a request and
+        makes the proper call to the TEST web services.
+        it relies on the epi_calculator to do such.
+        input: {"calc": [calculator], "prop": [property]}
+        output: returns data from TEST server
+        """
 
         EPI_URL = os.environ.get("CTS_EPI_SERVER")
 
@@ -150,7 +152,7 @@ class EpiCalc(Calculator):
         # fill any overlapping keys from request:
         for key in request_dict.keys():
             _response_dict[key] = request_dict.get(key)
-        _response_dict.update({'request_post': request_dict})
+        _response_dict.update({'request_post': request_dict, 'method': None})
 
         try:
             _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter

@@ -30,6 +30,7 @@ class SparcCalc(Calculator):
             "LOGD": "kow_wph",
             "BOILING_POINT": "boiling_point" 
         }
+        self.request_timeout = 10
 
     def get_sparc_query(self):
         query = {
@@ -207,6 +208,7 @@ class SparcCalc(Calculator):
                 _retries += 1
 
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
+        self.results = "calc server not found"
         return self.results
 
 
