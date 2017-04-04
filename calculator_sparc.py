@@ -3,6 +3,8 @@ import logging
 import requests
 import os
 from calculator import Calculator
+from calculator_measured import MeasuredCalc
+from calculator_test import TestCalc
 import smilesfilter
 
 
@@ -124,8 +126,8 @@ class SparcCalc(Calculator):
 
         # Get melting point for sparc calculations.
         # Try Measured, then TEST..although it'll be slow
-        # melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
-        melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
+        melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
+        # melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
         logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
 
         _response_dict = {}
@@ -201,7 +203,8 @@ class SparcCalc(Calculator):
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     self.results = json.loads(response.content)
-                    break
+                    # break
+                    return self.results
                 _retries += 1
             except Exception as e:
                 logging.warning("Exception in calculator_sparc.py: {}".format(e))
@@ -378,52 +381,55 @@ class SparcCalc(Calculator):
             logging.warning("Error getting logD at PH from SPARC: {}".format(e))
             raise
 
-    # def getMeltingPoint(self, structure, sessionid):
-    #     """
-    #     Gets mass of structure from Measured, tries
-    #     TEST if not available in Measured. Returns 0.0
-    #     if neither have mp value.
-    #     """
-    #     melting_point_request = {
-    #         'calc': "measured",  # should prob be measured
-    #         'props': ['melting_point'],
-    #         'chemical': structure,
-    #         'sessionid': sessionid
-    #     }
-    #     # todo: catch measured errors, then try epi melting point..
-    #     request = NotDjangoRequest(melting_point_request)
-    #     melting_point_response = measured_views.request_manager(request)
+    def getMeltingPoint(self, structure, sessionid):
+        """
+        Gets mass of structure from Measured, tries
+        TEST if not available in Measured. Returns 0.0
+        if neither have mp value.
+        """
+        melting_point_request = {
+            'calc': "measured",  # should prob be measured
+            # 'props': ['melting_point'],
+            'prop': 'melting_point',
+            'chemical': structure,
+            'sessionid': sessionid
+        }
+        # todo: catch measured errors, then try epi melting point..
+        # request = NotDjangoRequest(melting_point_request)
+        # melting_point_response = measured_views.request_manager(request)
+        measured_mp_response = MeasuredCalc().data_request_handler(melting_point_request)
 
-    #     # # convert to python dict
-    #     try:
-    #         melting_point = json.loads(melting_point_response.content)['data']
-    #     except Exception as e:
-    #         logging.warning("Error in sparc_cts/worker.py: {}".format(e))
-    #         melting_point = 0.0
+        # # convert to python dict
+        try:
+            melting_point = json.loads(measured_mp_response.content)['data']
+        except Exception as e:
+            logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+            melting_point = 0.0
 
-    #     logging.warning("MELTING POINT RESPONSE: {}".format(melting_point_response))
-    #     logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(melting_point_response)))
+        logging.warning("MELTING POINT RESPONSE: {}".format(measured_mp_response))
+        logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(measured_mp_response)))
 
-    #     if not isinstance(melting_point, float):
-    #         logging.warning("Trying to get MP from TEST..")
-    #         try:
-    #             melting_point_request['calc'] = 'test'
-    #             request = NotDjangoRequest(melting_point_request)
-    #             test_melting_point_response = test_views.request_manager(request)
-    #             logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
-    #             melting_point = json.loads(test_melting_point_response.content)[0]['data']
-    #             logging.warning("TEST MP VALUE: {}".format(melting_point))
-    #         except Exception as e:
-    #             logging.warning("Error in sparc_cts/worker.py: {}".format(e))
-    #             melting_point = 0.0
+        if not isinstance(melting_point, float):
+            logging.warning("Trying to get MP from TEST..")
+            try:
+                melting_point_request['calc'] = 'test'
+                # request = NotDjangoRequest(melting_point_request)
+                # test_melting_point_response = test_views.request_manager(request)
+                test_mp_response = TestCalc().data_request_handler(melting_point_request)
+                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
+                melting_point = json.loads(test_melting_point_response.content)[0]['data']
+                logging.warning("TEST MP VALUE: {}".format(melting_point))
+            except Exception as e:
+                logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+                melting_point = 0.0
 
-    #         logging.warning("TEST MP TYPE: {}:".format(type(melting_point)))
+            logging.warning("TEST MP TYPE: {}:".format(type(melting_point)))
 
-    #         if not isinstance(melting_point, float):
-    #             melting_point = 0.0
-    #     # else:
-    #     #     melting_point = melting_point_obj['data']
+            if not isinstance(melting_point, float):
+                melting_point = 0.0
+        # else:
+        #     melting_point = melting_point_obj['data']
 
-    #     logging.warning("MELTING POINT VALUE: {}".format(melting_point))
+        logging.warning("MELTING POINT VALUE: {}".format(melting_point))
 
-    #     return melting_point
+        return melting_point
