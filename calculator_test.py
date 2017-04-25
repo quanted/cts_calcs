@@ -2,10 +2,12 @@ import requests
 import json
 import logging
 import os
-try:
-    from cts_app.cts_calcs.calculator import Calculator
-except ImportError as e:
-    from cts_calcs.calculator import Calculator
+#try:
+#    from cts_app.cts_calcs.calculator import Calculator
+#except ImportError as e:
+#    from cts_calcs.calculator import Calculator
+from calculator import Calculator
+from smilesfilter import parseSmilesByCalculator
 
 headers = {'Content-Type': 'application/json'}
 
@@ -104,19 +106,21 @@ class TestCalc(Calculator):
             logging.info("Calling TEST for {} data...".format(request_dict['prop']))
 
             _response = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop'])
-            # response_json = json.loads(_response.content)
-            # _response_dict.update({'data': _response})
+            _response_obj = json.loads(_response.content)
+            #_response_dict.update({'data': _response_obj})
 
-            logging.info("TEST response data for {}: {}".format(request_dict['prop'], response_json))
+            logging.info("TEST response data for {}: {}".format(request_dict['prop'], _response))
 
             # sometimes TEST data successfully returns but with an error:
             if _response.status_code != 200:
                 _response_dict['data'] = "TEST could not process chemical"
             else:
-                _test_data = response_json['properties'][self.propMap[request_dict['prop']]['urlKey']]
+                _test_data = _response_obj['properties'][self.propMap[request_dict['prop']]['urlKey']]
+		logging.warning("~~~ TEST DATA: {}".format(_test_data))
+		logging.warning("~~~ MASS: {}".format(request_dict['mass']))
                 if _test_data == -9999:
                     _response_dict['data'] = "N/A"
-                elif prop == 'water_sol':
+                elif request_dict['prop'] == 'water_sol':
                     _response_dict['data'] = self.convertWaterSolubility(request_dict['mass'], _test_data)
                 else:
                     _response_dict['data'] = _test_data
@@ -125,6 +129,6 @@ class TestCalc(Calculator):
 
         except Exception as err:
             logging.warning("Exception occurred getting TEST data: {}".format(err))
-            _response_dict.update({'data': "timed out", 'request_post': request.POST})
-            logging.info("##### session id: {}".format(sessionid))
+            _response_dict.update({'data': "timed out", 'request_post': request_dict})
+            logging.info("##### session id: {}".format(request_dict.get('sessionid')))
             return _response_dict
