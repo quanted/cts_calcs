@@ -128,26 +128,8 @@ class MetabolizerCalc(Calculator):
 
 
     def make_data_request(self, structure, prop_obj, method=None):
-        url = self.baseUrl + prop_obj.url
-        prop_obj.postData.update({
-            "result-display": {
-                "include": ["structureData", "image"],
-                "parameters": {
-                    "structureData": "smiles"
-                }
-            }
-        })
-        post_data = {
-            "structure": structure,
-            "parameters": prop_obj.postData
-        }
-
-        logging.info("EFS REQUEST URL: {}".format(url))
-        logging.info("EFS REQUEST POST: {}".format(post_data))
-
-        if method:
-            post_data['parameters']['method'] = method
-
+        # url = self.baseUrl + prop_obj.url
+        url = self.efs_server_url + self.efs_metabolizer_endpoint
 
         _valid_result = False  # for retry logic
         _retries = 0
@@ -157,16 +139,61 @@ class MetabolizerCalc(Calculator):
                 response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
                 _valid_result = self.validate_response(response)
                 if _valid_result:
-                    # self.results = json.loads(response.content)
                     prop_obj.results = json.loads(response.content)
-                    # logging.info("Response from jchem server: {}".format(prop_obj.results))
-                    break
+                    return prop_obj.results
                 _retries += 1
             except Exception as e:
                 logging.warning("Exception in metabolizer_calculator.py: {}".format(e))
                 _retries += 1
 
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
+
+
+    def data_request_handler(self, request_dict):
+        reactionLibs = {
+            "hydrolysis": request_dict.get('abiotic_hydrolysis'),
+            "abiotic_reduction": request_dict.get('abiotic_reduction'),
+            # "human_biotransformation": self.mamm_metabolism
+        }
+
+        _trans_libs = []
+        for key, value in reactionLibs.items():
+            if value:
+                _trans_libs.append(key)
+
+        if not request_dict.get('gen_limit', False):
+            request_dict['gen_limit'] = 1
+
+        # NOTE: populationLimit is hard-coded to 0 as it currently does nothing
+
+        _data_dict = {
+            'structure': request_dict['chemical'],
+            'generationLimit': request_dict['gen_limit'],
+            'populationLimit': 0,
+            # 'likelyLimit': self.likely_limit,
+            'likelyLimit': 0.001,
+            'excludeCondition': ""  # 'generateImages': False
+        }
+
+        if len(_trans_libs) > 0:
+            _data_dict.update({'transformationLibraries': _trans_libs})
+
+        response = self.getTransProducts(_data_dict)
+        # response = self.make_data_request(request_dict['chemical'], self, None)
+        _results = MetabolizerCalc().recursive(response, int(request_dict.get('gen_limit', 1)))
+
+        _response_obj = {
+            'calc': "chemaxon",  # todo: change to metabolizer, change in template too
+            'prop': "products",
+            'node': request_dict.get('node'),
+            'data': json.loads(_results),
+            'chemical': request_dict.get('chemical'),
+            'workflow': 'gentrans',
+            'run_type': 'batch'            
+        }
+
+
+        return _response_obj
 
 
     def validate_response(self, response):
