@@ -77,13 +77,13 @@ class TestCalc(Calculator):
 		"""
 		_ws_result = None
 		if isinstance(_response_dict['mass'], float) or isinstance(_response_dict['mass'], int):
-				_ws_result = 1000 * float(_response_dict['mass']) * 10**-(_response_dict['test_datum'])
+				_ws_result = 1000 * float(_response_dict['mass']) * 10**-(_response_dict['data'])
 		else:
 			# request mass from Calculator
 			json_obj = self.getMass({'chemical': _response_dict['chemical']})
 			mass = json_obj['data'][0]['mass']
 			_response_dict.update({'mass': mass})
-			_ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['test_datum']))
+			_ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['data']))
 		_response_dict.update({'data': _ws_result})
 		return _response_dict
 
