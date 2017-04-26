@@ -88,7 +88,7 @@ class MetabolizerCalc(Calculator):
             newDict['data'].update(self.popupBuilder({"smiles": parent, "generation": "0"}, self.metabolite_keys, "{}".format(self.metID),
                                                 "Metabolite Information"))
 
-            _filtered_smiles = smilesfilter.filterSMILES(parent)
+            _filtered_smiles = smilesfilter.filterSMILES(parent)['results'][-1]
             _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
             
             if 'data' in _mol_info:
@@ -107,7 +107,7 @@ class MetabolizerCalc(Calculator):
                 newDict.update({"id": self.metID, "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
                 newDict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
 
-                _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])
+                _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])['results'][-1]
                 _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
                 
                 if 'data' in _mol_info:
