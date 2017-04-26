@@ -71,11 +71,22 @@ class TestCalc(Calculator):
         return response
 
 
-    def convertWaterSolubility(self, mass, test_datum):
+    def convertWaterSolubility(self, _response_dict):
         """
         Converts water solubility from log(mol/L) => mg/L
         """
-        return 1000 * float(mass) * 10**-(test_datum)
+	_ws_result = None
+	if isinstance(_response_dict['mass'], float) or isinstance(_response_dict['mass'], int):
+	        _ws_result = 1000 * float(_response_dict['mass']) * 10**-(_response_dict['test_datum'])
+	else:
+		# request mass from Calculator
+		json_obj = self.getMass({'chemical': _response_dict['chemical']})
+		mass = json_obj['data'][0]['mass']
+		_response_dict.update({'mass': mass})
+		_ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['test_datum'])
+	#_response_dict['data'] = _ws_result
+	_response_dict.update({'data': _ws_result})
+	return _response_dict
 
 
     def data_request_handler(self, request_dict):
@@ -116,14 +127,15 @@ class TestCalc(Calculator):
                 _response_dict['data'] = "TEST could not process chemical"
             else:
                 _test_data = _response_obj['properties'][self.propMap[request_dict['prop']]['urlKey']]
+		_response_dict['data'] = _test_data
 		logging.warning("~~~ TEST DATA: {}".format(_test_data))
 		logging.warning("~~~ MASS: {}".format(request_dict['mass']))
                 if _test_data == -9999:
                     _response_dict['data'] = "N/A"
                 elif request_dict['prop'] == 'water_sol':
-                    _response_dict['data'] = self.convertWaterSolubility(request_dict['mass'], _test_data)
-                else:
-                    _response_dict['data'] = _test_data
+                    _response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
+                #else:
+                #    _response_dict['data'] = _test_data
 
             return _response_dict
 
