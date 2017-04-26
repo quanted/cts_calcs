@@ -126,9 +126,9 @@ class TestCalc(Calculator):
 				_response_dict['data'] = "TEST could not process chemical"
 			else:
 				_test_data = _response_obj['properties'][self.propMap[request_dict['prop']]['urlKey']]
-		_response_dict['data'] = _test_data
-		logging.warning("~~~ TEST DATA: {}".format(_test_data))
-		logging.warning("~~~ MASS: {}".format(request_dict['mass']))
+			_response_dict['data'] = _test_data
+			logging.warning("~~~ TEST DATA: {}".format(_test_data))
+			logging.warning("~~~ MASS: {}".format(request_dict['mass']))
 				if _test_data == -9999:
 					_response_dict['data'] = "N/A"
 				elif request_dict['prop'] == 'water_sol':
