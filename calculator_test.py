@@ -83,9 +83,9 @@ class TestCalc(Calculator):
     		json_obj = self.getMass({'chemical': _response_dict['chemical']})
     		mass = json_obj['data'][0]['mass']
     		_response_dict.update({'mass': mass})
-            _ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['test_datum'])
+            _ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['test_datum']))
     	_response_dict.update({'data': _ws_result})
-    	return _response_dict
+        return _response_dict
 
 
     def data_request_handler(self, request_dict):
