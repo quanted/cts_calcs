@@ -75,18 +75,17 @@ class TestCalc(Calculator):
         """
         Converts water solubility from log(mol/L) => mg/L
         """
-	_ws_result = None
-	if isinstance(_response_dict['mass'], float) or isinstance(_response_dict['mass'], int):
-	        _ws_result = 1000 * float(_response_dict['mass']) * 10**-(_response_dict['test_datum'])
-	else:
-		# request mass from Calculator
-		json_obj = self.getMass({'chemical': _response_dict['chemical']})
-		mass = json_obj['data'][0]['mass']
-		_response_dict.update({'mass': mass})
-		_ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['test_datum'])
-	#_response_dict['data'] = _ws_result
-	_response_dict.update({'data': _ws_result})
-	return _response_dict
+    	_ws_result = None
+    	if isinstance(_response_dict['mass'], float) or isinstance(_response_dict['mass'], int):
+    	        _ws_result = 1000 * float(_response_dict['mass']) * 10**-(_response_dict['test_datum'])
+    	else:
+    		# request mass from Calculator
+    		json_obj = self.getMass({'chemical': _response_dict['chemical']})
+    		mass = json_obj['data'][0]['mass']
+    		_response_dict.update({'mass': mass})
+            _ws_result = 1000 * float(_response_dict['mass'] * 10**-(_response_dict['test_datum'])
+    	_response_dict.update({'data': _ws_result})
+    	return _response_dict
 
 
     def data_request_handler(self, request_dict):
