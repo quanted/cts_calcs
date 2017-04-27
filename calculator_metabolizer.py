@@ -71,41 +71,55 @@ class MetabolizerCalc(Calculator):
 
     def traverse(self, root, gen_limit):
         """
-        For gentrans model output - metabolites tree
+        For gentrans model output - products tree
+        Uses JIT spacetree library on output page; this
+        function walks the metabolizer response tree and uses
+        keys for plotting a JIT spacetree.
+        (https://philogb.github.io/jit/)
+
+        id - generation ID (e.g., 2.4.3 - parent 2's 4th child's 3rd child..)
+        name - product image (node) on the spacetree
+        data - shows up when the house hovers over a product
         """
 
-        # global metID
         self.metID += 1
-        newDict = {}
+        _products_dict = {}
 
         logging.info("metabolites: {}".format(self.metID))
 
-        tblID = "{}_table".format(self.metID)  # id for node's tooltip table
-
         if self.metID == 1:
-            parent = root.keys()[0]
-            newDict.update({"id": self.metID, "name": self.nodeWrapper(parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
-            newDict['data'].update(self.popupBuilder({"smiles": parent, "generation": "0"}, self.metabolite_keys, "{}".format(self.metID),
+            _parent = root.keys()[0]  # start with parent metabolite
+
+            # organizing data for spacetree
+            _products_dict.update({
+                "id": self.metID,
+                "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
+                "data": {},
+                "children": []
+            })
+            _products_dict['data'].update(self.popupBuilder({"smiles": _parent, "generation": "0"}, self.metabolite_keys, "{}".format(self.metID),
                                                 "Metabolite Information"))
 
-            _filtered_smiles = smilesfilter.filterSMILES(parent)['results'][-1]
+            _filtered_smiles = smilesfilter.filterSMILES(_parent)['results'][-1]
             _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
             
             if 'data' in _mol_info:
                 for key, val in _mol_info['data'][0].items():
                     if key in self.metabolite_keys:
-                        newDict['data'].update({key: val})
+                        _products_dict['data'].update({key: val})
 
             # skipping 2nd parent metabolite:
-            second_parent = root[parent]['metabolites'].keys()[0]
-            root = root[parent]['metabolites'][second_parent]
+            second_parent = root[_parent]['metabolites'].keys()[0]
+            root = root[_parent]['metabolites'][second_parent]
+
             # not-skipping version without 2nd parent problem:
-            # root = root[parent]
+            # root = root[_parent]
             
         else:
             if root['generation'] > 0 and root['generation'] <= gen_limit:
-                newDict.update({"id": self.metID, "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
-                newDict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
+                # continue walking tree until generation limit is met..
+                _products_dict.update({"id": self.metID, "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
+                _products_dict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
 
                 _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])['results'][-1]
                 _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
@@ -113,17 +127,19 @@ class MetabolizerCalc(Calculator):
                 if 'data' in _mol_info:
                     for key, val in _mol_info['data'][0].items():
                         if key in self.metabolite_keys:
-                            newDict['data'].update({key: val})
+                            _products_dict['data'].update({key: val})
 
         for key, value in root.items():
             if isinstance(value, dict):
                 for key2, value2 in root[key].items():
                     root2 = root[key][key2]
-                    if len(root2) > 0 and 'children' in newDict and root['generation'] < gen_limit:
-                    # if len(root2) > 0 and 'children' in newDict and root2['generation'] < gen_limit:
-                        newDict['children'].append(self.traverse(root2, gen_limit))
+                    # if len(root2) > 0 and 'children' in _products_dict and root2['generation'] < gen_limit:
+                    if len(root2) > 0 and 'children' in _products_dict and root['generation'] < gen_limit:
+                        # continue walking branch if root2 has contents, one of those contents is 'children', and
+                        # the generation limit isn't exceeded..
+                        _products_dict['children'].append(self.traverse(root2, gen_limit))
 
-        return newDict
+        return _products_dict
 
 
 
@@ -180,7 +196,7 @@ class MetabolizerCalc(Calculator):
 
         response = self.getTransProducts(_data_dict)
         # response = self.make_data_request(request_dict['chemical'], self, None)
-        _results = MetabolizerCalc().recursive(response, int(request_dict.get('gen_limit', 1)))
+        _results = MetabolizerCalc().recursive(response, int(request_dict['gen_limit']))
 
         _response_obj = {
             'calc': "chemaxon",  # todo: change to metabolizer, change in template too
