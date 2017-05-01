@@ -188,6 +188,7 @@ class Calculator(object):
                     "mass": "chemicalTerms(mass)",
                     "exactMass": "chemicalTerms(exactMass)",
                     "smiles": "chemicalTerms(molString('smiles'))",
+                    "cas": "chemicalTerms(molString('name:cas#'))",
                 },
                 "parameters": {
                     "structureData": "mrv"
@@ -318,83 +319,6 @@ class Calculator(object):
         }
         url = self.jchem_server_url + self.detail_endpoint
         return self.web_call(url, post_data)
-
-
-    # def singleFilter(self, request_obj):
-    #     """
-    #     Calls single EFS Standardizer filter
-    #     for filtering SMILES
-    #     """
-    #     try:
-    #         smiles = request_obj.get('smiles')
-    #         action = request_obj.get('action')
-    #     except Exception as e:
-    #         logging.info("Exception retrieving mass from jchem: {}".format(e))
-    #         raise
-    #     post_data = {
-    #         "structure": smiles,
-    #         "actions": [
-    #             action
-    #         ]
-    #     }
-    #     url = self.efs_server_url + self.efs_standardizer_endpoint
-    #     return self.web_call(url, post_data)
-
-
-    # def filterSMILES(self, request_obj):
-    #     """
-    #     cts ws call to jchem to perform various
-    #     smiles processing before being sent to
-    #     p-chem calculators
-    #     """
-
-    #     smiles = request_obj.get('smiles')
-
-    #     # Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
-    #     # 1. CTSWS actions "removeExplicitH" and "transform".
-    #     url = self.efs_server_url + self.efs_standardizer_endpoint
-    #     post_data = {
-    #         'structure': smiles,
-    #         'actions': [
-    #             "removeExplicitH",
-    #             "transform"
-    #         ]
-    #     }
-    #     response = self.web_call(url, post_data)
-
-    #     filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
-        
-    #     # 2. Get major tautomer from jchem:
-    #     # tautObj = JchemCalc.getPropObject('tautomerization')
-    #     # tautObj.setPostDataValues({"calculationType": "MAJOR"})
-    #     taut_obj = jchem_properties.Tautomerization()
-    #     taut_obj.postData.update({'calculationType': 'MAJOR'})
-    #     tautObj.makeDataRequest(filtered_smiles)
-    #     try:
-    #         _taut_response = self.web_call(taut_obj.url, taut_obj.postData)
-    #         major_taut_smiles = _taut_response['result']['structureData']['structure']
-    #     except Exception as e:
-    #         logging.warning("jchem_rest filterSMILES excpetion: {}".format(e))
-
-
-    #     # todo: verify this is major taut result smiles, not original smiles for major taut request...
-    #     # major_taut_smiles = tautObj.results['result']['structureData']['structure']
-
-    #     logging.warning("MAJOR TAUT SMILES: {}".format(major_taut_smiles))
-
-    #     # 3. Using major taut smiles for final "neutralize" filter:
-    #     post_data = {
-    #         'structure': major_taut_smiles,
-    #         'actions': [
-    #             "neutralize"
-    #         ]
-    #     }
-    #     response = self.web_call(url, post_data)
-
-    #     final_smiles = response['results'][-1]
-    #     logging.warning("FINAL FITERED SMILES: {}".format(final_smiles))
-
-    #     return response
 
 
     def web_call(self, url, data):
