@@ -151,7 +151,12 @@ class JchemCalc(Calculator):
                 if key in _spec_inputs:
                     _model_params.update({key: _spec_inputs[key]})
 
-            _model_params.update({'smiles': _filtered_smiles, 'run_type': 'single'})
+            _model_params.update({
+                'smiles': _filtered_smiles,
+                'run_type': 'single',
+                'chemical': request_dict['chemical'],
+                'method': 'POST',
+            })
 
             logging.warning("MAKING REQUEST TO SPECIATION: {}".format(_model_params))
 
