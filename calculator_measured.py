@@ -2,6 +2,10 @@ import requests
 import json
 import logging
 import os
+	
+from calculator import Calculator
+import smilesfilter
+
 try:
 	from cts_app.cts_calcs.calculator import Calculator
 except ImportError as e:
@@ -26,7 +30,7 @@ class MeasuredCalc(Calculator):
 		self.name = "measured"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
 		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
-		# self.urlStruct = "/rest/episuite/measured"  # old way
+		#self.urlStruct = "/rest/episuite/measured"  # old way
 
 		# map workflow parameters to test
 		self.propMap = {
@@ -101,12 +105,12 @@ class MeasuredCalc(Calculator):
 		}
 
 		try:
-			sparc_requested_property = self.propMap[requested_property]['result_key']
+			measured_requested_property = self.propMap[requested_property]['result_key']
 
-			if sparc_requested_property in properties_dict.keys():
-				data_obj['data'] = properties_dict[sparc_requested_property]['propertyvalue']
+			if measured_requested_property in properties_dict.keys():
+				data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
 			else:
-				data_obj['data'] = "property not available".format(sparc_requested_property)
+				data_obj['data'] = "property not available".format(measured_requested_property)
 
 			return data_obj
 
@@ -115,3 +119,51 @@ class MeasuredCalc(Calculator):
 			raise err
 
 
+	def data_request_handler(self, request_dict):
+
+		_filtered_smiles = ''
+		_response_dict = {}
+		_measured_data = {}
+
+		# fill any overlapping keys from request:
+		for key in request_dict.keys():
+			_response_dict[key] = request_dict.get(key)
+		_response_dict.update({'request_post': request_dict, 'method': None})
+
+		try:
+			_filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
+		except Exception as err:
+			logging.warning("Error filtering SMILES: {}".format(err))
+			_response_dict.update({'data': "Cannot filter SMILES"})
+			return _response_dict
+
+
+		try:
+			_response = self.makeDataRequest(_filtered_smiles) # make call for data!
+			_measured_data = json.loads(_response.content)
+			# _measured_data.update(json.loads(_response.content))
+			logging.info("Measured Data: {}".format(_measured_data))
+		except Exception as e:
+			logging.warning("Exception making request to Measured: {}".format(e))
+			_response_dict.update({'data': "data not found"})
+			return _response_dict
+
+		logging.info("Measured Data: {}".format(_measured_data))
+		# logging.info("Request props: {}".format(request_dict['props']))
+			
+
+		# get requested properties from results:
+		# for prop in request_dict['props']:
+		try:
+			_data_obj = self.getPropertyValue(request_dict['prop'], _measured_data)
+			logging.info("data object: {}".format(_data_obj))
+			_response_dict.update(_data_obj)
+
+			return _response_dict
+
+		except Exception as err:
+			logging.warning("Exception occurred getting Measured data: {}".format(err))
+			_response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
+			logging.info("##### session id: {}".format(request_dict['sessionid']))
+			return _response_dict
