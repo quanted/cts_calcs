@@ -100,8 +100,9 @@ class MetabolizerCalc(Calculator):
             _products_dict['data'].update(self.popupBuilder({"smiles": _parent, "generation": "0"}, self.metabolite_keys, "{}".format(self.metID),
                                                 "Metabolite Information"))
 
-            _filtered_smiles = smilesfilter.filterSMILES(_parent)['results'][-1]
-            _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
+            # _filtered_smiles = smilesfilter.filterSMILES(_parent)['results'][-1]
+            # _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
+            _mol_info = {}
             
             if 'data' in _mol_info:
                 for key, val in _mol_info['data'][0].items():
@@ -121,8 +122,9 @@ class MetabolizerCalc(Calculator):
                 _products_dict.update({"id": self.metID, "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
                 _products_dict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
 
-                _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])['results'][-1]
-                _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
+                # _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])['results'][-1]
+                # _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
+                _mol_info = {}
                 
                 if 'data' in _mol_info:
                     for key, val in _mol_info['data'][0].items():
