@@ -34,6 +34,7 @@ class MetabolizerCalc(Calculator):
         self.methods = ['KLOP', 'VG', 'PHYS']  # kow_no_ph and kow_wph only
         self.props = ['water_sol', 'ion_con', 'kow_no_ph', 'kow_wph', 'water_sol_ph']  # available pchem props
         self.prop_name = prop_name  # prop name for MetabolizerCalc instance
+        self.products_list = []  # single-level list of products with genKey
 
         self.metID = 0  # unique id for each node
         self.metabolite_keys = ['smiles', 'formula', 'iupac', 'mass', 'accumulation', 'production', 'transmissivity', 'generation', 'routes', 'exactMass']
@@ -63,9 +64,24 @@ class MetabolizerCalc(Calculator):
         library) understands
         """
         root = jsonDict['results']
+
         reDict = {}
-        parent = root.keys()[0]
-        reDict.update(self.traverse(root, gen_limit))
+        reDict.update({
+            'tree': self.traverse(root, gen_limit),
+            'total_products': self.metID
+        })
+
+
+        # Need to hit SMILES filter, then retrieve molecular info,
+        # node image, and popup image for products...
+        # logging.info("PRODUCTS LIST: {}".format(self.products_list))
+
+        
+        # Could make one big request to get node images from list of 
+        # nodes here! But, the tree would need to be walked again so it
+        # can have edit the 'name' key with the node images...
+
+
         return json.dumps(reDict)
 
 
@@ -91,45 +107,56 @@ class MetabolizerCalc(Calculator):
             _parent = root.keys()[0]  # start with parent metabolite
 
             # organizing data for spacetree
-            _products_dict.update({
-                "id": self.metID,
-                "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
-                "data": {},
-                "children": []
-            })
-            _products_dict['data'].update(self.popupBuilder({"smiles": _parent, "generation": "0"}, self.metabolite_keys, "{}".format(self.metID),
-                                                "Metabolite Information"))
-
-            # _filtered_smiles = smilesfilter.filterSMILES(_parent)['results'][-1]
-            # _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
-            _mol_info = {}
-            
-            if 'data' in _mol_info:
-                for key, val in _mol_info['data'][0].items():
-                    if key in self.metabolite_keys:
-                        _products_dict['data'].update({key: val})
+            # _products_dict.update({
+            #     "id": self.metID,
+            #     "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
+            #     "data": {},
+            #     "children": []
+            # })
+            # _products_dict['data'].update(
+            #     self.popupBuilder({"smiles": _parent, "generation": "0"},
+            #         self.metabolite_keys, "{}".format(self.metID),
+            #         "Metabolite Information"
+            #     )
+            # )
+            # self.products_list.append(_parent)
 
             # skipping 2nd parent metabolite:
             second_parent = root[_parent]['metabolites'].keys()[0]
             root = root[_parent]['metabolites'][second_parent]
-
             # not-skipping version without 2nd parent problem:
             # root = root[_parent]
+
+            _products_dict.update({
+                "id": self.metID,
+                "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
+                # "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
+                # 'name': "",
+                "data": {'smiles': _parent, 'routes': root['routes'], 'generation': root['generation']},
+                "children": []
+            })
+
             
         else:
             if root['generation'] > 0 and root['generation'] <= gen_limit:
                 # continue walking tree until generation limit is met..
-                _products_dict.update({"id": self.metID, "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True), "data": {}, "children": []})
-                _products_dict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
+                # _products_dict.update({
+                #     "id": self.metID,
+                #     "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True),
+                #     "data": {},
+                #     "children": []
+                # })
+                # _products_dict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
+                _products_dict.update({
+                    "id": self.metID,
+                    "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
+                    # 'name': self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True),
+                    # 'name': "",
+                    "data": {'smiles': root['smiles'], 'routes': root['routes'].split(',')[-1], 'generation': root['generation']},
+                    "children": []
+                })
+                # self.products_list.append(root['smiles'])
 
-                # _filtered_smiles = smilesfilter.filterSMILES(root['smiles'])['results'][-1]
-                # _mol_info = self.getChemDetails({'chemical': _filtered_smiles})
-                _mol_info = {}
-                
-                if 'data' in _mol_info:
-                    for key, val in _mol_info['data'][0].items():
-                        if key in self.metabolite_keys:
-                            _products_dict['data'].update({key: val})
 
         for key, value in root.items():
             if isinstance(value, dict):
@@ -200,14 +227,19 @@ class MetabolizerCalc(Calculator):
         # response = self.make_data_request(request_dict['chemical'], self, None)
         _results = MetabolizerCalc().recursive(response, int(request_dict['gen_limit']))
 
+        _products_data = json.loads(_results)
+
         _response_obj = {
             'calc': "chemaxon",  # todo: change to metabolizer, change in template too
             'prop': "products",
             'node': request_dict.get('node'),
-            'data': json.loads(_results),
+            # 'data': json.loads(_results),
+            'data': _products_data['tree'],
+            'total_products': _products_data['total_products'],
             'chemical': request_dict.get('chemical'),
             'workflow': 'gentrans',
-            'run_type': 'batch'            
+            'run_type': 'batch',
+            'request_post': request_dict            
         }
 
 
@@ -238,4 +270,5 @@ class MetabolizerCalc(Calculator):
         Makes request to metabolizer
         """
         url = self.efs_server_url + self.efs_metabolizer_endpoint
+        self.request_timeout = 60
         return self.web_call(url, request_obj)
