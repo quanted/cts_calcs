@@ -126,9 +126,9 @@ class SparcCalc(Calculator):
 
         # Get melting point for sparc calculations.
         # Try Measured, then TEST..although it'll be slow
-        melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
+        self.meltingpoint = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
         # melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
-        logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
+        logging.warning("Using melting point: {} for SPARC calculation".format(self.meltingpoint))
 
         _response_dict = {}
         for key in request_dict.keys():
@@ -401,7 +401,8 @@ class SparcCalc(Calculator):
 
         # # convert to python dict
         try:
-            melting_point = json.loads(measured_mp_response.content)['data']
+            # melting_point = json.loads(measured_mp_response.content)['data']
+            melting_point = melting_point_response['data']
         except Exception as e:
             logging.warning("Error in sparc_cts/worker.py: {}".format(e))
             melting_point = 0.0
@@ -416,8 +417,9 @@ class SparcCalc(Calculator):
                 # request = NotDjangoRequest(melting_point_request)
                 # test_melting_point_response = test_views.request_manager(request)
                 test_mp_response = TestCalc().data_request_handler(melting_point_request)
-                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
-                melting_point = json.loads(test_melting_point_response.content)[0]['data']
+                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response))
+                # melting_point = json.loads(test_melting_point_response.content)[0]['data']
+                melting_point = test_melting_point_response['data']
                 logging.warning("TEST MP VALUE: {}".format(melting_point))
             except Exception as e:
                 logging.warning("Error in sparc_cts/worker.py: {}".format(e))
