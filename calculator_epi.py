@@ -239,7 +239,7 @@ class EpiCalc(Calculator):
                                     verify=False)
                 logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_mp_response))
                 # melting_point = json.loads(test_melting_point_response.content)[0]['data']
-                melting_point = test_melting_point_response['data']['data']
+                melting_point = json.loads(test_mp_response.content)['data']['data']
                 logging.warning("TEST MP VALUE: {}".format(melting_point))
             except Exception as e:
                 logging.warning("Error in calculator_epi.py: {}".format(e))
