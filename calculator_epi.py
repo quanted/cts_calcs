@@ -30,8 +30,8 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        # self.urlStruct = "/episuiteapi/rest/episuite/{}/estimated"  # new way (cgi server 1)
-        self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
+        self.urlStruct = "/episuiteapi/rest/episuite/{}/estimated"  # new way (cgi server 1)
+        # self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
         self.methods = None
         self.melting_point = 0.0
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
@@ -219,7 +219,7 @@ class EpiCalc(Calculator):
 
         # # convert to python dict
         try:
-            melting_point = json.loads(measured_mp_response.content)['data']
+            melting_point = json.loads(measured_mp_response.content)['data']['data']
             # melting_point = measured_mp_response['data']
         except Exception as e:
             logging.warning("Error in calculator_epi.py: {}".format(e))
@@ -231,10 +231,15 @@ class EpiCalc(Calculator):
                 melting_point_request['calc'] = 'test'
                 # request = NotDjangoRequest(melting_point_request)
                 # test_melting_point_response = test_views.request_manager(request)
-                test_mp_response = TestCalc().data_request_handler(melting_point_request)
-                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response))
+                # test_mp_response = TestCalc().data_request_handler(melting_point_request)
+                test_mp_response = requests.post(
+                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/test/run', 
+                                    data=json.dumps(melting_point_request), 
+                                    allow_redirects=True,
+                                    verify=False)
+                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_mp_response))
                 # melting_point = json.loads(test_melting_point_response.content)[0]['data']
-                melting_point = test_melting_point_response['data']
+                melting_point = test_melting_point_response['data']['data']
                 logging.warning("TEST MP VALUE: {}".format(melting_point))
             except Exception as e:
                 logging.warning("Error in calculator_epi.py: {}".format(e))

@@ -195,33 +195,39 @@ class MetabolizerCalc(Calculator):
 
 
     def data_request_handler(self, request_dict):
-        reactionLibs = {
-            "hydrolysis": request_dict.get('abiotic_hydrolysis'),
-            "abiotic_reduction": request_dict.get('abiotic_reduction'),
-            # "human_biotransformation": self.mamm_metabolism
-        }
 
-        _trans_libs = []
-        for key, value in reactionLibs.items():
-            if value:
-                _trans_libs.append(key)
+        logging.warning("$$$ METABOLIZER REQUEST: {} $$$".format(request_dict))
 
-        if not request_dict.get('gen_limit', False):
-            request_dict['gen_limit'] = 1
+        # reactionLibs = {
+        #     "hydrolysis": request_dict.get('abiotic_hydrolysis'),
+        #     "abiotic_reduction": request_dict.get('abiotic_reduction'),
+        #     # "human_biotransformation": self.mamm_metabolism
+        # }
 
-        # NOTE: populationLimit is hard-coded to 0 as it currently does nothing
+        # _trans_libs = []
+        # for key, value in reactionLibs.items():
+        #     if value:
+        #         _trans_libs.append(key)
 
-        _data_dict = {
-            'structure': request_dict['chemical'],
-            'generationLimit': request_dict['gen_limit'],
-            'populationLimit': 0,
-            # 'likelyLimit': self.likely_limit,
-            'likelyLimit': 0.001,
-            'excludeCondition': ""  # 'generateImages': False
-        }
+        # if not request_dict.get('gen_limit', False):
+        #     request_dict['gen_limit'] = 1
 
-        if len(_trans_libs) > 0:
-            _data_dict.update({'transformationLibraries': _trans_libs})
+        # # NOTE: populationLimit is hard-coded to 0 as it currently does nothing
+
+        # _data_dict = {
+        #     'structure': request_dict['chemical'],
+        #     'generationLimit': request_dict['gen_limit'],
+        #     'populationLimit': 0,
+        #     # 'likelyLimit': self.likely_limit,
+        #     'likelyLimit': 0.001,
+        #     'excludeCondition': ""  # 'generateImages': False
+        # }
+
+        # if len(_trans_libs) > 0:
+        #     _data_dict.update({'transformationLibraries': _trans_libs})
+
+        _data_dict = request_dict.get('metabolizer_post')
+        logging.info("METABOLIZER POST: {}".format(_data_dict))
 
         response = self.getTransProducts(_data_dict)
         # response = self.make_data_request(request_dict['chemical'], self, None)
