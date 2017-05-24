@@ -33,7 +33,7 @@ class EpiCalc(Calculator):
         # self.urlStruct = "/episuiteapi/rest/episuite/{}/estimated"  # new way (cgi server 1)
         self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
         self.methods = None
-        self.melting_point = 25.0
+        self.melting_point = 0.0
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
         self.propMap = {
             'melting_point': {
@@ -166,10 +166,9 @@ class EpiCalc(Calculator):
             return _response_dict
 
         try:
-
             self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
-            logging.warning("Using melting point: {} for SPARC calculation".format(self.melting_point))
-
+            # logging.warning("Using melting point: {} for SPARC calculation".format(self.melting_point))
+            # self.melting_point = request_dict.get('melting_point')
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
             if 'propertyvalue' in _result_obj:
@@ -203,18 +202,28 @@ class EpiCalc(Calculator):
         # request = NotDjangoRequest(melting_point_request)
         # melting_point_response = measured_views.request_manager(request)
         melting_point = 0.0
-        measured_mp_response = MeasuredCalc().data_request_handler(melting_point_request)
+        # measured_mp_response = MeasuredCalc().data_request_handler(melting_point_request)
+        # Ideally need to make request to measured worker/queue:
+        # tasks.measuredTask.apply_async(args=[melting_point_request], queue='measured')
+        # measured_mp_resonse = tasks.measuredTask.apply(args[melting_point_request], queue='measured')
+
+        # Probably best to call REST endpoint for melting point:
+        measured_mp_response = requests.post(
+                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/measured/run', 
+                                    data=json.dumps(melting_point_request), 
+                                    allow_redirects=True,
+                                    verify=False)
+
+
+        logging.warning("MELTING POINT RESPONSE: {}".format(measured_mp_response.content))
 
         # # convert to python dict
         try:
-            # melting_point = json.loads(measured_mp_response)['data']
-            melting_point = measured_mp_response['data']
+            melting_point = json.loads(measured_mp_response.content)['data']
+            # melting_point = measured_mp_response['data']
         except Exception as e:
             logging.warning("Error in calculator_epi.py: {}".format(e))
             melting_point = 0.0
-
-        logging.warning("MELTING POINT RESPONSE: {}".format(measured_mp_response))
-        logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(measured_mp_response)))
 
         if not isinstance(melting_point, float):
             logging.warning("Trying to get MP from TEST..")
