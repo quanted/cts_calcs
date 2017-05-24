@@ -184,7 +184,8 @@ class JchemCalc(Calculator):
                 'node': request_dict['node'],
                 'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
-                'run_type': 'batch'
+                'run_type': 'batch',
+                'request_post': {'service': "speciation"}
             }
             data_obj.update(speciation_data)
 

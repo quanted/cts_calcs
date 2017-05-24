@@ -30,7 +30,9 @@ class MeasuredCalc(Calculator):
 		self.name = "measured"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
 		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
-		#self.urlStruct = "/rest/episuite/measured"  # old way
+		# self.urlStruct = "/rest/episuite/measured"  # old way
+		self.request_timeout = 10
+		self.melting_point = 0.0
 
 		# map workflow parameters to test
 		self.propMap = {
@@ -68,19 +70,21 @@ class MeasuredCalc(Calculator):
 
 	def makeDataRequest(self, structure):
 		
-		post = self.getPostData()
-		post['structure'] = structure
-		url = self.baseUrl + self.urlStruct
+		_post = self.getPostData()
+		_post['structure'] = structure
+		_url = self.baseUrl + self.urlStruct
 
-		logging.info("Measured URL: {}".format(url))
+		logging.info("Measured URL: {}".format(_url))
+
+		# return self.request_logic(_url, _post)
 
 		try:
-			response = requests.post(url, data=json.dumps(post), headers=headers, timeout=30)
+			response = requests.post(_url, data=json.dumps(_post), headers=self.headers, timeout=self.request_timeout)
 		except requests.exceptions.ConnectionError as ce:
-			logging.info("connection exception: {}".format(ce))
+			logging.warning("connection exception: {}".format(ce))
 			raise 
 		except requests.exceptions.Timeout as te:
-			logging.info("timeout exception: {}".format(te))
+			logging.warning("timeout exception: {}".format(te))
 			raise 
 		else:
 			self.results = response
@@ -118,6 +122,48 @@ class MeasuredCalc(Calculator):
 			logging.warning("Error at Measured Calc: {}".format(err))
 			raise err
 
+	def request_logic(self, url, post_data):
+		"""
+		Handles retries and validation of responses
+		"""
+
+		_valid_result = False  # for retry logic
+		_retries = 0
+		while not _valid_result and _retries < self.max_retries:
+			# retry data request to chemaxon server until max retries or a valid result is returned
+			try:
+				response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
+				_valid_result = self.validate_response(response)
+				if _valid_result:
+					self.results = json.loads(response.content)
+					# break
+					return self.results
+				_retries += 1
+			except Exception as e:
+				logging.warning("Exception in calculator_epi.py: {}".format(e))
+				_retries += 1
+
+			logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
+		self.results = "calc server not found"
+		return self.results
+
+
+	def validate_response(self, response):
+		"""
+		Validates sparc response.
+		Returns False if data is null, or any other
+		values that indicate an error
+		"""
+		if response.status_code != 200:
+			logging.warning("epi server response status: {}".format(response.status_code))
+			return False
+
+		# successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
+		# json_obj = json.loads(response.content)
+
+		# TODO: verify if blank data, finding the source of the empty water sol values...
+		return True
+
 
 	def data_request_handler(self, request_dict):
 
@@ -138,32 +184,29 @@ class MeasuredCalc(Calculator):
 			_response_dict.update({'data': "Cannot filter SMILES"})
 			return _response_dict
 
+		_retries = 3
+		while _retries > 0:
 
-		try:
-			_response = self.makeDataRequest(_filtered_smiles) # make call for data!
-			_measured_data = json.loads(_response.content)
-			# _measured_data.update(json.loads(_response.content))
+			try:
+				_response = self.makeDataRequest(_filtered_smiles) # make call for data!
+				logging.info("Response from Measured: {}".format(_response))
+				_measured_data = json.loads(_response.content)
+				logging.info("Measured Data: {}".format(_measured_data))
+			except Exception as e:
+				logging.warning("Exception making request to Measured: {}".format(e))
+				_response_dict.update({'data': "data not found"})
+				# return _response_dict
+
 			logging.info("Measured Data: {}".format(_measured_data))
-		except Exception as e:
-			logging.warning("Exception making request to Measured: {}".format(e))
-			_response_dict.update({'data': "data not found"})
-			return _response_dict
 
-		logging.info("Measured Data: {}".format(_measured_data))
-		# logging.info("Request props: {}".format(request_dict['props']))
-			
+			try:
+				_data_obj = self.getPropertyValue(request_dict['prop'], _measured_data)
+				logging.info("data object: {}".format(_data_obj))
+				_response_dict.update(_data_obj)
+				return _response_dict
+			except Exception as err:
+				logging.warning("Exception occurred getting Measured data: {}".format(err))
+				_response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
 
-		# get requested properties from results:
-		# for prop in request_dict['props']:
-		try:
-			_data_obj = self.getPropertyValue(request_dict['prop'], _measured_data)
-			logging.info("data object: {}".format(_data_obj))
-			_response_dict.update(_data_obj)
-
-			return _response_dict
-
-		except Exception as err:
-			logging.warning("Exception occurred getting Measured data: {}".format(err))
-			_response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
-			logging.info("##### session id: {}".format(request_dict['sessionid']))
-			return _response_dict
+			logging.info("Retrying Measured request..")
+			_retries = _retries - 1
