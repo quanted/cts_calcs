@@ -154,7 +154,8 @@ class EpiCalc(Calculator):
 
         # fill any overlapping keys from request:
         for key in request_dict.keys():
-            _response_dict[key] = request_dict.get(key)
+            if not key == 'nodes':
+                _response_dict[key] = request_dict.get(key)
         _response_dict.update({'request_post': request_dict, 'method': None})
 
         try:
@@ -166,9 +167,7 @@ class EpiCalc(Calculator):
             return _response_dict
 
         try:
-            self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
-            # logging.warning("Using melting point: {} for SPARC calculation".format(self.melting_point))
-            # self.melting_point = request_dict.get('melting_point')
+            self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict.get('sessionid'))
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
             if 'propertyvalue' in _result_obj:
@@ -181,7 +180,7 @@ class EpiCalc(Calculator):
         except Exception as err:
             logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
             _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
-            logging.info("##### session id: {}".format(request_dict['sessionid']))
+            logging.info("##### session id: {}".format(request_dict.get('sessionid')))
             return _response_dict
 
 
