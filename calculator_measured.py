@@ -173,7 +173,8 @@ class MeasuredCalc(Calculator):
 
 		# fill any overlapping keys from request:
 		for key in request_dict.keys():
-			_response_dict[key] = request_dict.get(key)
+			if not key == 'nodes':
+				_response_dict[key] = request_dict.get(key)
 		_response_dict.update({'request_post': request_dict, 'method': None})
 
 		try:

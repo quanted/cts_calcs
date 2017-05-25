@@ -199,7 +199,8 @@ class JchemCalc(Calculator):
 
             _response_dict = {}
             for key in request_dict.keys():
-                _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
+                if not key == 'nodes':
+                    _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
 
             _response_dict.update({'request_post': request_dict})
             # _response_dict.update({'prop': prop})
