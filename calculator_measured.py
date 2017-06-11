@@ -29,8 +29,8 @@ class MeasuredCalc(Calculator):
 		self.postData = {"smiles" : ""}
 		self.name = "measured"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
-		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
-		# self.urlStruct = "/rest/episuite/measured"  # old way
+		# self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
+		self.urlStruct = "/rest/episuite/measured"  # old way
 		self.request_timeout = 10
 		self.melting_point = 0.0
 
@@ -211,3 +211,4 @@ class MeasuredCalc(Calculator):
 
 			logging.info("Retrying Measured request..")
 			_retries = _retries - 1
+		return _response_dict
