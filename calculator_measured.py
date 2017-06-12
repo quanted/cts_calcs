@@ -211,3 +211,4 @@ class MeasuredCalc(Calculator):
 
 			logging.info("Retrying Measured request..")
 			_retries = _retries - 1
+		return _response_dict

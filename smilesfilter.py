@@ -210,7 +210,7 @@ def parseSmilesByCalculator(structure, calculator):
             raise "Structure too large, must be < 1500 g/mol.."
 
     #2-3. clear stereos from structure, untransform [N+](=O)[O-] >> N(=O)=O..
-    if calculator == 'epi' or calculator == 'sparc':
+    if calculator == 'epi' or calculator == 'sparc' or calculator == 'measured':
         try:
             # clear stereoisomers:
             filtered_smiles = clearStereos(structure)
