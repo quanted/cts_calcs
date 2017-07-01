@@ -9,7 +9,7 @@ import smilesfilter
 
 
 class SparcCalc(Calculator):
-    def __init__(self, smiles=None, meltingpoint=0.0, pressure=760.0, temperature=25.0):
+    def __init__(self, smiles=None, melting_point=0.0, pressure=760.0, temperature=25.0):
 
         Calculator.__init__(self)  # inherit Calculator base class
 
@@ -19,7 +19,7 @@ class SparcCalc(Calculator):
         self.smiles = smiles
         self.solvents = dict()
         self.pressure = pressure
-        self.meltingpoint = meltingpoint
+        self.melting_point = melting_point
         self.temperature = temperature
         self.props = ["water_sol", "vapor_press", "henrys_law_con", "mol_diss", "boiling_point"]
         self.sparc_props = {
@@ -37,7 +37,7 @@ class SparcCalc(Calculator):
     def get_sparc_query(self):
         query = {
             'pressure': self.pressure,
-            'meltingPoint': self.meltingpoint,
+            'meltingPoint': self.melting_point,
             'temperature': self.temperature,
             'calculations': self.getCalculations(),
             'smiles': self.smiles,
@@ -53,7 +53,7 @@ class SparcCalc(Calculator):
             'solvents': [],
             'units': units,
             'pressure': self.pressure,
-            'meltingPoint': self.meltingpoint,
+            'meltingPoint': self.melting_point,
             'temperature': self.temperature,
             'type': sparc_prop
         }
@@ -126,9 +126,13 @@ class SparcCalc(Calculator):
 
         # Get melting point for sparc calculations.
         # Try Measured, then TEST..although it'll be slow
-        self.meltingpoint = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
+        if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
+            self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict.get('sessionid'))
+        else:
+            self.melting_point = None
+        # self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
         # melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
-        logging.warning("Using melting point: {} for SPARC calculation".format(self.meltingpoint))
+        logging.warning("Using melting point: {} for SPARC calculation".format(self.melting_point))
 
         _response_dict = {}
         for key in request_dict.keys():
