@@ -2,10 +2,10 @@ import json
 import logging
 import requests
 import os
-from calculator import Calculator
-from calculator_measured import MeasuredCalc
-from calculator_test import TestCalc
-import smilesfilter
+from .calculator import Calculator
+from .calculator_measured import MeasuredCalc
+from .calculator_test import TestCalc
+from .smilesfilter import parseSmilesByCalculator
 
 
 class SparcCalc(Calculator):

@@ -3,17 +3,19 @@ import json
 import logging
 import os
 
-from calculator import Calculator
-import smilesfilter
+from .calculator import Calculator
+from .calculator_measured import MeasuredCalc
+from .calculator_test import TestCalc
+from .smilesfilter import parseSmilesByCalculator
 
 # try:
 #     # from cts_app.cts_calcs.calculator import Calculator
 #     from cts_app.cts_calcs.smilesfilter import max_weight
-#     # from cts_app.cts_calcs import smilesfilter
+#     # from cts_app.cts_calcs from .smilesfilter import parseSmilesByCalculator
 # except ImportError as e:
 #     # from cts_calcs.calculator import Calculator
 #     from cts_calcs.smilesfilter import max_weight
-#     # from cts_calcs import smilesfilter
+#     # from cts_calcs from .smilesfilter import parseSmilesByCalculator
 
 headers = {'Content-Type': 'application/json'}
 

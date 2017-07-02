@@ -3,8 +3,8 @@ import json
 import logging
 import os
 	
-from calculator import Calculator
-import smilesfilter
+from .calculator import Calculator
+from .smilesfilter import parseSmilesByCalculator
 
 try:
 	from cts_app.cts_calcs.calculator import Calculator
@@ -30,7 +30,9 @@ class MeasuredCalc(Calculator):
 		self.name = "measured"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
 		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
-		#self.urlStruct = "/rest/episuite/measured"  # old way
+		# self.urlStruct = "/rest/episuite/measured"  # old way
+		self.request_timeout = 10
+		self.melting_point = 0.0
 
 		# map workflow parameters to test
 		self.propMap = {

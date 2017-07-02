@@ -6,8 +6,8 @@ import os
 #    from cts_app.cts_calcs.calculator import Calculator
 #except ImportError as e:
 #    from cts_calcs.calculator import Calculator
-from calculator import Calculator
-from smilesfilter import parseSmilesByCalculator
+from .calculator import Calculator
+from .smilesfilter import parseSmilesByCalculator
 
 headers = {'Content-Type': 'application/json'}
 
