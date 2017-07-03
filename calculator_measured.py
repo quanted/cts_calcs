@@ -3,8 +3,8 @@ import json
 import logging
 import os
 	
-from calculator import Calculator
-import smilesfilter
+from .calculator import Calculator
+from .smilesfilter import parseSmilesByCalculator
 
 try:
 	from cts_app.cts_calcs.calculator import Calculator

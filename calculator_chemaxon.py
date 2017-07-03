@@ -4,10 +4,10 @@ import logging
 import os
 import redis
 
-from smilesfilter import parseSmilesByCalculator
-from calculator import Calculator
+from .smilesfilter import parseSmilesByCalculator
+from .calculator import Calculator
 # import jchem_properties
-from jchem_properties import JchemProperty
+from .jchem_properties import JchemProperty
 
 
 # class JchemCalc(object):

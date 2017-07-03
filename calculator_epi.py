@@ -2,20 +2,19 @@ import requests
 import json
 import logging
 import os
-
-from calculator import Calculator
-from calculator_measured import MeasuredCalc
-from calculator_test import TestCalc
-import smilesfilter
+from .calculator import Calculator
+from .calculator_measured import MeasuredCalc
+from .calculator_test import TestCalc
+from .smilesfilter import parseSmilesByCalculator
 
 # try:
 #     # from cts_app.cts_calcs.calculator import Calculator
 #     from cts_app.cts_calcs.smilesfilter import max_weight
-#     # from cts_app.cts_calcs import smilesfilter
+#     # from cts_app.cts_calcs from .smilesfilter import parseSmilesByCalculator
 # except ImportError as e:
 #     # from cts_calcs.calculator import Calculator
 #     from cts_calcs.smilesfilter import max_weight
-#     # from cts_calcs import smilesfilter
+#     # from cts_calcs from .smilesfilter import parseSmilesByCalculator
 
 headers = {'Content-Type': 'application/json'}
 
@@ -75,12 +74,14 @@ class EpiCalc(Calculator):
 
 
     def getPostData(self, calc, prop, method=None):
-        return {'structure': "", 'melting_point': self.melting_point}
+        return {'structure': "", 'melting_point': None}
 
     
     def makeDataRequest(self, structure, calc, prop, method=None):
         _post = self.getPostData(calc, prop)
         _post['structure'] = structure
+        if self.melting_point != None:
+            _post['melting_point'] = self.melting_point
 
         logging.info("getting url...")
 
@@ -167,7 +168,10 @@ class EpiCalc(Calculator):
             return _response_dict
 
         try:
-            self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict.get('sessionid'))
+            if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
+                self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict.get('sessionid'))
+            else:
+                self.melting_point = None
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
             if 'propertyvalue' in _result_obj:

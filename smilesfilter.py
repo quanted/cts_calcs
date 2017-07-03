@@ -4,8 +4,8 @@ import requests
 import logging
 import json
 # import jchem_rest
-from calculator import Calculator
-import jchem_properties
+from .calculator import Calculator
+from .jchem_properties import Tautomerization
 # from calculator_chemaxon import JchemProperty
 # from calculator_chemaxon import Tautomerization
 
@@ -102,7 +102,7 @@ def filterSMILES(smiles):
     # 2. Get major tautomer from jchem:
     # tautObj = JchemCalc.getPropObject('tautomerization')
     # tautObj.setPostDataValues({"calculationType": "MAJOR"})
-    taut_obj = jchem_properties.Tautomerization()
+    taut_obj = Tautomerization()
     taut_obj.postData.update({'calculationType': 'MAJOR'})
     # taut_obj.makeDataRequest(filtered_smiles)
     taut_obj.make_data_request(filtered_smiles, taut_obj)

@@ -4,8 +4,8 @@ import logging
 import os
 import redis
 
-import smilesfilter
-from calculator import Calculator
+from .smilesfilter import parseSmilesByCalculator
+from .calculator import Calculator
 
 
 class MetabolizerCalc(Calculator):

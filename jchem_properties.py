@@ -2,7 +2,7 @@ import requests
 import json
 import logging
 import os
-from calculator import Calculator
+from .calculator import Calculator
 
 
 class JchemProperty(object):
