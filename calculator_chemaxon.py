@@ -151,7 +151,12 @@ class JchemCalc(Calculator):
                 if key in _spec_inputs:
                     _model_params.update({key: _spec_inputs[key]})
 
-            _model_params.update({'smiles': _filtered_smiles, 'run_type': 'single'})
+            _model_params.update({
+                'smiles': _filtered_smiles,
+                'run_type': 'single',
+                'chemical': request_dict['chemical'],
+                'method': 'POST',
+            })
 
             logging.warning("MAKING REQUEST TO SPECIATION: {}".format(_model_params))
 
@@ -179,7 +184,8 @@ class JchemCalc(Calculator):
                 'node': request_dict['node'],
                 'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
-                'run_type': 'batch'
+                'run_type': 'batch',
+                'request_post': {'service': "speciation"}
             }
             data_obj.update(speciation_data)
 
@@ -193,7 +199,8 @@ class JchemCalc(Calculator):
 
             _response_dict = {}
             for key in request_dict.keys():
-                _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
+                if not key == 'nodes':
+                    _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
 
             _response_dict.update({'request_post': request_dict})
             # _response_dict.update({'prop': prop})

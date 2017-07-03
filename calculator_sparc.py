@@ -9,7 +9,7 @@ from .smilesfilter import parseSmilesByCalculator
 
 
 class SparcCalc(Calculator):
-    def __init__(self, smiles=None, meltingpoint=0.0, pressure=760.0, temperature=25.0):
+    def __init__(self, smiles=None, melting_point=0.0, pressure=760.0, temperature=25.0):
 
         Calculator.__init__(self)  # inherit Calculator base class
 
@@ -19,7 +19,7 @@ class SparcCalc(Calculator):
         self.smiles = smiles
         self.solvents = dict()
         self.pressure = pressure
-        self.meltingpoint = meltingpoint
+        self.melting_point = melting_point
         self.temperature = temperature
         self.props = ["water_sol", "vapor_press", "henrys_law_con", "mol_diss", "boiling_point"]
         self.sparc_props = {
@@ -37,7 +37,7 @@ class SparcCalc(Calculator):
     def get_sparc_query(self):
         query = {
             'pressure': self.pressure,
-            'meltingPoint': self.meltingpoint,
+            'meltingPoint': self.melting_point,
             'temperature': self.temperature,
             'calculations': self.getCalculations(),
             'smiles': self.smiles,
@@ -53,7 +53,7 @@ class SparcCalc(Calculator):
             'solvents': [],
             'units': units,
             'pressure': self.pressure,
-            'meltingPoint': self.meltingpoint,
+            'meltingPoint': self.melting_point,
             'temperature': self.temperature,
             'type': sparc_prop
         }
@@ -126,15 +126,20 @@ class SparcCalc(Calculator):
 
         # Get melting point for sparc calculations.
         # Try Measured, then TEST..although it'll be slow
-        melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
+        if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
+            self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict.get('sessionid'))
+        else:
+            self.melting_point = None
+        # self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict['sessionid'])
         # melting_point = 0.0  # TODO: add getMeltingPoint back after Measured and TEST refactor
-        logging.warning("Using melting point: {} for SPARC calculation".format(melting_point))
+        logging.warning("Using melting point: {} for SPARC calculation".format(self.melting_point))
 
         _response_dict = {}
         for key in request_dict.keys():
-            _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
+            if not key == 'nodes':
+                _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
 
-        _response_dict.update({'request_post': request_dict})
+        _response_dict.update({'request_post': request_dict, 'method': None})
         # logging.info("response dict: {}".format(_response_dict))
 
 
@@ -397,17 +402,29 @@ class SparcCalc(Calculator):
         # todo: catch measured errors, then try epi melting point..
         # request = NotDjangoRequest(melting_point_request)
         # melting_point_response = measured_views.request_manager(request)
-        measured_mp_response = MeasuredCalc().data_request_handler(melting_point_request)
+        melting_point = 0.0
+        # measured_mp_response = MeasuredCalc().data_request_handler(melting_point_request)
+        # Ideally need to make request to measured worker/queue:
+        # tasks.measuredTask.apply_async(args=[melting_point_request], queue='measured')
+        # measured_mp_resonse = tasks.measuredTask.apply(args[melting_point_request], queue='measured')
+
+        # Probably best to call REST endpoint for melting point:
+        measured_mp_response = requests.post(
+                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/measured/run', 
+                                    data=json.dumps(melting_point_request), 
+                                    allow_redirects=True,
+                                    verify=False)
+
+
+        logging.warning("MELTING POINT RESPONSE: {}".format(measured_mp_response.content))
 
         # # convert to python dict
         try:
-            melting_point = json.loads(measured_mp_response.content)['data']
+            melting_point = json.loads(measured_mp_response.content)['data']['data']
+            # melting_point = measured_mp_response['data']
         except Exception as e:
-            logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+            logging.warning("Error in calculator_epi.py: {}".format(e))
             melting_point = 0.0
-
-        logging.warning("MELTING POINT RESPONSE: {}".format(measured_mp_response))
-        logging.warning("MELTING POINT RESPONSE TYPE: {}".format(type(measured_mp_response)))
 
         if not isinstance(melting_point, float):
             logging.warning("Trying to get MP from TEST..")
@@ -415,12 +432,18 @@ class SparcCalc(Calculator):
                 melting_point_request['calc'] = 'test'
                 # request = NotDjangoRequest(melting_point_request)
                 # test_melting_point_response = test_views.request_manager(request)
-                test_mp_response = TestCalc().data_request_handler(melting_point_request)
-                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_melting_point_response.content))
-                melting_point = json.loads(test_melting_point_response.content)[0]['data']
+                # test_mp_response = TestCalc().data_request_handler(melting_point_request)
+                test_mp_response = requests.post(
+                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/test/run', 
+                                    data=json.dumps(melting_point_request), 
+                                    allow_redirects=True,
+                                    verify=False)
+                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_mp_response))
+                # melting_point = json.loads(test_melting_point_response.content)[0]['data']
+                melting_point = json.loads(test_mp_response.content)['data']['data']
                 logging.warning("TEST MP VALUE: {}".format(melting_point))
             except Exception as e:
-                logging.warning("Error in sparc_cts/worker.py: {}".format(e))
+                logging.warning("Error in calculator_epi.py: {}".format(e))
                 melting_point = 0.0
 
             logging.warning("TEST MP TYPE: {}:".format(type(melting_point)))
