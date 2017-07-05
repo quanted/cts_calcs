@@ -3,7 +3,7 @@ import json
 import logging
 import os
 
-from ..cts_calcs.calculator import Calculator
+from .calculator import Calculator
 
 
 headers = {'Content-Type': 'application/json'}
