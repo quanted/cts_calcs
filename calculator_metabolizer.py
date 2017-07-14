@@ -104,7 +104,8 @@ class MetabolizerCalc(Calculator):
         logging.info("metabolites: {}".format(self.metID))
 
         if self.metID == 1:
-            _parent = root.keys()[0]  # start with parent metabolite
+            # _parent = root.keys()[0]  # start with parent metabolite
+            _parent = list(root.keys())[0]  # python 3 fix
 
             # organizing data for spacetree
             # _products_dict.update({
@@ -122,7 +123,8 @@ class MetabolizerCalc(Calculator):
             # self.products_list.append(_parent)
 
             # skipping 2nd parent metabolite:
-            second_parent = root[_parent]['metabolites'].keys()[0]
+            # second_parent = root[_parent]['metabolites'].keys()[0]
+            second_parent = list(root[_parent]['metabolites'].keys())[0]  # python 3 fix
             root = root[_parent]['metabolites'][second_parent]
             # not-skipping version without 2nd parent problem:
             # root = root[_parent]
