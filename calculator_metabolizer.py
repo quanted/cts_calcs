@@ -4,7 +4,7 @@ import logging
 import os
 import redis
 
-from .smilesfilter import parseSmilesByCalculator
+# from .smilesfilter import parseSmilesByCalculator
 from .calculator import Calculator
 
 

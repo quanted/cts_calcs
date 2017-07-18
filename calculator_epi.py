@@ -160,7 +160,7 @@ class EpiCalc(Calculator):
         _response_dict.update({'request_post': request_dict, 'method': None})
 
         try:
-            _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+            _filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
             logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
