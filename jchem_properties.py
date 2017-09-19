@@ -248,10 +248,19 @@ class Pka(JchemProperty):
         # after all, there are classes for microspecies and isoelectr point
 
         # self.make_data_request(request_dict.get('chemical'), self, None)
-        _pkas = self.getMostAcidicPka() + self.getMostBasicPka()
-        _pkas.sort()
 
-        return {'pKa': _pkas}
+        # Sorts all pKa values (acidic or basic) in ascending order
+        # _pkas = self.getMostAcidicPka() + self.getMostBasicPka()
+        # _pkas.sort()
+
+        # Now want it back to pKa and pKb like it used to be:
+        pka_values = {
+            'pKa': self.getMostAcidicPka(),
+            'pKb': self.getMostBasicPka()
+        }
+
+        # return {'pKa': _pkas}
+        return pka_values
 
 
 class IsoelectricPoint(JchemProperty):
