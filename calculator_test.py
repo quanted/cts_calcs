@@ -144,3 +144,109 @@ class TestCalc(Calculator):
 			_response_dict.update({'data': "timed out", 'request_post': request_dict})
 			logging.info("##### session id: {}".format(request_dict.get('sessionid')))
 			return _response_dict
+
+
+class TestWSCalc(Calculator):
+	"""
+	TEST WS Calculator at https://comptox.epa.gov/dashboard/web-test/
+	Additional documentation: Todd Martin's User's Guide
+	"""
+
+	def __init__(self):
+
+		Calculator.__init__(self)
+
+		self.postData = {"smiles" : ""}
+		self.name = "test"
+		self.baseUrl = os.environ['CTS_TESTWS_SERVER']
+
+		# hc - hierarchical clustering, sm - single model,
+		# nn - nearest neighbor, gc - group contribution
+		self.methods = ['fda', 'hc', 'sm', 'nn', 'gc']
+		# map workflow parameters to test
+		self.propMap = {
+			'melting_point': {
+			   'urlKey': 'MP'
+			},
+			'boiling_point': {
+			   'urlKey': 'BP'
+			},
+			'water_sol': {
+			   'urlKey': 'WS'
+			},
+			'vapor_press': {
+			   'urlKey': 'VP'
+			}
+			# 'henrys_law_con': ,
+			# 'kow_no_ph': 
+		}
+
+	def makeDataRequest(self, structure, calc, prop):
+		test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
+		# url = self.baseUrl + self.urlStruct.format('FDAMethod', test_prop)
+		_payload = {'smiles': structure, 'method': method}
+		try:
+			# response = requests.post(url, data=json.dumps(post), headers=headers, timeout=10)
+			response = requests.get(url, params=_payload, timeout=10)
+		except requests.exceptions.ConnectionError as ce:
+			logging.info("connection exception: {}".format(ce))
+			# return None
+			raise
+		except requests.exceptions.Timeout as te:
+			logging.info("timeout exception: {}".format(te))
+			# return None
+			raise
+
+		self.results = response
+		return response
+
+
+	def data_request_handler(self, request_dict):		
+
+		_filtered_smiles = ''
+		_response_dict = {}
+
+		# fill any overlapping keys from request:
+		for key in request_dict.keys():
+			if not key == 'nodes':
+				_response_dict[key] = request_dict.get(key)
+		_response_dict.update({'request_post': request_dict, 'method': None})
+
+
+		# filter smiles before sending to TEST:
+		# ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
+		try:
+			_filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+		except Exception as err:
+			logging.warning("Error filtering SMILES: {}".format(err))
+			_response_dict.update({'data': "Cannot filter SMILES for TEST WS data"})
+			return _response_dict
+		# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+		logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
+
+		try:
+			logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
+
+			_response = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop'])
+			_response_obj = json.loads(_response.content)
+
+			logging.info("TEST WS response data for {}: {}".format(request_dict['prop'], _response))
+
+			_test_data = _response_obj['predictions']  # list of predictions
+			_response_dict['data'] = _test_data
+
+			# sometimes TEST data successfully returns but with an error:
+			if _response.status_code != 200:
+				_response_dict['data'] = "TEST could not process chemical"
+			
+			if request_dict['prop'] == 'water_sol':
+					_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
+
+			return _response_dict
+
+		except Exception as err:
+			logging.warning("Exception occurred getting TEST data: {}".format(err))
+			_response_dict.update({'data': "timed out", 'request_post': request_dict})
+			logging.info("##### session id: {}".format(request_dict.get('sessionid')))
+			return _response_dict
