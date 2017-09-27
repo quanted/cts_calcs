@@ -98,25 +98,29 @@ class MeasuredCalc(Calculator):
 				"requested property: {} for Measured data doesn't match Measured's property keys".format(
 					requested_property))
 
-		properties_dict = response['properties']
-		data_obj = {
+		_data_obj = {
 			'calc': "measured",
 			'prop': requested_property
 		}
 
 		try:
+
+			properties_dict = response['properties']
+
 			measured_requested_property = self.propMap[requested_property]['result_key']
 
 			if measured_requested_property in properties_dict.keys():
-				data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
+				_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
 			else:
-				data_obj['data'] = "property not available".format(measured_requested_property)
+				_data_obj['data'] = "property not available".format(measured_requested_property)
 
-			return data_obj
+			return _data_obj
 
 		except Exception as err:
-			logging.warning("Error at Measured Calc: {}".format(err))
-			raise err
+			logging.warning("Error at Measured Calc getting property value...: {}".format(err))
+			logging.warning("Data from EPI WS: {}".format(response))
+			_data_obj.update({'data': "N/A"})
+			return _data_obj
 
 	def request_logic(self, url, post_data):
 		"""
