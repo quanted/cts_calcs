@@ -191,9 +191,9 @@ class TestWSCalc(Calculator):
 		}
 
 	def makeDataRequest(self, structure, calc, prop, method):
-		# test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
+		test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
 		# url = self.baseUrl + self.urlStruct.format('FDAMethod', test_prop)
-		_url = self.baseUrl + prop
+		_url = self.baseUrl + test_prop
 		_payload = {'smiles': structure, 'method': method}
 		try:
 			# response = requests.post(url, data=json.dumps(post), headers=headers, timeout=10)
@@ -250,9 +250,10 @@ class TestWSCalc(Calculator):
 		if _response.status_code != 200:
 			_response_dict['data'] = "TEST could not process chemical"
 		
-		if request_dict.get('prop') == 'water_sol':
-				# _response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
-				_response_dict = TestCalc().convertWaterSolubility(_response_dict)
+		# TODO: Use TEST WS mass value (or node's cheminfo) to convert WS
+		# if request_dict.get('prop') == 'water_sol':
+		# 		# _response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
+		# 		_response_dict = TestCalc().convertWaterSolubility(_response_dict)
 
 		return _response_dict
 
