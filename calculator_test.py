@@ -243,8 +243,9 @@ class TestWSCalc(Calculator):
 
 		logging.info("TEST WS response data for {}: {}".format(request_dict.get('prop'), _response))
 
-		_test_data = _response_obj['predictions']  # list of predictions
-		_response_dict['data'] = _test_data
+		# _test_data = _response_obj['predictions']  # list of predictions
+		# _response_dict['data'] = _test_data
+		_response_dict['data'] = _response_obj
 
 		# sometimes TEST data successfully returns but with an error:
 		if _response.status_code != 200:
