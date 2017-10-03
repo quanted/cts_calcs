@@ -172,6 +172,13 @@ class TestWSCalc(Calculator):
 		# hc - hierarchical clustering, sm - single model,
 		# nn - nearest neighbor, gc - group contribution
 		self.methods = ['fda', 'hc', 'sm', 'nn', 'gc']
+		self.methods_map = {
+			'Hierarchical clustering': 'hc',
+			'FDA': 'fda',
+			'Group contribution': 'gc',
+			'Nearest neighbor': 'nn'
+			# sm - single mode returning error still
+		}
 		# map workflow parameters to test
 		self.propMap = {
 			'melting_point': {
@@ -221,6 +228,7 @@ class TestWSCalc(Calculator):
 			if not key == 'nodes':
 				_response_dict[key] = request_dict.get(key)
 		# _response_dict.update({'request_post': request_dict})
+		_response_dict.update({'request_post': {'service': "pchemprops"}})  # TODO: get rid of 'request_post' and double data
 
 
 		# filter smiles before sending to TEST:
@@ -238,18 +246,18 @@ class TestWSCalc(Calculator):
 		# try:
 		logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
 
-		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), request_dict.get('method'))
-		_response_obj = json.loads(_response.content)
+		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), "hc")
 
 		logging.info("TEST WS response data for {}: {}".format(request_dict.get('prop'), _response))
 
 		# _test_data = _response_obj['predictions']  # list of predictions
 		# _response_dict['data'] = _test_data
-		_response_dict['data'] = _response_obj
 
 		# sometimes TEST data successfully returns but with an error:
 		if _response.status_code != 200:
-			_response_dict['data'] = "TEST could not process chemical"
+			_response_dict.update({'data': "TEST could not process chemical"})
+		else:
+			_response_dict.update({'data': json.loads(_response.content)})
 		
 		# TODO: Use TEST WS mass value (or node's cheminfo) to convert WS
 		# if request_dict.get('prop') == 'water_sol':
@@ -257,9 +265,3 @@ class TestWSCalc(Calculator):
 		# 		_response_dict = TestCalc().convertWaterSolubility(_response_dict)
 
 		return _response_dict
-
-		# except Exception as err:
-		# 	logging.warning("Exception occurred getting TEST data: {}".format(err))
-		# 	_response_dict.update({'data': "timed out", 'request_post': request_dict})
-		# 	logging.info("##### session id: {}".format(request_dict.get('sessionid')))
-		# 	return _response_dict
