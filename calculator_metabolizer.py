@@ -134,7 +134,7 @@ class MetabolizerCalc(Calculator):
                 "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
                 # "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
                 # 'name': "",
-                "data": {'smiles': _parent, 'routes': root['routes'], 'generation': root['generation'], 'accumulation': root.get('accumulation'), 'production': root.get('production')},
+                "data": {'smiles': _parent, 'routes': root['routes'], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 2), 'production': round(root.get('production'), 2)},
                 "children": []
             })
 
@@ -154,7 +154,7 @@ class MetabolizerCalc(Calculator):
                     "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
                     # 'name': self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True),
                     # 'name': "",
-                    "data": {'smiles': root['smiles'], 'routes': root['routes'].split(',')[-1], 'generation': root['generation'], 'accumulation': root.get('accumulation'), 'production': root.get('production')},
+                    "data": {'smiles': root['smiles'], 'routes': root['routes'].split(',')[-1], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 2), 'production': round(root.get('production'), 2)},
                     "children": []
                 })
                 # self.products_list.append(root['smiles'])
