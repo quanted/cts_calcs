@@ -7,7 +7,7 @@ from .calculator import Calculator
 
 class JchemProperty(object):
     """
-    Jchem Physical-Chemical Properties
+    Jchem Physicochemical Properties
     """
     def __init__(self):
         

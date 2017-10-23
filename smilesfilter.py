@@ -12,6 +12,119 @@ from .jchem_properties import Tautomerization
 max_weight = 1500 # max weight [g/mol] for epi, test, and sparc
 
 
+
+# class ChemInfo(object):
+#     """
+#     TODO: Should this class reside in smilesfilter? Or calculator??
+
+#     Class for all things related to chemical information and CTS.
+
+#     Suggested subclasses: SMILESFilter, ACTORWS
+#     Suggested functions: getting chem info workflow, funcs w/in sub classes
+#     """
+
+
+
+class ACTORWS(object):
+    """
+    Uses actor web services to obtain curated
+    CAS#, SMILES, preferred name, iupac, and DTXSID.
+    Location: https://actorws.epa.gov/actorws/
+    """
+    def __init__(self):
+        self.base_url = "https://actorws.epa.gov/actorws"
+        self.chemid_url = "https://actorws.epa.gov/actorws/chemIdentifier/v01/resolve.json"  # ?identifier=[chemical name or SMILES]
+        self.dsstox_url = "https://actorws.epa.gov/actorws/dsstox/v02/casTable.json"  # ?identifier=[casrn or gsid]
+
+        self.calc = "actorws"
+        self.props = ['dsstox', 'chemid']
+        self.chemid_result_keys = ['synGsid']  # chemidentifier result key of interest
+        self.dsstox_result_keys = ['casrn', 'dsstoxSubstanceId', 'preferredName', 'smiles', 'iupac']
+
+        self.result_obj = {
+            'calc': "actorws",
+            'prop': "",
+            'data': {},
+        }
+
+    def make_request(self, url, payload):
+        _response = requests.get(url, params=payload, timeout=10)
+        
+        if _response.status_code != 200:
+            return {'success': False, 'error': "error connecting to actorws", 'data': None}
+            
+        return json.loads(_response.content)
+
+
+    ##### PUBLIC METHODS BELOW #####
+
+    def get_dsstox_results(self, chemical, id_type):
+        """
+        Makes request to actowws dsstox for the following
+        result keys: casrn, dsstoxSubstanceId, preferredName, smiles, and iupac
+
+        Input: cas number or gsid obtained from actorws chemicalIdentifier endpoint
+        Output: Dictionary of above result key:vals
+        """
+        _payload = {}
+        if id_type == 'gsid':
+            _payload = {'gsid': chemical}
+        elif id_type == 'CAS#':
+            _payload = {'casrn': chemical}
+
+        _dsstox_results = self.make_request(self.dsstox_url, _payload)
+
+        logging.warning("DSSTOX RESULTS: {}".format(_dsstox_results))
+
+        try:
+            _dsstox_results = _dsstox_results['DataList']['list'][0]
+        except KeyError as e:
+            logging.warning("Error getting dsstox results key:vals..")
+            raise e  # raise it for now
+
+        # what key:vals should be with results??
+
+        _results = self.result_obj
+        _results['prop'] = "dsstox"
+        for _key, _val in _dsstox_results.items():
+            if _key in self.dsstox_result_keys:
+                _results['data'][_key] = _val
+
+        return _results
+
+    def get_chemid_results(self, chemical):
+        """
+        Makes request to actorws chemicalIdentifier endpoint for
+        'synGsid' to be used for dsstox if cas isn't provided by user.
+
+        Inputs: chemical - either a chemical name or smiles
+        Output: Dictionary with results_obj keys and synGsid
+        """
+        _chemid_results = self.make_request(self.chemid_url, {'identifier': chemical})
+
+        logging.warning("CHEMID RESULTS: {}".format(_chemid_results))
+
+        try:
+            _chemid_results = _chemid_results['DataRow']
+        except KeyError as e:
+            logging.warning("Error getting dsstox results key:vals..")
+            raise e  # raise it for now
+
+        # what key:vals should be with results??
+
+        _results = self.result_obj
+        _results['prop'] = "chemid"
+        _result_key = self.chemid_result_keys[0]  # only one key needed for now
+        
+        if _result_key in _chemid_results:
+            _results['data'].update({'gsid': _chemid_results.get(_result_key)})  # getting synGsid key:val
+
+        # todo: add more error handling, waiting to start new cheminfo workflow w/ actorws first..
+
+        return _results
+
+
+
 def is_valid_smiles(smiles):
 
     excludestring = {".","[Ag]","[Al]","[Au]","[As]","[As+","[B]","[B-]","[Br-]","[Ca]",
@@ -40,20 +153,6 @@ def is_valid_smiles(smiles):
     return return_val
 
 
-# def filterSMILES(smiles):
-#     """
-#     calculator-independent SMILES processing.
-#     uses jchem web services through jchem_rest
-#     """
-#     response = jchem_rest.filterSMILES({'smiles': smiles})
-#     logging.warning("FILTER RESPONSE: {}".format(response))
-#     try:
-#         filtered_smiles = response['results'][-1] # picks out smiles from efs???
-#         logging.warning("NEW SMILES: {}".format(filtered_smiles))
-#         return filtered_smiles
-#     except Exception as e:
-#         logging.warning("> error in filterSMILES: {}".format(e))
-#         raise e
 def singleFilter( request_obj):
     """
     Calls single EFS Standardizer filter
