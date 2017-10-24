@@ -48,7 +48,8 @@ class EpiCalc(Calculator):
             'water_sol': {
                 'urlKey': 'waterSolubility',
                 'propKey': '',
-                'resultKey': 'waterSolMgLEstimated'
+                'resultKey': 'waterSolMgLEstimated',
+                'methods': ['wskownt', 'waternt']
             },
             'vapor_press': {
                 'urlKey': 'vaporPressure',
@@ -179,6 +180,10 @@ class EpiCalc(Calculator):
             else:
                 _response_dict.update({'data': _result_obj})
 
+            # # NOTE: EPI now returns 2 values for water solubility
+            # if request_dict.get('prop') == 'water_sol':
+            #     for method in self.propMap['water_sol']['methods']:
+        
             return _response_dict
 
         except Exception as err:

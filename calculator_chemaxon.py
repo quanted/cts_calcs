@@ -29,6 +29,7 @@ class JchemCalc(Calculator):
         self.methods = ['KLOP', 'VG', 'PHYS']  # kow_no_ph and kow_wph only
         self.props = ['water_sol', 'ion_con', 'kow_no_ph', 'kow_wph', 'water_sol_ph']  # available pchem props
         self.prop_name = prop_name  # prop name for JchemCalc instance
+        self.format_url = '/rest-v0/util/analyze'  # returns chemical's format (e.g., "smiles", "casrn")
 
         # chemaxon speciation request
         self.speciation_request = {
@@ -352,3 +353,21 @@ class JchemCalc(Calculator):
 
         # self.run_data.update(self.jchemDictResults)
         return jchem_results_obj
+
+
+    def getChemicalFormat(self, chemical):
+        """
+        jchem web service /rest-v0/util/analyze endpoint.
+        returns type/format of user-entered chemical,
+        e.g., "smiles", "cas#", etc.
+
+        Input: chemical - any format recognized by jchem (smiles, cas, name, mrv, iupac)
+        """
+        _response = requests.post(self.format_url, data=chemical, headers=self.headers, timeout=self.request_timeout)
+        _valid_result = self.validate_response(_response)
+        if _valid_result:
+            _result_obj = json.loads(_response.content)
+            logging.warning("analyze result: {}".format(_result_obj))
+            return _result_obj
+        else:
+            return {'error': "error getting chemical type"}
