@@ -25,9 +25,9 @@ class MeasuredCalc(Calculator):
 		self.postData = {"smiles" : ""}
 		self.name = "measured"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
-		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
-		# self.urlStruct = "/rest/episuite/measured"  # old way
-		self.request_timeout = 10
+		# self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
+		self.urlStruct = "/rest/episuite/measured"  # old way
+		self.request_timeout = 20
 		self.melting_point = 0.0
 
 		# map workflow parameters to test
@@ -105,14 +105,16 @@ class MeasuredCalc(Calculator):
 
 		try:
 
-			properties_dict = response['properties']
+			# properties_dict = response['properties']
+			properties_list = response['data']  # 'data' is a list of objects now
 
-			measured_requested_property = self.propMap[requested_property]['result_key']
 
-			if measured_requested_property in properties_dict.keys():
-				_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
-			else:
-				_data_obj['data'] = "property not available".format(measured_requested_property)
+			# measured_requested_property = self.propMap[requested_property]['result_key']
+
+			# if measured_requested_property in properties_dict.keys():
+			# 	_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
+			# else:
+			# 	_data_obj['data'] = "property not available".format(measured_requested_property)
 
 			return _data_obj
 
@@ -140,7 +142,7 @@ class MeasuredCalc(Calculator):
 					return self.results
 				_retries += 1
 			except Exception as e:
-				logging.warning("Exception in calculator_epi.py: {}".format(e))
+				logging.warning("Exception in calculator_measured.py: {}".format(e))
 				_retries += 1
 
 			logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
@@ -201,9 +203,7 @@ class MeasuredCalc(Calculator):
 			logging.info("Measured Data: {}".format(_measured_data))
 
 			try:
-				_data_obj = self.getPropertyValue(request_dict['prop'], _measured_data)
-				logging.info("data object: {}".format(_data_obj))
-				_response_dict.update(_data_obj)
+				_response_dict.update(_measured_data)
 				return _response_dict
 			except Exception as err:
 				logging.warning("Exception occurred getting Measured data: {}".format(err))

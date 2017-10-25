@@ -84,7 +84,7 @@ class JchemCalc(Calculator):
             logging.warning("error occurred: {}".format(e))
             return None
 
-    def data_request_handler(self, request_dict, ws_protocol=False):
+    def data_request_handler(self, request_dict):
         """
         Handles requests to the JCHEM server.
           + For websocket protocol, it can handle a list of p-chem properties,
