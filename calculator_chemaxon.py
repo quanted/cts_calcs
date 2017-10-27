@@ -206,7 +206,7 @@ class JchemCalc(Calculator):
             _response_dict.update({'request_post': request_dict})
             # _response_dict.update({'prop': prop})
 
-            logging.info("response dict: {}".format(_response_dict))
+            #logging.info("response dict: {}".format(_response_dict))
 
             try:
 
@@ -218,11 +218,11 @@ class JchemCalc(Calculator):
                     # _results = self.parse_jchem_results(request_dict)
                     # _results = self.getJchemPropData(request_dict['chemical'], prop, request_dict['ph'], method, request_dict['mass'])
                     _results = JchemProperty().getJchemPropData(_response_dict)
-                    logging.warning("RESULTS CALC CHEMAXON: {}".format(_results))
+                    # logging.warning("RESULTS CALC CHEMAXON: {}".format(_results))
 
                     _response_dict.update({'data': _results['data'], 'method': request_dict['method']})
 
-                    logging.warning("chemaxon _response_dict for {}: {}".format(request_dict['prop'], _response_dict))
+                    # logging.warning("chemaxon _response_dict for {}: {}".format(request_dict['prop'], _response_dict))
                     # result_json = json.dumps(_response_dict)
 
                     # self.redis_conn.publish(request_dict['sessionid'], result_json)
@@ -266,7 +266,7 @@ class JchemCalc(Calculator):
         }
 
         logging.info("JCHEM REQUEST URL: {}".format(url))
-        logging.info("JCHEM REQUEST POST: {}".format(post_data))
+        # logging.info("JCHEM REQUEST POST: {}".format(post_data))
 
         if method:
             post_data['parameters']['method'] = method

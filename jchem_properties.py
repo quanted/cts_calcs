@@ -99,7 +99,7 @@ class JchemProperty(object):
         }
 
         logging.info("JCHEM REQUEST URL: {}".format(url))
-        logging.info("JCHEM REQUEST POST: {}".format(post_data))
+        # logging.info("JCHEM REQUEST POST: {}".format(post_data))
 
         if method:
             post_data['parameters']['method'] = method
@@ -116,7 +116,7 @@ class JchemProperty(object):
                 if _valid_result:
                     # self.results = json.loads(response.content)
                     prop_obj.results = json.loads(response.content)
-                    logging.warning("RETURNING: {}".format(response.content))
+                    # logging.warning("RETURNING: {}".format(response.content))
                     return json.loads(response.content)
                     # logging.info("Response from jchem server: {}".format(prop_obj.results))
                     break
@@ -466,7 +466,7 @@ class Solubility(JchemProperty):
         elif request_dict.get('prop') == 'water_sol':
             logging.warning("Getting intrinsic water sol")
             _result = self.getIntrinsicSolubility()
-            logging.warning("result: {}".format(_result))
+            # logging.warning("result: {}".format(_result))
             return _result
         else:
             return None
