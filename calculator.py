@@ -9,19 +9,12 @@ import redis
 import datetime
 import pytz
 
-# from cts_app.cts_calcs import jchem_properties
-# import jchem_properties
-
 
 class Calculator(object):
 	"""
 	Skeleton class for calculators
 	"""
-
 	def __init__(self, calc=None):
-		"""
-		calc -- p-chem calculator name, 'getTransProducts', or 'getSpeciationData'
-		"""
 		self.name = ''
 		self.propMap = {}
 		self.baseUrl = None
@@ -30,7 +23,6 @@ class Calculator(object):
 		self.headers = {'Content-Type': 'application/json'}
 		self.request_timeout = 30  # default, set unique ones in calc sub classes
 		self.max_retries = 3
-		# self.request_type = ''  # http or ws (https or wss [todo])
 
 		self.image_scale = 50
 
@@ -45,8 +37,6 @@ class Calculator(object):
 		self.export_endpoint = '/webservices/rest-v0/util/calculate/molExport'
 		self.detail_endpoint = '/webservices/rest-v0/util/detail'
 		self.type_endpoint = '/webservices/rest-v0/util/analyze'
-		# self.hydro_endpoint = '/webservices/rest-v0/util/convert/hydrogenizer'
-		# self.standardizer_endpoint = '/webservices/rest-v0/util/convert/standardizer'
 
 		# CTSWS (formerlly EFS) metabolizer endpoints:
 		self.efs_metabolizer_endpoint = '/ctsws/rest/metabolizer'
@@ -144,19 +134,11 @@ class Calculator(object):
 		else:
 			return "Error: result key not found"
 
-
-
-
-
-
-	################### FUNCTION FROM CTS_REST USED BY BASICALLY EVERYTHING ###########
-
 	def gen_jid(self):
 		ts = datetime.datetime.now(pytz.UTC)
 		localDatetime = ts.astimezone(pytz.timezone('US/Eastern'))
 		jid = localDatetime.strftime('%Y%m%d%H%M%S%f')
 		return jid
-
 
 
 
@@ -263,14 +245,6 @@ class Calculator(object):
 		}
 		url = self.jchem_server_url + self.export_endpoint
 		return self.web_call(url, data)  # get responset))
-
-
-	# def getTransProducts(self, request_obj):
-	#     """
-	#     Makes request to metabolizer
-	#     """
-	#     url = self.efs_server_url + self.efs_metabolizer_endpoint
-	#     return self.web_call(url, request_obj)
 
 
 	def getStructInfo(self, structure):
@@ -415,11 +389,6 @@ class Calculator(object):
 			
 		else:
 			html = self.imgTmpl(isProduct).render(Context(dict(smiles=smiles, img=img, height=height, width=width, scale=scale, key=key)))
-
-		# wrapper for SVG type images:
-		# html = data['data'][0]['image']['image']  # expecting svg type now (could affect popups)
-
-		# do the <svg> elements need class and id like imgTmpl below???
 
 		return html
 
