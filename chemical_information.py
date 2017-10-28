@@ -4,7 +4,59 @@ import requests
 import logging
 import json
 from .calculator import Calculator
+from .calculator_metabolizer import MetabolizerCalc
 from .jchem_properties import Tautomerization
+
+
+
+class Molecule(object):
+	"""
+	Basic molecule object for CTS
+	"""
+	def __init__(self):
+
+		# cts keys:
+		self.chemical = ''  # initial structure from user (any chemaxon format)
+		self.orig_smiles = ''  # before filtering, converted to smiles
+
+		# chemaxon/jchem keys:
+		self.smiles = ''  # post filtered smiles 
+		self.formula = ''
+		self.iupac = ''
+		self.cas = ''
+		self.mass = ''
+		self.structureData = ''
+		self.exactMass = ''
+
+	def createMolecule(self, chemical, orig_smiles, chem_details_response, get_structure_data=None):
+		"""
+		Gets Molecule attributes from Calculator's getChemDetails response
+		"""
+
+		try:
+			# set attrs from jchem data:
+			for key in self.__dict__.keys():
+				if key != 'orig_smiles' and key != 'chemical':
+					logging.warning("elif key: {}".format(key))
+					if key == 'structureData' and get_structure_data == None:
+						pass
+					elif key == 'cas':
+						# check if object with 'error' key instead of string of CAS#..
+						if isinstance(chem_details_response['data'][0][key], dict):
+							self.__setattr__(key, "N/A")
+						else:
+							self.__setattr__(key, chem_details_response['data'][0][key])	
+					else:
+						self.__setattr__(key, chem_details_response['data'][0][key])
+			# set cts attrs:
+			self.__setattr__('chemical', chemical)
+			self.__setattr__('orig_smiles', orig_smiles)
+
+			return self.__dict__
+		except KeyError as err:
+			raise err
+
+
 
 
 class ChemInfo(object):
@@ -26,54 +78,6 @@ class ChemInfo(object):
 			'mass': "",
 			'exactMass': ""
 		}
-
-	# def getChemInfo(self, request_post):
-	# 	"""
-	# 	Initial attempt for a single chem info function that's used
-	# 	by tasks.py in cts celery and cts_rest.py in cts api
-
-	# 	NOTE/TODO: Currently doesn't use the actorws services, like
-	# 	cts_rest.py does for the Chemical Editor. Use func from cts_rest
-	# 	once this works..
-	# 	"""
-	# 	chemical = request_post.get('chemical')
-	# 	get_sd = request_post.get('get_structure_data')  # bool for getting <cml> format image for marvin sketch
-
-	# 	response = self.convertToSMILES({'chemical': chemical})
-	# 	orig_smiles = response['structure']
-	# 	filtered_smiles_response = smilesfilter.filterSMILES(orig_smiles)
-	# 	filtered_smiles = filtered_smiles_response['results'][-1]
-
-	# 	logging.info("Filtered SMILES: {}".format(filtered_smiles))
-
-	# 	jchem_response = self.getChemDetails({'chemical': filtered_smiles})  # get chemical details
-
-	# 	molecule_obj = {'chemical': filtered_smiles}
-	# 	for key, val in jchem_response['data'][0].items():
-	# 		molecule_obj[key] = val
-	# 		# chem_list.append(molecule_obj)
-
-	# 	if request_post.get('is_node'):
-	# 		#### only get these if gentrans single mode: ####
-	# 		molecule_obj.update({'node_image': self.nodeWrapper(filtered_smiles, MetabolizerCalc().tree_image_height, MetabolizerCalc().tree_image_width, MetabolizerCalc().image_scale, MetabolizerCalc().metID,'svg', True)})
-	# 		molecule_obj.update({
-	# 			'popup_image': self.popupBuilder(
-	# 				{"smiles": filtered_smiles}, 
-	# 				MetabolizerCalc().metabolite_keys, 
-	# 				"{}".format(request_post.get('id')),
-	# 				"Metabolite Information")
-	# 		})
-	# 		##################################################
-
-	# 	wrapped_post = {
-	# 		'status': True,  # 'metadata': '',
-	# 		'data': molecule_obj,
-	# 		'request_post': request_post
-	# 	}
-
-	# 	logging.info("Returning Chemical Info: {}".format(json_data))
-
-	# 	return wrapped_post  # return json object!
 
 
 	def get_cheminfo(self, request_post):
@@ -200,11 +204,12 @@ class ChemInfo(object):
 			'data': molecule_obj,
 			'request_post': request_post
 		}
-		json_data = json.dumps(wrapped_post)
+		return wrapped_post
+		# json_data = json.dumps(wrapped_post)
 
-		logging.warning("Returning Chemical Info: {}".format(json_data))
+		# logging.warning("Returning Chemical Info: {}".format(json_data))
 
-		return HttpResponse(json_data, content_type='application/json')
+		# return HttpResponse(json_data, content_type='application/json')
 
 		# except KeyError as error:
 		# 	logging.warning(error)
