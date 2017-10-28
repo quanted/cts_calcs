@@ -296,7 +296,7 @@ class Calculator(object):
 		return self.web_call(url, post_data)
 
 
-	def getChemicalType(self, chemical):
+	def get_chemical_type(self, chemical):
 		"""
 		Returns type of chemical (e.g., smiles, name, cas, etc.)
 		"""

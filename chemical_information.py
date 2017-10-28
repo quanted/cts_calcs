@@ -27,53 +27,197 @@ class ChemInfo(object):
 			'exactMass': ""
 		}
 
-	def getChemInfo(self, request_post):
-		"""
-		Initial attempt for a single chem info function that's used
-		by tasks.py in cts celery and cts_rest.py in cts api
+	# def getChemInfo(self, request_post):
+	# 	"""
+	# 	Initial attempt for a single chem info function that's used
+	# 	by tasks.py in cts celery and cts_rest.py in cts api
 
-		NOTE/TODO: Currently doesn't use the actorws services, like
-		cts_rest.py does for the Chemical Editor. Use func from cts_rest
-		once this works..
+	# 	NOTE/TODO: Currently doesn't use the actorws services, like
+	# 	cts_rest.py does for the Chemical Editor. Use func from cts_rest
+	# 	once this works..
+	# 	"""
+	# 	chemical = request_post.get('chemical')
+	# 	get_sd = request_post.get('get_structure_data')  # bool for getting <cml> format image for marvin sketch
+
+	# 	response = self.convertToSMILES({'chemical': chemical})
+	# 	orig_smiles = response['structure']
+	# 	filtered_smiles_response = smilesfilter.filterSMILES(orig_smiles)
+	# 	filtered_smiles = filtered_smiles_response['results'][-1]
+
+	# 	logging.info("Filtered SMILES: {}".format(filtered_smiles))
+
+	# 	jchem_response = self.getChemDetails({'chemical': filtered_smiles})  # get chemical details
+
+	# 	molecule_obj = {'chemical': filtered_smiles}
+	# 	for key, val in jchem_response['data'][0].items():
+	# 		molecule_obj[key] = val
+	# 		# chem_list.append(molecule_obj)
+
+	# 	if request_post.get('is_node'):
+	# 		#### only get these if gentrans single mode: ####
+	# 		molecule_obj.update({'node_image': self.nodeWrapper(filtered_smiles, MetabolizerCalc().tree_image_height, MetabolizerCalc().tree_image_width, MetabolizerCalc().image_scale, MetabolizerCalc().metID,'svg', True)})
+	# 		molecule_obj.update({
+	# 			'popup_image': self.popupBuilder(
+	# 				{"smiles": filtered_smiles}, 
+	# 				MetabolizerCalc().metabolite_keys, 
+	# 				"{}".format(request_post.get('id')),
+	# 				"Metabolite Information")
+	# 		})
+	# 		##################################################
+
+	# 	wrapped_post = {
+	# 		'status': True,  # 'metadata': '',
+	# 		'data': molecule_obj,
+	# 		'request_post': request_post
+	# 	}
+
+	# 	logging.info("Returning Chemical Info: {}".format(json_data))
+
+	# 	return wrapped_post  # return json object!
+
+
+	def get_cheminfo(self, request_post):
 		"""
+		Makes call to Calculator for chemaxon
+		data. Converts incoming structure to smiles,
+		then filters smiles, and then retrieves data
+		:param request:
+		:return: chemical details response json
+
+		Note: Due to marvin sketch image data (<cml> image) being
+		so large, a bool, "structureData", is used to determine
+		whether or not to grab it. It's only needed in chem edit tab.
+		"""
+		# Updated cheminfo workflow with actorws:
+		###########################################################################################
+		# 1. Determine if user's chemical is smiles, cas, or drawn
+		# 		a. If smiles, get gsid from actorws chemicalIdentifier endpoint
+		#		b. If cas, get chem data from actorws dsstox endpoint
+		#		c. If drawn, get smiles from chemaxon, then gsid like in a.
+		# 2. Check if request from 1. "matched" (exist?)
+		#		a. If 1b returns cas result, get cheminfo from dsstox results
+		#		b. If 1a or 1c, use gsid from chemicalIdentifier and perform step 1b for dsstox cheminfo
+		# 3. Use dsstox results: curated CAS#, SMILES, preferredName, iupac, and dtxsid
+		#		a. Display in chemical editor.
+		#############################################################################################
+
 		chemical = request_post.get('chemical')
 		get_sd = request_post.get('get_structure_data')  # bool for getting <cml> format image for marvin sketch
+		is_node = request_post.get('is_node')  # bool for tree node or not
 
-		response = self.convertToSMILES({'chemical': chemical})
-		orig_smiles = response['structure']
-		filtered_smiles_response = smilesfilter.filterSMILES(orig_smiles)
+		actorws = ACTORWS()
+		calc = Calculator()
+
+		# 1. Determine chemical type from user (e.g., smiles, cas, name, etc.):
+		chem_type = calc.get_chemical_type(chemical)
+		logging.info("chem type: {}".format(chem_type))
+
+		_gsid = None
+		_jchem_smiles = None
+		_name_or_smiles = chem_type['type'] == 'name' or chem_type['type'] == 'smiles'
+		_actor_results = {}  # final key:vals from actorws: smiles, iupac, preferredName, dsstoxSubstanceId, casrn
+
+		# Checking type for next step:
+		if chem_type['type'] == 'mrv':
+			logging.info("Getting SMILES from jchem web services..")
+			response = calc.convertToSMILES({'chemical': chemical})
+			_jchem_smiles = response['structure']
+			logging.info("SMILES of drawn chemical: {}".format(_jchem_smiles))
+
+		if _name_or_smiles or _jchem_smiles:
+			logging.info("Getting gsid from actorws chemicalIdentifier..")
+			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
+			_gsid = chemid_results.get('data', {}).get('gsid')
+			logging.info("gsid from actorws chemid: {}".format(_gsid))
+			if not _gsid:
+				_actor_results['gsid'] = "N/A"
+			else:	
+				_actor_results['gsid'] = _gsid
+
+
+		# Should be CAS# or have gsid from chemid by this point..
+		if _gsid or chem_type['type'] == 'CAS#':
+			id_type = 'CAS#'
+			if _gsid:
+				chem_id = _gsid
+				id_type = 'gsid'
+			logging.info("Getting results from actorws dsstox..")
+			dsstox_results = actorws.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			_actor_results.update(dsstox_results)
+
+			# TODO: The "matching?" part again. Just check if results were successful??
+
+		# ?: Are the iupac, smiles, casrn used from actorws if available, and
+		# if they're not then using just the values from chemaxon?
+		# Also, are the additional cells in Chemical Editor that are for actorws
+		# values going to be "N/A" if using chemaxon for chem info?
+
+		# Need to figure out orig_smiles for smiles filter:
+		# If user enters something other than SMILES, use actorws smiles for orig_smiles
+		orig_smiles = ""
+		if chem_type['type'] == 'smiles':
+			orig_smiles = chemical  # use user-entered smiles as orig_siles
+		elif 'smiles' in _actor_results:
+			orig_smiles = _actor_results['smiles']  # use actorws smiles as orig_smiles
+		else:
+			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
+			orig_smiles = calc.convertToSMILES({'chemical': chemical}).get('structure')
+
+		# response = Calculator().convertToSMILES({'chemical': chemical})
+		# orig_smiles = response['structure']
+
+		logging.info("original smiles before cts filtering: {}".format(orig_smiles))
+
+		# filtered_smiles_response = smilesfilter.filterSMILES(orig_smiles)
+		filtered_smiles_response = SMILESFilter().filterSMILES(orig_smiles)
 		filtered_smiles = filtered_smiles_response['results'][-1]
 
-		logging.info("Filtered SMILES: {}".format(filtered_smiles))
+		logging.warning("Filtered SMILES: {}".format(filtered_smiles))
 
-		jchem_response = self.getChemDetails({'chemical': filtered_smiles})  # get chemical details
+		jchem_response = calc.getChemDetails({'chemical': filtered_smiles})  # get chemical details
 
-		molecule_obj = {'chemical': filtered_smiles}
-		for key, val in jchem_response['data'][0].items():
-			molecule_obj[key] = val
-			# chem_list.append(molecule_obj)
+		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
-		if request_post.get('is_node'):
-			#### only get these if gentrans single mode: ####
-			molecule_obj.update({'node_image': self.nodeWrapper(filtered_smiles, MetabolizerCalc().tree_image_height, MetabolizerCalc().tree_image_width, MetabolizerCalc().image_scale, MetabolizerCalc().metID,'svg', True)})
+		# Loop _actor_results, replace certain keys in molecule_obj with actorws vals:
+		for key, val in _actor_results['data'].items():
+			if key == 'casrn':
+				molecule_obj['cas'] = val
+			else:
+				molecule_obj[key] = val  # replace or add any values from chemaxon deat
+
+		if is_node:
+			molecule_obj.update({'node_image': calc.nodeWrapper(filtered_smiles, MetabolizerCalc().tree_image_height, MetabolizerCalc().tree_image_width, MetabolizerCalc().image_scale, MetabolizerCalc().metID,'svg', True)})
 			molecule_obj.update({
-				'popup_image': self.popupBuilder(
+				'popup_image': Calculator().popupBuilder(
 					{"smiles": filtered_smiles}, 
 					MetabolizerCalc().metabolite_keys, 
 					"{}".format(request_post.get('id')),
 					"Metabolite Information")
 			})
-			##################################################
 
 		wrapped_post = {
 			'status': True,  # 'metadata': '',
 			'data': molecule_obj,
 			'request_post': request_post
 		}
+		json_data = json.dumps(wrapped_post)
 
-		logging.info("Returning Chemical Info: {}".format(json_data))
+		logging.warning("Returning Chemical Info: {}".format(json_data))
 
-		return wrapped_post  # return json object!
+		return HttpResponse(json_data, content_type='application/json')
+
+		# except KeyError as error:
+		# 	logging.warning(error)
+		# 	wrapped_post = {
+		# 		'status': False, 
+		# 		'error': 'Error validating chemical',
+		# 		'chemical': chemical
+		# 	}
+		# 	return HttpResponse(json.dumps(wrapped_post), content_type='application/json')
+		# except Exception as error:
+		# 	logging.warning(error)
+		# 	wrapped_post = {'status': False, 'error': error}
+		# 	return HttpResponse(json.dumps(wrapped_post), content_type='application/json')
 
 
 
@@ -154,8 +298,8 @@ class ACTORWS(object):
         try:
             _chemid_results = _chemid_results['DataRow']
         except KeyError as e:
-            logging.warning("Error getting dsstox results key:vals..")
-            raise e  # raise it for now
+            logging.warning("'DataRow' key not found in chemid results.. Returning None..")
+            return None
 
         # what key:vals should be with results??
 
@@ -194,7 +338,7 @@ class SMILESFilter(object):
 	def is_valid_smiles(self, smiles):
 
 		_return_val = self.return_val
-		_return_val['smiles'] = 
+		_return_val['smiles'] = smiles
 
 		if any(x in smiles for x in self.excludestring):
 			return _return_val  # metal in smiles, invalid!
