@@ -32,12 +32,10 @@ class Molecule(object):
 		"""
 		Gets Molecule attributes from Calculator's getChemDetails response
 		"""
-
-		try:
-			# set attrs from jchem data:
-			for key in self.__dict__.keys():
-				if key != 'orig_smiles' and key != 'chemical':
-					logging.warning("elif key: {}".format(key))
+		# set attrs from jchem data:
+		for key in self.__dict__.keys():
+			if key != 'orig_smiles' and key != 'chemical':
+				try:
 					if key == 'structureData' and get_structure_data == None:
 						pass
 					elif key == 'cas':
@@ -48,13 +46,13 @@ class Molecule(object):
 							self.__setattr__(key, chem_details_response['data'][0][key])	
 					else:
 						self.__setattr__(key, chem_details_response['data'][0][key])
-			# set cts attrs:
-			self.__setattr__('chemical', chemical)
-			self.__setattr__('orig_smiles', orig_smiles)
+				except KeyError as err:
+					raise err
+		# set cts attrs:
+		self.__setattr__('chemical', chemical)
+		self.__setattr__('orig_smiles', orig_smiles)
 
-			return self.__dict__
-		except KeyError as err:
-			raise err
+		return self.__dict__
 
 
 
@@ -133,10 +131,10 @@ class ChemInfo(object):
 			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 			_gsid = chemid_results.get('data', {}).get('gsid')
 			logging.info("gsid from actorws chemid: {}".format(_gsid))
-			if not _gsid:
-				_actor_results['gsid'] = "N/A"
-			else:	
-				_actor_results['gsid'] = _gsid
+			# if not _gsid:
+			# 	_actor_results['gsid'] = "N/A"
+			# else:	
+			# 	_actor_results['gsid'] = _gsid
 
 
 		# Should be CAS# or have gsid from chemid by this point..
@@ -148,8 +146,6 @@ class ChemInfo(object):
 			logging.info("Getting results from actorws dsstox..")
 			dsstox_results = actorws.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
-
-			# TODO: The "matching?" part again. Just check if results were successful??
 
 		# ?: Are the iupac, smiles, casrn used from actorws if available, and
 		# if they're not then using just the values from chemaxon?
@@ -183,7 +179,7 @@ class ChemInfo(object):
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
 		# Loop _actor_results, replace certain keys in molecule_obj with actorws vals:
-		for key, val in _actor_results['data'].items():
+		for key, val in _actor_results.get('data', {}).items():
 			if key == 'casrn':
 				molecule_obj['cas'] = val
 			else:
