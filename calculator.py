@@ -455,8 +455,7 @@ class Calculator(object):
 			if key in paramKeys:
 
 				# Convert other types (e.g., float, int) to string
-				# if not isinstance(value, unicode) and not (isinstance(value, str)):
-				if not isinstance(value, str):
+				if isinstance(value, float):
 					
 					if key == 'exactMass':
 						value = str(value)

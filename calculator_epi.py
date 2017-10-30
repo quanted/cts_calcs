@@ -29,10 +29,11 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        # self.urlStruct = "/episuiteapi/rest/episuite/{}/estimated"  # new way (cgi server 1)
-        self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
+        self.urlStruct = "/episuiteapi/rest/episuite/{}/estimated"  # new way (cgi server 1)
+        # self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
         self.methods = None
         self.melting_point = 0.0
+        self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc']
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
         self.propMap = {
             'melting_point': {
@@ -127,6 +128,7 @@ class EpiCalc(Calculator):
         """
         if response.status_code != 200:
             logging.warning("epi server response status: {}".format(response.status_code))
+            logging.warning("epi server response: {}".format(response.content))
             return False
 
         # successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
@@ -175,10 +177,7 @@ class EpiCalc(Calculator):
                 self.melting_point = None
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
-            if 'propertyvalue' in _result_obj:
-                _response_dict.update({'data': _result_obj['propertyvalue']})
-            else:
-                _response_dict.update({'data': _result_obj})
+            _response_dict.update({'data': _result_obj})
 
             # # NOTE: EPI now returns 2 values for water solubility
             # if request_dict.get('prop') == 'water_sol':

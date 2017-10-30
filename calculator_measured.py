@@ -25,8 +25,8 @@ class MeasuredCalc(Calculator):
 		self.postData = {"smiles" : ""}
 		self.name = "measured"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
-		# self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
-		self.urlStruct = "/rest/episuite/measured"  # old way
+		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
+		# self.urlStruct = "/rest/episuite/measured"  # old way
 		self.request_timeout = 20
 		self.melting_point = 0.0
 
@@ -86,43 +86,43 @@ class MeasuredCalc(Calculator):
 			self.results = response
 			return response
 
-	def getPropertyValue(self, requested_property, response):
-		"""
-		Returns CTS data object for a requested
-		property (cts format)
-		"""
-		# make sure property is in measured's format:
-		if not requested_property in self.propMap.keys():
-			# requested prop name doesn't match prop keys..
-			raise KeyError(
-				"requested property: {} for Measured data doesn't match Measured's property keys".format(
-					requested_property))
+	# def getPropertyValue(self, requested_property, response):
+	# 	"""
+	# 	Returns CTS data object for a requested
+	# 	property (cts format)
+	# 	"""
+	# 	# make sure property is in measured's format:
+	# 	if not requested_property in self.propMap.keys():
+	# 		# requested prop name doesn't match prop keys..
+	# 		raise KeyError(
+	# 			"requested property: {} for Measured data doesn't match Measured's property keys".format(
+	# 				requested_property))
 
-		_data_obj = {
-			'calc': "measured",
-			'prop': requested_property
-		}
+	# 	_data_obj = {
+	# 		'calc': "measured",
+	# 		'prop': requested_property
+	# 	}
 
-		try:
+	# 	try:
 
-			# properties_dict = response['properties']
-			properties_list = response['data']  # 'data' is a list of objects now
+	# 		# properties_dict = response['properties']
+	# 		properties_list = response['data']  # 'data' is a list of objects now
 
 
-			# measured_requested_property = self.propMap[requested_property]['result_key']
+	# 		# measured_requested_property = self.propMap[requested_property]['result_key']
 
-			# if measured_requested_property in properties_dict.keys():
-			# 	_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
-			# else:
-			# 	_data_obj['data'] = "property not available".format(measured_requested_property)
+	# 		# if measured_requested_property in properties_dict.keys():
+	# 		# 	_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
+	# 		# else:
+	# 		# 	_data_obj['data'] = "property not available".format(measured_requested_property)
 
-			return _data_obj
+	# 		return _data_obj
 
-		except Exception as err:
-			logging.warning("Error at Measured Calc getting property value...: {}".format(err))
-			logging.warning("Data from EPI WS: {}".format(response))
-			_data_obj.update({'data': "N/A"})
-			return _data_obj
+	# 	except Exception as err:
+	# 		logging.warning("Error at Measured Calc getting property value...: {}".format(err))
+	# 		logging.warning("Data from EPI WS: {}".format(response))
+	# 		_data_obj.update({'data': "N/A"})
+	# 		return _data_obj
 
 	def request_logic(self, url, post_data):
 		"""
