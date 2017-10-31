@@ -3,26 +3,10 @@ __author__ = 'KWOLFE'
 import requests
 import logging
 import json
-# import jchem_rest
 from .calculator import Calculator
 from .jchem_properties import Tautomerization
-# from calculator_chemaxon import JchemProperty
-# from calculator_chemaxon import Tautomerization
 
 max_weight = 1500 # max weight [g/mol] for epi, test, and sparc
-
-
-
-# class ChemInfo(object):
-#     """
-#     TODO: Should this class reside in smilesfilter? Or calculator??
-
-#     Class for all things related to chemical information and CTS.
-
-#     Suggested subclasses: SMILESFilter, ACTORWS
-#     Suggested functions: getting chem info workflow, funcs w/in sub classes
-#     """
-
 
 
 class ACTORWS(object):

@@ -33,6 +33,7 @@ class EpiCalc(Calculator):
         # self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
         self.methods = None
         self.melting_point = 0.0
+        self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc']
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
         self.propMap = {
             'melting_point': {
@@ -127,6 +128,7 @@ class EpiCalc(Calculator):
         """
         if response.status_code != 200:
             logging.warning("epi server response status: {}".format(response.status_code))
+            logging.warning("epi server response: {}".format(response.content))
             return False
 
         # successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
@@ -175,10 +177,7 @@ class EpiCalc(Calculator):
                 self.melting_point = None
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
-            if 'propertyvalue' in _result_obj:
-                _response_dict.update({'data': _result_obj['propertyvalue']})
-            else:
-                _response_dict.update({'data': _result_obj})
+            _response_dict.update({'data': _result_obj})
 
             # # NOTE: EPI now returns 2 values for water solubility
             # if request_dict.get('prop') == 'water_sol':
@@ -216,6 +215,7 @@ class EpiCalc(Calculator):
         # measured_mp_resonse = tasks.measuredTask.apply(args[melting_point_request], queue='measured')
 
         # Probably best to call REST endpoint for melting point:
+        # The rest call (cts_rest.py) will return one prop
         measured_mp_response = requests.post(
                                     os.environ.get('CTS_REST_SERVER') + '/cts/rest/measured/run', 
                                     data=json.dumps(melting_point_request), 
@@ -227,13 +227,18 @@ class EpiCalc(Calculator):
 
         # # convert to python dict
         try:
-            melting_point = json.loads(measured_mp_response.content)['data']['data']
+            measured_results_object = json.loads(measured_mp_response.content)
+            melting_point = measured_results_object['data']
+            melting_point = float(melting_point['data'])
+            # for data_obj in measured_results_object:
+            #     if data_obj['prop'] == 'melting_point':
+            #         melting_point = float(data_obj['data'])
             # melting_point = measured_mp_response['data']
         except Exception as e:
             logging.warning("Error in calculator_epi.py: {}".format(e))
             melting_point = 0.0
 
-        if not isinstance(melting_point, float):
+        if melting_point == 0.0 or not isinstance(melting_point, float):
             logging.warning("Trying to get MP from TEST..")
             try:
                 melting_point_request['calc'] = 'test'

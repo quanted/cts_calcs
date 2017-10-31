@@ -27,7 +27,7 @@ class MeasuredCalc(Calculator):
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
 		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
 		# self.urlStruct = "/rest/episuite/measured"  # old way
-		self.request_timeout = 10
+		self.request_timeout = 20
 		self.melting_point = 0.0
 
 		# map workflow parameters to test
@@ -86,41 +86,43 @@ class MeasuredCalc(Calculator):
 			self.results = response
 			return response
 
-	def getPropertyValue(self, requested_property, response):
-		"""
-		Returns CTS data object for a requested
-		property (cts format)
-		"""
-		# make sure property is in measured's format:
-		if not requested_property in self.propMap.keys():
-			# requested prop name doesn't match prop keys..
-			raise KeyError(
-				"requested property: {} for Measured data doesn't match Measured's property keys".format(
-					requested_property))
+	# def getPropertyValue(self, requested_property, response):
+	# 	"""
+	# 	Returns CTS data object for a requested
+	# 	property (cts format)
+	# 	"""
+	# 	# make sure property is in measured's format:
+	# 	if not requested_property in self.propMap.keys():
+	# 		# requested prop name doesn't match prop keys..
+	# 		raise KeyError(
+	# 			"requested property: {} for Measured data doesn't match Measured's property keys".format(
+	# 				requested_property))
 
-		_data_obj = {
-			'calc': "measured",
-			'prop': requested_property
-		}
+	# 	_data_obj = {
+	# 		'calc': "measured",
+	# 		'prop': requested_property
+	# 	}
 
-		try:
+	# 	try:
 
-			properties_dict = response['properties']
+	# 		# properties_dict = response['properties']
+	# 		properties_list = response['data']  # 'data' is a list of objects now
 
-			measured_requested_property = self.propMap[requested_property]['result_key']
 
-			if measured_requested_property in properties_dict.keys():
-				_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
-			else:
-				_data_obj['data'] = "property not available".format(measured_requested_property)
+	# 		# measured_requested_property = self.propMap[requested_property]['result_key']
 
-			return _data_obj
+	# 		# if measured_requested_property in properties_dict.keys():
+	# 		# 	_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
+	# 		# else:
+	# 		# 	_data_obj['data'] = "property not available".format(measured_requested_property)
 
-		except Exception as err:
-			logging.warning("Error at Measured Calc getting property value...: {}".format(err))
-			logging.warning("Data from EPI WS: {}".format(response))
-			_data_obj.update({'data': "N/A"})
-			return _data_obj
+	# 		return _data_obj
+
+	# 	except Exception as err:
+	# 		logging.warning("Error at Measured Calc getting property value...: {}".format(err))
+	# 		logging.warning("Data from EPI WS: {}".format(response))
+	# 		_data_obj.update({'data': "N/A"})
+	# 		return _data_obj
 
 	def request_logic(self, url, post_data):
 		"""
@@ -140,7 +142,7 @@ class MeasuredCalc(Calculator):
 					return self.results
 				_retries += 1
 			except Exception as e:
-				logging.warning("Exception in calculator_epi.py: {}".format(e))
+				logging.warning("Exception in calculator_measured.py: {}".format(e))
 				_retries += 1
 
 			logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
@@ -201,9 +203,7 @@ class MeasuredCalc(Calculator):
 			logging.info("Measured Data: {}".format(_measured_data))
 
 			try:
-				_data_obj = self.getPropertyValue(request_dict['prop'], _measured_data)
-				logging.info("data object: {}".format(_data_obj))
-				_response_dict.update(_data_obj)
+				_response_dict.update(_measured_data)
 				return _response_dict
 			except Exception as err:
 				logging.warning("Exception occurred getting Measured data: {}".format(err))
