@@ -115,7 +115,7 @@ class ChemInfo(object):
 		logging.info("chem type: {}".format(chem_type))
 
 		_gsid = None
-		_jchem_smiles = None
+		_smiles_from_mrv = False
 		_name_or_smiles = chem_type['type'] == 'name' or chem_type['type'] == 'smiles'
 		_actor_results = {}  # final key:vals from actorws: smiles, iupac, preferredName, dsstoxSubstanceId, casrn
 
@@ -123,10 +123,11 @@ class ChemInfo(object):
 		if chem_type['type'] == 'mrv':
 			logging.info("Getting SMILES from jchem web services..")
 			response = calc.convertToSMILES({'chemical': chemical})
-			_jchem_smiles = response['structure']
-			logging.info("SMILES of drawn chemical: {}".format(_jchem_smiles))
+			chemical = response['structure']
+			logging.info("SMILES of drawn chemical: {}".format(chemical))
+			_smiles_from_mrv = True
 
-		if _name_or_smiles or _jchem_smiles:
+		if _name_or_smiles or _smiles_from_mrv:
 			logging.info("Getting gsid from actorws chemicalIdentifier..")
 			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 			_gsid = chemid_results.get('data', {}).get('gsid')
@@ -180,10 +181,12 @@ class ChemInfo(object):
 
 		# Loop _actor_results, replace certain keys in molecule_obj with actorws vals:
 		for key, val in _actor_results.get('data', {}).items():
-			molecule_obj[key] = val  # replace or add any values from chemaxon deat
+			if key != 'iupac':
+				# using chemaxon 'iupac' instead of actorws
+				molecule_obj[key] = val  # replace or add any values from chemaxon deat
 
 		for key in actorws.dsstox_result_keys:
-			if key == 'casrn': key = "cas"
+			# if key == 'casrn': key = "cas"
 			if key not in molecule_obj:
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
@@ -282,8 +285,6 @@ class ACTORWS(object):
 		_results['prop'] = "dsstox"
 		for _key, _val in _dsstox_results.items():
 			if _key in self.dsstox_result_keys:
-				if _key == 'casrn':
-					_key = "cas"
 				_results['data'][_key] = _val
 
 		return _results
