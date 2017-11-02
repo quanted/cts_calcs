@@ -41,7 +41,7 @@ class EpiCalc(Calculator):
                 'urlKey': 'waterSolubility',
                 'propKey': '',
                 'resultKey': 'waterSolMgLEstimated',
-                'methods': ['wskownt', 'waternt']
+                'methods': {'wskownt': "WSKOWNT", 'waternt': "WATERNT"}
             },
             'vapor_press': {
                 'urlKey': 'vaporPressure',
@@ -81,6 +81,7 @@ class EpiCalc(Calculator):
         _url = self.baseUrl + self.getUrl(prop)
 
         logging.info("EPI URL: {}".format(_url))
+        logging.info("EPI POST: {}".format(_post))
 
         return self.request_logic(_url, _post)
 
@@ -171,8 +172,14 @@ class EpiCalc(Calculator):
             _response_dict.update({'data': _result_obj})
 
             # # NOTE: EPI now returns 2 values for water solubility
-            # if request_dict.get('prop') == 'water_sol':
-            #     for method in self.propMap['water_sol']['methods']:
+            if request_dict.get('prop') == 'water_sol':
+                logging.warning("water sol property..")
+                for data_obj in _result_obj.get('data', {}):
+                    # replacing method name with ALL CAPS version:
+                    logging.warning("water sol data obj: {}".format(data_obj))
+                    _method_names = self.propMap['water_sol']['methods']
+                    logging.warning("methods: {}".format(_method_names))
+                    data_obj['method'] = _method_names.get(data_obj['method'])
         
             return _response_dict
 
