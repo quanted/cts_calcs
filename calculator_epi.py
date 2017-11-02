@@ -5,18 +5,9 @@ import os
 from .calculator import Calculator
 from .calculator_measured import MeasuredCalc
 from .calculator_test import TestCalc
-from .smilesfilter import parseSmilesByCalculator
+from .chemical_information import SMILESFilter
 
-# try:
-#     # from cts_app.cts_calcs.calculator import Calculator
-#     from cts_app.cts_calcs.smilesfilter import max_weight
-#     # from cts_app.cts_calcs from .smilesfilter import parseSmilesByCalculator
-# except ImportError as e:
-#     # from cts_calcs.calculator import Calculator
-#     from cts_calcs.smilesfilter import max_weight
-#     # from cts_calcs from .smilesfilter import parseSmilesByCalculator
 
-headers = {'Content-Type': 'application/json'}
 
 
 class EpiCalc(Calculator):
@@ -163,7 +154,7 @@ class EpiCalc(Calculator):
         _response_dict.update({'request_post': request_dict, 'method': None})
 
         try:
-            _filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+            _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
             logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))

@@ -7,7 +7,7 @@ import os
 #except ImportError as e:
 #    from cts_calcs.calculator import Calculator
 from .calculator import Calculator
-from .smilesfilter import parseSmilesByCalculator
+from .chemical_information import SMILESFilter
 
 headers = {'Content-Type': 'application/json'}
 
@@ -106,7 +106,7 @@ class TestCalc(Calculator):
 		# filter smiles before sending to TEST:
 		# ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
 		try:
-			_filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+			_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
 			_response_dict.update({'data': "Cannot filter SMILES for TEST data"})
@@ -234,7 +234,7 @@ class TestWSCalc(Calculator):
 		# filter smiles before sending to TEST:
 		# ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
 		try:
-			_filtered_smiles = parseSmilesByCalculator(request_dict.get('chemical'), self.name) # call smilesfilter
+			_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict.get('chemical'), self.name) # call smilesfilter
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
 			_response_dict.update({'data': "Cannot filter SMILES for TEST WS data"})

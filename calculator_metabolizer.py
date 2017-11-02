@@ -3,9 +3,8 @@ import json
 import logging
 import os
 import redis
-
-# from .smilesfilter import parseSmilesByCalculator
 from .calculator import Calculator
+
 
 
 class MetabolizerCalc(Calculator):
