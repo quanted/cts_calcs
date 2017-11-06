@@ -5,18 +5,9 @@ import os
 from .calculator import Calculator
 from .calculator_measured import MeasuredCalc
 from .calculator_test import TestCalc
-from .smilesfilter import parseSmilesByCalculator
+from .chemical_information import SMILESFilter
 
-# try:
-#     # from cts_app.cts_calcs.calculator import Calculator
-#     from cts_app.cts_calcs.smilesfilter import max_weight
-#     # from cts_app.cts_calcs from .smilesfilter import parseSmilesByCalculator
-# except ImportError as e:
-#     # from cts_calcs.calculator import Calculator
-#     from cts_calcs.smilesfilter import max_weight
-#     # from cts_calcs from .smilesfilter import parseSmilesByCalculator
 
-headers = {'Content-Type': 'application/json'}
 
 
 class EpiCalc(Calculator):
@@ -50,7 +41,7 @@ class EpiCalc(Calculator):
                 'urlKey': 'waterSolubility',
                 'propKey': '',
                 'resultKey': 'waterSolMgLEstimated',
-                'methods': ['wskownt', 'waternt']
+                'methods': {'wskownt': "WSKOWNT", 'waternt': "WATERNT"}
             },
             'vapor_press': {
                 'urlKey': 'vaporPressure',
@@ -90,6 +81,7 @@ class EpiCalc(Calculator):
         _url = self.baseUrl + self.getUrl(prop)
 
         logging.info("EPI URL: {}".format(_url))
+        logging.info("EPI POST: {}".format(_post))
 
         return self.request_logic(_url, _post)
 
@@ -163,7 +155,7 @@ class EpiCalc(Calculator):
         _response_dict.update({'request_post': request_dict, 'method': None})
 
         try:
-            _filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+            _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
             logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
@@ -180,8 +172,14 @@ class EpiCalc(Calculator):
             _response_dict.update({'data': _result_obj})
 
             # # NOTE: EPI now returns 2 values for water solubility
-            # if request_dict.get('prop') == 'water_sol':
-            #     for method in self.propMap['water_sol']['methods']:
+            if request_dict.get('prop') == 'water_sol':
+                logging.warning("water sol property..")
+                for data_obj in _result_obj.get('data', {}):
+                    # replacing method name with ALL CAPS version:
+                    logging.warning("water sol data obj: {}".format(data_obj))
+                    _method_names = self.propMap['water_sol']['methods']
+                    logging.warning("methods: {}".format(_method_names))
+                    data_obj['method'] = _method_names.get(data_obj['method'])
         
             return _response_dict
 

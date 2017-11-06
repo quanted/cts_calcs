@@ -3,14 +3,12 @@ import json
 import logging
 import os
 import redis
-
-from .smilesfilter import parseSmilesByCalculator
+from .chemical_information import SMILESFilter
 from .calculator import Calculator
-# import jchem_properties
 from .jchem_properties import JchemProperty
 
 
-# class JchemCalc(object):
+
 class JchemCalc(Calculator):
 
     def __init__(self, prop_name=None):
@@ -106,15 +104,11 @@ class JchemCalc(Calculator):
 
         _filtered_smiles = ''
         try:
-            _filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-            # _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['smiles'], request_dict['calc']) # call smilesfilter
+            _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
-            request_dict.update({'data': 'Cannot filter SMILES for EPI data'})
-            # if not ws_protocol:
+            request_dict.update({'data': 'Cannot filter SMILES for ChemAxon data'})
             return request_dict  # if not WS, just send object (for http/rest)
-            # self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
-            # return
 
 
         logging.info("Original CTS filtered SMILES: {}".format(request_dict['chemical']))

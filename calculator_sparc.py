@@ -5,7 +5,7 @@ import os
 from .calculator import Calculator
 from .calculator_measured import MeasuredCalc
 from .calculator_test import TestCalc
-from .smilesfilter import parseSmilesByCalculator
+from .chemical_information import SMILESFilter
 
 
 class SparcCalc(Calculator):
@@ -113,7 +113,7 @@ class SparcCalc(Calculator):
 
         _filtered_smiles = ''
         try:
-            _filtered_smiles = parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
+            _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
             # _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['smiles'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
