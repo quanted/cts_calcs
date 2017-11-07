@@ -170,8 +170,9 @@ class ChemInfo(object):
 		logging.info("original smiles before cts filtering: {}".format(orig_smiles))
 
 		# filtered_smiles_response = smilesfilter.filterSMILES(orig_smiles)
-		filtered_smiles_response = SMILESFilter().filterSMILES(orig_smiles)
-		filtered_smiles = filtered_smiles_response['results'][-1]
+		# filtered_smiles_response = SMILESFilter().filterSMILES(orig_smiles)
+		# filtered_smiles = filtered_smiles_response['results'][-1]
+		filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
 
 		logging.warning("Filtered SMILES: {}".format(filtered_smiles))
 
@@ -389,6 +390,8 @@ class SMILESFilter(object):
 		p-chem calculators
 		"""
 
+		logging.info("{} is being processed by cts SMILES filter..".format(smiles))
+
 		# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
 		# 1. CTSWS actions "removeExplicitH" and "transform".
 		url = Calculator().efs_server_url + Calculator().efs_standardizer_endpoint
@@ -401,29 +404,55 @@ class SMILESFilter(object):
 		}
 		response = Calculator().web_call(url, post_data)
 
+		logging.info("1. Removing explicit H, then transforming..")
+		logging.info("request to jchem: {}".format(post_data))
+		logging.info("response from jchem: {}".format(response))
+
 		filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
+
+		logging.info("filtered smiles so far: {}".format(filtered_smiles))
 		
 		# 2. Get major tautomer from jchem:
 		taut_obj = Tautomerization()
 		taut_obj.postData.update({'calculationType': 'MAJOR'})
 		taut_obj.make_data_request(filtered_smiles, taut_obj)
 
+		logging.info("2. Obtaining major tautomer from {}".format(filtered_smiles))
+		logging.info("request to jchem: {}".format(taut_obj.postData))
+		logging.info("response from jchem: {}".format(taut_obj.results))
+
 		# todo: verify this is major taut result smiles, not original smiles for major taut request...
-		major_taut_smiles = taut_obj.results['result']['structureData']['structure']
+		major_taut_smiles = None
+		try:
+			major_taut_smiles = taut_obj.results['result']['structureData']['structure']
+		except KeyError as e:
+			logging.warning("Jchem error requesting major tautomer from {}..".format(filtered_smiles))
+			logging.warning("Exception: {}".format(e))
+			logging.warning("Using smiles {} for next step..".format(filtered_smiles))
+
+		if major_taut_smiles:
+			logging.info("Major tautomer found: {}".format(major_taut_smiles))
+			filtered_smiles = major_taut_smiles
 
 		# 3. Using major taut smiles for final "neutralize" filter:
 		post_data = {
-			'structure': major_taut_smiles, 
+			'structure': filtered_smiles, 
 			'actions': [
 				"neutralize"
 			]
 		}
 		response = Calculator().web_call(url, post_data)
 
+		logging.info("3. Neutralizing smiles {}".format(filtered_smiles))
+		logging.info("request to jchem: {}".format(post_data))
+		logging.info("response from jchem: {}".format(response))
+
 		final_smiles = response['results'][-1]
+		logging.info("smiles results after cts filtering: {}".format(response.get('results')))
 		logging.warning("FINAL FITERED SMILES: {}".format(final_smiles))
 
-		return response
+		# return response
+		return final_smiles
 
 
 	def checkMass(self, chemical):
