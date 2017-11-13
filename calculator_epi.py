@@ -41,7 +41,7 @@ class EpiCalc(Calculator):
                 'urlKey': 'waterSolubility',
                 'propKey': '',
                 'resultKey': 'waterSolMgLEstimated',
-                'methods': {'wskownt': "WSKOWNT", 'waternt': "WATERNT"}
+                'methods': {'wskownt': "WSKOW", 'waternt': "WATERNT"}
             },
             'vapor_press': {
                 'urlKey': 'vaporPressure',
