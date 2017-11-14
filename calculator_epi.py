@@ -56,13 +56,12 @@ class EpiCalc(Calculator):
         return {'structure': "", 'melting_point': None}
 
     
-    def makeDataRequest(self, structure, calc, prop, method=None):
-        _post = self.getPostData(calc, prop)
-        _post['structure'] = structure
+    def makeDataRequest(self, structure, calc):
+        # _post = self.getPostData(calc, prop)
+        _post = {'structure': structure}
         if self.melting_point != None:
             _post['melting_point'] = self.melting_point
 
-        logging.info("getting url...")
 
         # _url = self.baseUrl + self.getUrl(prop)
         _url = self.baseUrl + self.urlStruct
@@ -135,6 +134,8 @@ class EpiCalc(Calculator):
         _filtered_smiles = ''
         _response_dict = {}
 
+        logging.info("Request dict to epi: {}".format(request_dict))
+
         # fill any overlapping keys from request:
         for key in request_dict.keys():
             if not key == 'nodes':
@@ -150,11 +151,12 @@ class EpiCalc(Calculator):
             return _response_dict
 
         try:
-            if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
-                self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
-            else:
-                self.melting_point = None
-            _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
+            # if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
+            #     self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
+            # else:
+            #     self.melting_point = None
+            self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
+            _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc']) # make call for data!
 
             # _response_dict.update({'data': _result_obj})
             _response_dict.update(_result_obj)
