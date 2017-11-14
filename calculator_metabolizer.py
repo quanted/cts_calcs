@@ -105,22 +105,7 @@ class MetabolizerCalc(Calculator):
         if self.metID == 1:
             # _parent = root.keys()[0]  # start with parent metabolite
             _parent = list(root.keys())[0]  # python 3 fix
-
-            # organizing data for spacetree
-            # _products_dict.update({
-            #     "id": self.metID,
-            #     "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
-            #     "data": {},
-            #     "children": []
-            # })
-            # _products_dict['data'].update(
-            #     self.popupBuilder({"smiles": _parent, "generation": "0"},
-            #         self.metabolite_keys, "{}".format(self.metID),
-            #         "Metabolite Information"
-            #     )
-            # )
-            # self.products_list.append(_parent)
-
+            
             # skipping 2nd parent metabolite:
             # second_parent = root[_parent]['metabolites'].keys()[0]
             second_parent = list(root[_parent]['metabolites'].keys())[0]  # python 3 fix
@@ -131,9 +116,7 @@ class MetabolizerCalc(Calculator):
             _products_dict.update({
                 "id": self.metID,
                 "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
-                # "name": self.nodeWrapper(_parent, self.tree_image_height, self.tree_image_width, self.image_scale, self.metID,'svg', True),
-                # 'name': "",
-                "data": {'smiles': _parent, 'routes': root['routes'], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 2), 'production': round(root.get('production'), 2)},
+                "data": {'smiles': _parent, 'routes': root['route'], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 2), 'production': round(root.get('production'), 2)},
                 "children": []
             })
 
@@ -141,19 +124,10 @@ class MetabolizerCalc(Calculator):
         else:
             if root['generation'] > 0 and root['generation'] <= gen_limit:
                 # continue walking tree until generation limit is met..
-                # _products_dict.update({
-                #     "id": self.metID,
-                #     "name": self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True),
-                #     "data": {},
-                #     "children": []
-                # })
-                # _products_dict['data'].update(self.popupBuilder(root, self.metabolite_keys, "{}".format(self.metID), "Metabolite Information"))
                 _products_dict.update({
                     "id": self.metID,
                     "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
-                    # 'name': self.nodeWrapper(root['smiles'], self.tree_image_height, self.tree_image_width, self.image_scale, self.metID, 'svg', True),
-                    # 'name': "",
-                    "data": {'smiles': root['smiles'], 'routes': root['routes'].split(',')[-1], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 2), 'production': round(root.get('production'), 2)},
+                    "data": {'smiles': root['smiles'], 'routes': root['route'].split(',')[-1], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 2), 'production': round(root.get('production'), 2)},
                     "children": []
                 })
                 # self.products_list.append(root['smiles'])
