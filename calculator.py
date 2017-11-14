@@ -141,6 +141,56 @@ class Calculator(object):
 		return jid
 
 
+	def get_melting_point(self, structure, sessionid):
+		"""
+		Gets mass of structure from Measured, tries
+		TEST if not available in Measured, and finally EPI.
+		Returns MP as float or None
+		"""
+		melting_point_request = {
+			'calc': "",
+			'prop': 'melting_point',
+			'chemical': structure,
+			'sessionid': sessionid
+		}
+
+		# melting_point = 0.0
+		melting_point = None
+
+
+		# Attempt at MP workflow as loop..
+		mp_request_calcs = ['measured', 'test', 'epi']  # ordered list of calcs for mp request
+
+		for calc in mp_request_calcs:
+
+			melting_point_request['calc'] = calc
+
+			logging.info("Requesting melting point from {}..".format(calc))
+
+			mp_response = requests.post(
+							os.environ.get('CTS_REST_SERVER') + '/cts/rest/{}/run'.format(calc), 
+							data=json.dumps(melting_point_request), 
+							allow_redirects=True,
+							verify=False,
+							timeout=15)
+
+			logging.info("Melting point response: {}".format(mp_response.content))
+
+			try:
+				results_object = json.loads(mp_response.content)
+				melting_point = float(results_object['data']['data'])
+			except Exception as e:
+				logging.warning("Unable to get melting point from {}: {}".format(calc, e))
+				melting_point = None  # making sure mp stays None if exception
+
+			if isinstance(melting_point, float):
+				logging.info("Melting point value found from {} calc, MP = {}".format(calc, melting_point))
+				return melting_point
+
+		# if no MP found from all 3 calcs, return None for MP
+		return None
+
+
 
 
 	################ JCHEM REST STUFF (WHERE SHOULD IT GO??? CTS_REST???) ###################

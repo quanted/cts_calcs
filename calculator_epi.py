@@ -20,48 +20,34 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        self.urlStruct = "/episuiteapi/rest/episuite/{}/estimated"  # new way (cgi server 1)
-        # self.urlStruct = "/rest/episuite/{}/estimated"  # old way (local machine)
+        self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
+        # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
         self.melting_point = 0.0
         self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc']
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
         self.propMap = {
             'melting_point': {
-                'urlKey': 'meltingPoint',
-                'propKey': 'Melting Pt (deg C)(estimated)',
-                'resultKey': 'meltingPtDegCEstimated'
+               'result_key': 'melting_point'
             },
             'boiling_point': {
-                'urlKey': 'boilingPoint',
-                'propKey': '',
-                'resultKey': 'boilingPtDegCEstimated'
+               'result_key': 'boiling_point'
             },
             'water_sol': {
-                'urlKey': 'waterSolubility',
-                'propKey': '',
-                'resultKey': 'waterSolMgLEstimated',
-                'methods': {'wskownt': "WSKOWNT", 'waternt': "WATERNT"}
+               'result_key': 'water_solubility',
+               'methods': {'wskownt': "WSKOW", 'waternt': "WATERNT"}
             },
             'vapor_press': {
-                'urlKey': 'vaporPressure',
-                'propKey': '',
-                'resultKey': 'vaporPressMmHgEstimated'
+               'result_key': 'vapor_pressure'
             },
             'henrys_law_con': {
-                'urlKey': 'henrysLawConstant',
-                'propKey': '',
-                'resultKey': 'henryLcBondAtmM3Mole'
+                'result_key': 'henrys_law_constant'
             },
             'kow_no_ph': {
-                'urlKey': 'logKow',
-                'propKey': '',
-                'resultKey': 'logKowEstimate'
+                'result_key': 'log_kow'
             },
             'koc': {
-                'urlKey': 'soilAdsorptionCoefficientKoc',
-                'propKey': '',
-                'resultKey': 'soilAdsorptionCoefKoc'
+                'result_key': 'log_koc'
             }
         }
 
@@ -78,7 +64,8 @@ class EpiCalc(Calculator):
 
         logging.info("getting url...")
 
-        _url = self.baseUrl + self.getUrl(prop)
+        # _url = self.baseUrl + self.getUrl(prop)
+        _url = self.baseUrl + self.urlStruct
 
         logging.info("EPI URL: {}".format(_url))
         logging.info("EPI POST: {}".format(_post))
@@ -164,22 +151,23 @@ class EpiCalc(Calculator):
 
         try:
             if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
-                self.melting_point = self.getMeltingPoint(_filtered_smiles, request_dict.get('sessionid'))
+                self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
             else:
                 self.melting_point = None
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'], request_dict['prop']) # make call for data!
 
-            _response_dict.update({'data': _result_obj})
+            # _response_dict.update({'data': _result_obj})
+            _response_dict.update(_result_obj)
 
-            # # NOTE: EPI now returns 2 values for water solubility
-            if request_dict.get('prop') == 'water_sol':
-                logging.warning("water sol property..")
-                for data_obj in _result_obj.get('data', {}):
-                    # replacing method name with ALL CAPS version:
-                    logging.warning("water sol data obj: {}".format(data_obj))
-                    _method_names = self.propMap['water_sol']['methods']
-                    logging.warning("methods: {}".format(_method_names))
-                    data_obj['method'] = _method_names.get(data_obj['method'])
+            # # # NOTE: EPI now returns 2 values for water solubility
+            # if request_dict.get('prop') == 'water_sol':
+            #     logging.warning("water sol property..")
+            #     for data_obj in _result_obj.get('data', {}):
+            #         # replacing method name with ALL CAPS version:
+            #         logging.warning("water sol data obj: {}".format(data_obj))
+            #         _method_names = self.propMap['water_sol']['methods']
+            #         logging.warning("methods: {}".format(_method_names))
+            #         data_obj['method'] = _method_names.get(data_obj['method'])
         
             return _response_dict
 
@@ -188,81 +176,3 @@ class EpiCalc(Calculator):
             _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
             logging.info("##### session id: {}".format(request_dict.get('sessionid')))
             return _response_dict
-
-
-    def getMeltingPoint(self, structure, sessionid):
-        """
-        Gets mass of structure from Measured, tries
-        TEST if not available in Measured. Returns 0.0
-        if neither have mp value.
-        """
-        melting_point_request = {
-            'calc': "measured",  # should prob be measured
-            # 'props': ['melting_point'],
-            'prop': 'melting_point',
-            'chemical': structure,
-            'sessionid': sessionid
-        }
-        # todo: catch measured errors, then try epi melting point..
-        # request = NotDjangoRequest(melting_point_request)
-        # melting_point_response = measured_views.request_manager(request)
-        melting_point = 0.0
-        # measured_mp_response = MeasuredCalc().data_request_handler(melting_point_request)
-        # Ideally need to make request to measured worker/queue:
-        # tasks.measuredTask.apply_async(args=[melting_point_request], queue='measured')
-        # measured_mp_resonse = tasks.measuredTask.apply(args[melting_point_request], queue='measured')
-
-        # Probably best to call REST endpoint for melting point:
-        # The rest call (cts_rest.py) will return one prop
-        measured_mp_response = requests.post(
-                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/measured/run', 
-                                    data=json.dumps(melting_point_request), 
-                                    allow_redirects=True,
-                                    verify=False)
-
-
-        logging.warning("MELTING POINT RESPONSE: {}".format(measured_mp_response.content))
-
-        # # convert to python dict
-        try:
-            measured_results_object = json.loads(measured_mp_response.content)
-            melting_point = measured_results_object['data']
-            melting_point = float(melting_point['data'])
-            # for data_obj in measured_results_object:
-            #     if data_obj['prop'] == 'melting_point':
-            #         melting_point = float(data_obj['data'])
-            # melting_point = measured_mp_response['data']
-        except Exception as e:
-            logging.warning("Error in calculator_epi.py: {}".format(e))
-            melting_point = 0.0
-
-        if melting_point == 0.0 or not isinstance(melting_point, float):
-            logging.warning("Trying to get MP from TEST..")
-            try:
-                melting_point_request['calc'] = 'test'
-                # request = NotDjangoRequest(melting_point_request)
-                # test_melting_point_response = test_views.request_manager(request)
-                # test_mp_response = TestCalc().data_request_handler(melting_point_request)
-                test_mp_response = requests.post(
-                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/test/run', 
-                                    data=json.dumps(melting_point_request), 
-                                    allow_redirects=True,
-                                    verify=False)
-                logging.warning("TEST MP RESPONSE CONTENT: {}".format(test_mp_response))
-                # melting_point = json.loads(test_melting_point_response.content)[0]['data']
-                melting_point = json.loads(test_mp_response.content)['data']['data']
-                logging.warning("TEST MP VALUE: {}".format(melting_point))
-            except Exception as e:
-                logging.warning("Error in calculator_epi.py: {}".format(e))
-                melting_point = 0.0
-
-            logging.warning("TEST MP TYPE: {}:".format(type(melting_point)))
-
-            if not isinstance(melting_point, float):
-                melting_point = 0.0
-        # else:
-        #     melting_point = melting_point_obj['data']
-
-        logging.warning("MELTING POINT VALUE: {}".format(melting_point))
-
-        return melting_point

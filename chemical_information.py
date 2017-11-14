@@ -112,7 +112,9 @@ class ChemInfo(object):
 
 		# 1. Determine chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = calc.get_chemical_type(chemical)
-		logging.info("chem type: {}".format(chem_type))
+
+		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
+		logging.info("Chemical type: {}".format(chem_type))
 
 		_gsid = None
 		_smiles_from_mrv = False
@@ -132,11 +134,6 @@ class ChemInfo(object):
 			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 			_gsid = chemid_results.get('data', {}).get('gsid')
 			logging.info("gsid from actorws chemid: {}".format(_gsid))
-			# if not _gsid:
-			# 	_actor_results['gsid'] = "N/A"
-			# else:	
-			# 	_actor_results['gsid'] = _gsid
-
 
 		# Should be CAS# or have gsid from chemid by this point..
 		if _gsid or chem_type['type'] == 'CAS#':
@@ -148,32 +145,21 @@ class ChemInfo(object):
 			dsstox_results = actorws.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 
-		# ?: Are the iupac, smiles, casrn used from actorws if available, and
-		# if they're not then using just the values from chemaxon?
-		# Also, are the additional cells in Chemical Editor that are for actorws
-		# values going to be "N/A" if using chemaxon for chem info?
-
-		# Need to figure out orig_smiles for smiles filter:
 		# If user enters something other than SMILES, use actorws smiles for orig_smiles
 		orig_smiles = ""
 		if chem_type['type'] == 'smiles':
 			orig_smiles = chemical  # use user-entered smiles as orig_siles
-		elif 'smiles' in _actor_results:
-			orig_smiles = _actor_results['smiles']  # use actorws smiles as orig_smiles
+		elif 'smiles' in _actor_results.get('data', {}):
+			orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
+			logging.info("Using actorws smiles as original smiles..")
 		else:
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
 			orig_smiles = calc.convertToSMILES({'chemical': chemical}).get('structure')
 
-		# response = Calculator().convertToSMILES({'chemical': chemical})
-		# orig_smiles = response['structure']
+		filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
 
-		logging.info("original smiles before cts filtering: {}".format(orig_smiles))
-
-		# filtered_smiles_response = smilesfilter.filterSMILES(orig_smiles)
-		filtered_smiles_response = SMILESFilter().filterSMILES(orig_smiles)
-		filtered_smiles = filtered_smiles_response['results'][-1]
-
-		logging.warning("Filtered SMILES: {}".format(filtered_smiles))
+		logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
+		logging.info("Filtered SMILES: {}".format(filtered_smiles))
 
 		jchem_response = calc.getChemDetails({'chemical': filtered_smiles})  # get chemical details
 
@@ -181,12 +167,11 @@ class ChemInfo(object):
 
 		# Loop _actor_results, replace certain keys in molecule_obj with actorws vals:
 		for key, val in _actor_results.get('data', {}).items():
-			if key != 'iupac':
+			if key != 'iupac' and key != 'smiles':
 				# using chemaxon 'iupac' instead of actorws
 				molecule_obj[key] = val  # replace or add any values from chemaxon deat
 
 		for key in actorws.dsstox_result_keys:
-			# if key == 'casrn': key = "cas"
 			if key not in molecule_obj:
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
@@ -206,25 +191,6 @@ class ChemInfo(object):
 			'request_post': request_post
 		}
 		return wrapped_post
-		# json_data = json.dumps(wrapped_post)
-
-		# logging.warning("Returning Chemical Info: {}".format(json_data))
-
-		# return HttpResponse(json_data, content_type='application/json')
-
-		# except KeyError as error:
-		# 	logging.warning(error)
-		# 	wrapped_post = {
-		# 		'status': False, 
-		# 		'error': 'Error validating chemical',
-		# 		'chemical': chemical
-		# 	}
-		# 	return HttpResponse(json.dumps(wrapped_post), content_type='application/json')
-		# except Exception as error:
-		# 	logging.warning(error)
-		# 	wrapped_post = {'status': False, 'error': error}
-		# 	return HttpResponse(json.dumps(wrapped_post), content_type='application/json')
-
 
 
 
@@ -389,6 +355,8 @@ class SMILESFilter(object):
 		p-chem calculators
 		"""
 
+		logging.info("{} is being processed by cts SMILES filter..".format(smiles))
+
 		# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
 		# 1. CTSWS actions "removeExplicitH" and "transform".
 		url = Calculator().efs_server_url + Calculator().efs_standardizer_endpoint
@@ -401,29 +369,54 @@ class SMILESFilter(object):
 		}
 		response = Calculator().web_call(url, post_data)
 
+		logging.info("1. Removing explicit H, then transforming..")
+		logging.info("request to jchem: {}".format(post_data))
+		logging.info("response from jchem: {}".format(response))
+
 		filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
+
+		logging.info("filtered smiles so far: {}".format(filtered_smiles))
 		
 		# 2. Get major tautomer from jchem:
 		taut_obj = Tautomerization()
 		taut_obj.postData.update({'calculationType': 'MAJOR'})
 		taut_obj.make_data_request(filtered_smiles, taut_obj)
 
+		logging.info("2. Obtaining major tautomer from {}".format(filtered_smiles))
+		logging.info("request to jchem: {}".format(taut_obj.postData))
+		logging.info("response from jchem: {}".format(taut_obj.results))
+
 		# todo: verify this is major taut result smiles, not original smiles for major taut request...
-		major_taut_smiles = taut_obj.results['result']['structureData']['structure']
+		major_taut_smiles = None
+		try:
+			major_taut_smiles = taut_obj.results['result']['structureData']['structure']
+		except KeyError as e:
+			logging.warning("Jchem error requesting major tautomer from {}..".format(filtered_smiles))
+			logging.warning("Exception: {}".format(e))
+			logging.warning("Using smiles {} for next step..".format(filtered_smiles))
+
+		if major_taut_smiles:
+			logging.info("Major tautomer found: {}.. Using as filtered smiles..".format(major_taut_smiles))
+			filtered_smiles = major_taut_smiles
 
 		# 3. Using major taut smiles for final "neutralize" filter:
 		post_data = {
-			'structure': major_taut_smiles, 
+			'structure': filtered_smiles, 
 			'actions': [
 				"neutralize"
 			]
 		}
 		response = Calculator().web_call(url, post_data)
 
+		logging.info("3. Neutralizing smiles {}".format(filtered_smiles))
+		logging.info("request to jchem: {}".format(post_data))
+		logging.info("response from jchem: {}".format(response))
+
 		final_smiles = response['results'][-1]
+		logging.info("smiles results after cts filtering: {}".format(response.get('results')))
 		logging.warning("FINAL FITERED SMILES: {}".format(final_smiles))
 
-		return response
+		return final_smiles
 
 
 	def checkMass(self, chemical):

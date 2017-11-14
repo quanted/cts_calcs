@@ -157,7 +157,7 @@ class MeasuredCalc(Calculator):
 		values that indicate an error
 		"""
 		if response.status_code != 200:
-			logging.warning("epi server response status: {}".format(response.status_code))
+			logging.warning("measured server response status: {}".format(response.status_code))
 			return False
 
 		# successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
