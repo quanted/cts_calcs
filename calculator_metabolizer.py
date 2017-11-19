@@ -67,7 +67,7 @@ class MetabolizerCalc(Calculator):
         reDict = {}
         reDict.update({
             'tree': self.traverse(root, gen_limit),
-            'total_products': self.metID
+            'total_products': self.metID - 1  # subtract out the parent for "total products" value
         })
 
 
