@@ -363,7 +363,7 @@ class Calculator(object):
 
 		logging.warning("CHEM TYPE RESULTS: {}".format(results))
 
-		if 'properties' in results.get('type'):
+		if 'properties' in results.get('type', []):
 			_type = results['type']['properties']['type']
 		elif results.get('type'):
 			_type = results['type']
