@@ -139,8 +139,10 @@ class ChemInfo(object):
 		if _gsid or chem_type['type'] == 'CAS#':
 			id_type = 'CAS#'
 			if _gsid:
-				chem_id = _gsid
+				chem_id = _gsid  # use gsid for ACTORWS request
 				id_type = 'gsid'
+			else:
+				chem_id = chemical  # use CAS# for ACTORWS request
 			logging.info("Getting results from actorws dsstox..")
 			dsstox_results = actorws.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
@@ -241,11 +243,10 @@ class ACTORWS(object):
 
 		try:
 			_dsstox_results = _dsstox_results['DataList']['list'][0]
-		except KeyError as e:
-			logging.warning("Error getting dsstox results key:vals..")
-			raise e  # raise it for now
-
-		# what key:vals should be with results??
+		except Exception as e:
+			logging.warning("Error getting dsstox results key:vals: {}".format(e))
+			logging.warning("Using only Jchem WS results instead..")
+			# raise e  # raise it for now
 
 		_results = self.result_obj
 		_results['prop'] = "dsstox"
