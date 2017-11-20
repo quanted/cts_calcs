@@ -118,7 +118,7 @@ class ChemInfo(object):
 
 		_gsid = None
 		_smiles_from_mrv = False
-		_name_or_smiles = chem_type['type'] == 'name' or chem_type['type'] == 'smiles'
+		_name_or_smiles = chem_type['type'] in ['name', 'common', 'smiles']  # bool for chemical in name/common or smiles format
 		_actor_results = {}  # final key:vals from actorws: smiles, iupac, preferredName, dsstoxSubstanceId, casrn
 
 		# Checking type for next step:
