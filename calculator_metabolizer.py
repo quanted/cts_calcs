@@ -51,7 +51,7 @@ class MetabolizerCalc(Calculator):
             'populationLimit': 0,
             'likelyLimit': 0.001,
             'transformationLibraries': ["hydrolysis", "abiotic_reduction"],  # NOTE: no transformationLibraries key:val for mammalian metabolism
-            'excludeCondition': ""
+            'excludeCondition': "hasValenceError()"
         }
 
 
