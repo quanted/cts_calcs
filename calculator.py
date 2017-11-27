@@ -357,18 +357,16 @@ class Calculator(object):
 		response = requests.post(url, data=chemical, headers=request_header, timeout=self.request_timeout)
 		results = json.loads(response.content)
 
-		_type = ""
-
-		# NOTE: What will come back for drawn chemical type???
+		_type = None
 
 		logging.warning("CHEM TYPE RESULTS: {}".format(results))
 
-		if 'properties' in results.get('type'):
-			_type = results['type']['properties']['type']
-		elif results.get('type'):
+		if 'properties' in results:
+			_type = results['properties'].get('type')
+
+		if not _type and results.get('type'):
 			_type = results['type']
-		else:
-			_type = None
+
 
 		return {'type': _type}
 

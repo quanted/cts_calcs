@@ -51,7 +51,7 @@ class MetabolizerCalc(Calculator):
             'populationLimit': 0,
             'likelyLimit': 0.001,
             'transformationLibraries': ["hydrolysis", "abiotic_reduction"],  # NOTE: no transformationLibraries key:val for mammalian metabolism
-            'excludeCondition': ""
+            'excludeCondition': "hasValenceError()"
         }
 
 
@@ -67,7 +67,7 @@ class MetabolizerCalc(Calculator):
         reDict = {}
         reDict.update({
             'tree': self.traverse(root, gen_limit),
-            'total_products': self.metID
+            'total_products': self.metID - 1  # subtract out the parent for "total products" value
         })
 
 
@@ -202,6 +202,8 @@ class MetabolizerCalc(Calculator):
         #     _data_dict.update({'transformationLibraries': _trans_libs})
 
         _data_dict = request_dict.get('metabolizer_post')
+        _data_dict.update({'excludeCondition': 'hasValenceError()'})
+
         logging.info("METABOLIZER POST: {}".format(_data_dict))
 
         response = self.getTransProducts(_data_dict)
