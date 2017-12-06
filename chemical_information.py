@@ -27,6 +27,7 @@ class Molecule(object):
 		self.mass = ''
 		self.structureData = ''
 		self.exactMass = ''
+		self.preferredName = ''	
 
 	def createMolecule(self, chemical, orig_smiles, chem_details_response, get_structure_data=None):
 		"""
@@ -174,7 +175,8 @@ class ChemInfo(object):
 				molecule_obj[key] = val  # replace or add any values from chemaxon deat
 
 		for key in actorws.dsstox_result_keys:
-			if key not in molecule_obj:
+			if key not in molecule_obj and key != 'preferredName':
+				# Note: using preferredName from chemaxon instead..
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
 		if is_node:
