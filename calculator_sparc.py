@@ -350,9 +350,9 @@ class SparcCalc(Calculator):
         if pka.get('macroPka') != -1000:
 
             if _pka_type == 'Acid' or _pka_type == 'Both':
-                pka_obj['pKa'] = _pka_data
+                pka_obj['pKa'].append(_pka_data)
             elif _pka_type == 'Base':
-                pka_obj['pKb'] = _pka_data
+                pka_obj['pKb'].append(_pka_data)
 
         return pka_obj
 
