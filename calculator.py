@@ -222,6 +222,7 @@ class Calculator(object):
 					"exactMass": "chemicalTerms(exactMass)",
 					"smiles": "chemicalTerms(molString('smiles'))",
 					"cas": "chemicalTerms(molString('name:cas#'))",
+					"preferredName": "chemicalTerms(molString('name:t'))"
 				},
 				"parameters": {
 					"structureData": "mrv"

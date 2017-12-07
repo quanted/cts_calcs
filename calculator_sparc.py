@@ -328,16 +328,33 @@ class SparcCalc(Calculator):
         try:
             pka_results = results['macroPkaResults'] # list of pka..
             pka_data = [] # return list of pka values..
-            for pka in pka_results:
-                if 'macroPka' in pka and pka['macroPka'] != -1000:
-                    pka_data.append(pka['macroPka'])
-                else:
-                    pka_data.append("out of range")
+            pka_results_obj = {'pKa': [], 'pKb': []}
+            for pka_item in pka_results:
+                self.getPkaAndPkbFromResults(pka_item, pka_results_obj)
+
+            if len(pka_results_obj['pKa']) + len(pka_results_obj['pKb']) == 0:
+                pka_results_obj = {'pKa': ["none"]}  # Return just "none" if no pKa or pKb
+
         except Exception as e:
             logging.warning("Error getting pka from SPARC response: {}".format(e))
             raise Exception("error parsing sparc request")
         
-        return {"pKa": pka_data}
+        # return {"pKa": pka_data}
+        return pka_results_obj
+
+
+    def getPkaAndPkbFromResults(self, pka, pka_obj):
+        _pka_type = pka.get('macroPkaType')
+        _pka_data = pka.get('macroPka')
+
+        if pka.get('macroPka') != -1000:
+
+            if _pka_type == 'Acid' or _pka_type == 'Both':
+                pka_obj['pKa'].append(_pka_data)
+            elif _pka_type == 'Base':
+                pka_obj['pKb'].append(_pka_data)
+
+        return pka_obj
 
 
     def makeCallForLogD(self):
