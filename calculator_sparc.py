@@ -333,7 +333,8 @@ class SparcCalc(Calculator):
                 self.getPkaAndPkbFromResults(pka_item, pka_results_obj)
 
             if len(pka_results_obj['pKa']) + len(pka_results_obj['pKb']) == 0:
-                pka_results_obj = {'pKa': ["none"]}  # Return just "none" if no pKa or pKb
+                # pka_results_obj = {'pKa': []}  # Return just "none" if no pKa or pKb
+                pka_results_obj = None
 
         except Exception as e:
             logging.warning("Error getting pka from SPARC response: {}".format(e))

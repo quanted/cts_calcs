@@ -259,6 +259,10 @@ class Pka(JchemProperty):
             'pKb': self.getMostBasicPka()
         }
 
+        if not pka_values['pKa'] and not pka_values['pKb']:
+            # if both lists are empty, return "none"
+            pka_values = None
+
         # return {'pKa': _pkas}
         return pka_values
 
