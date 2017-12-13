@@ -202,7 +202,8 @@ class MetabolizerCalc(Calculator):
         #     _data_dict.update({'transformationLibraries': _trans_libs})
 
         _data_dict = request_dict.get('metabolizer_post')
-        _data_dict.update({'excludeCondition': 'hasValenceError()'})
+        _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
+
 
         logging.info("METABOLIZER POST: {}".format(_data_dict))
 
