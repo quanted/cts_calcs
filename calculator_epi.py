@@ -20,10 +20,10 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
-        # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
+        # self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
+        self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
-        self.melting_point = 0.0
+        self.melting_point = None
         self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc']
         self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
         self.propMap = {
@@ -116,7 +116,13 @@ class EpiCalc(Calculator):
         return True
 
 
-
+    def get_mp_from_results(self, results):
+        for data_obj in results['data']:
+                if data_obj.get('prop') == 'melting_point':
+                    logging.info("Found MP in EPI results..")
+                    return float(data_obj['data'])
+                    
+        return None
 
 
     # def request_manager(request):
@@ -155,21 +161,22 @@ class EpiCalc(Calculator):
             #     self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
             # else:
             #     self.melting_point = None
-            self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
+            
+            self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
+
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc']) # make call for data!
 
-            # _response_dict.update({'data': _result_obj})
-            _response_dict.update(_result_obj)
+            # Making EPI request without MP first since it returns values
+            # for all props anyways, then making the request again using the MP value.
+            # NOTE: Ensure this is needed for all props and not just ws and vp..
+            if not self.melting_point:
+                # MP not found from measured or test, getting from results,
+                # and requesting data again with set MP..
+                self.melting_point = self.get_mp_from_results(_result_obj)
+                logging.info("Making request to EPI with MP: {}".format(self.melting_point))
+                _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'])  # Make request using MP
 
-            # # # NOTE: EPI now returns 2 values for water solubility
-            # if request_dict.get('prop') == 'water_sol':
-            #     logging.warning("water sol property..")
-            #     for data_obj in _result_obj.get('data', {}):
-            #         # replacing method name with ALL CAPS version:
-            #         logging.warning("water sol data obj: {}".format(data_obj))
-            #         _method_names = self.propMap['water_sol']['methods']
-            #         logging.warning("methods: {}".format(_method_names))
-            #         data_obj['method'] = _method_names.get(data_obj['method'])
+            _response_dict.update(_result_obj)
         
             return _response_dict
 

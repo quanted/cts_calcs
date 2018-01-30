@@ -141,7 +141,7 @@ class Calculator(object):
 		return jid
 
 
-	def get_melting_point(self, structure, sessionid):
+	def get_melting_point(self, structure, sessionid, calc=None):
 		"""
 		Gets mass of structure from Measured, tries
 		TEST if not available in Measured, and finally EPI.
@@ -159,7 +159,9 @@ class Calculator(object):
 
 
 		# Attempt at MP workflow as loop..
-		mp_request_calcs = ['measured', 'test', 'epi']  # ordered list of calcs for mp request
+		mp_request_calcs = ['measured', 'test']  # ordered list of calcs for mp request
+		if calc != 'epi':
+			mp_request_calcs.append('epi')
 
 		for calc in mp_request_calcs:
 
@@ -172,7 +174,7 @@ class Calculator(object):
 							data=json.dumps(melting_point_request), 
 							allow_redirects=True,
 							verify=False,
-							timeout=15)
+							timeout=30)
 
 			logging.info("Melting point response: {}".format(mp_response.content))
 
