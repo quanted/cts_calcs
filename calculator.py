@@ -182,9 +182,8 @@ class Calculator(object):
 				results_object = json.loads(mp_response.content)
 				melting_point = float(results_object['data']['data'])
 			except Exception as e:
-				logging.warning("Unable to get melting point from {}: {}".format(calc, e))
-				melting_point = None  # making sure mp stays None if exception
-
+				logging.warning("Unable to get melting point from {}\n Exception: {}".format(calc, e))
+				logging.warning("Data returned from Measured that triggered exception: {}".format(results_object.get('data')))
 			if isinstance(melting_point, float):
 				logging.info("Melting point value found from {} calc, MP = {}".format(calc, melting_point))
 				return melting_point
