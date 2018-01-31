@@ -161,6 +161,7 @@ class Calculator(object):
 		# Attempt at MP workflow as loop..
 		mp_request_calcs = ['measured', 'test']  # ordered list of calcs for mp request
 		if calc != 'epi':
+			# Note: EPI also requests MP, but gets it from itself if it can't from Measured or TEST.
 			mp_request_calcs.append('epi')
 
 		for calc in mp_request_calcs:
