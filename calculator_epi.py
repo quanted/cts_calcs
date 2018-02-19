@@ -153,25 +153,29 @@ class EpiCalc(Calculator):
             logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
-            _response_dict.update({'data': "Cannot filter SMILES for EPI data"})
+            _response_dict.update({'data': "Cannot filter SMILES"})
             return _response_dict
 
         try:
+
+            _get_mp = request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press'
+
             # if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
             #     self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
             # else:
             #     self.melting_point = None
             
-            self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
+            if _get_mp:
+                self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
+            else:
+                self.melting_point = None
 
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc']) # make call for data!
 
-            # Making EPI request without MP first since it returns values
-            # for all props anyways, then making the request again using the MP value.
-            # NOTE: Ensure this is needed for all props and not just ws and vp..
-            if not self.melting_point:
+            if _get_mp and not self.melting_point:
                 # MP not found from measured or test, getting from results,
                 # and requesting data again with set MP..
+                logging.info("Trying to get MP from EPI request now..")
                 self.melting_point = self.get_mp_from_results(_result_obj)
                 logging.info("Making request to EPI with MP: {}".format(self.melting_point))
                 _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'])  # Make request using MP
@@ -183,5 +187,4 @@ class EpiCalc(Calculator):
         except Exception as err:
             logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
             _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
-            logging.info("##### session id: {}".format(request_dict.get('sessionid')))
             return _response_dict

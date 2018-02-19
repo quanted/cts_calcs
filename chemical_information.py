@@ -494,7 +494,8 @@ class SMILESFilter(object):
 			logging.info("checking mass for: {}...".format(structure))
 			if not self.checkMass(structure):
 				logging.info("Structure too large, must be < 1500 g/mol..")
-				raise "Structure too large, must be < 1500 g/mol.."
+				# raise "Structure too large, must be < 1500 g/mol.."
+				raise Exception({'data': "structure too large"})
 
 		#2-3. clear stereos from structure, untransform [N+](=O)[O-] >> N(=O)=O..
 		if calculator == 'epi' or calculator == 'sparc' or calculator == 'measured':
@@ -509,12 +510,13 @@ class SMILESFilter(object):
 				logging.info("structure transformed..")
 			except Exception as e:
 				logging.warning("!!! Error in parseSmilesByCalculator() {} !!!".format(e))
-				raise e
+				raise {'data': "error filtering chemical"}
 
 		# 4. Check for metals and stuff (square brackets):
 		if calculator == 'epi' or calculator == 'measured':
 			if '[' in filtered_smiles or ']' in filtered_smiles:
 				# bubble up to calc for handling error
-				raise Exception("{} cannot process metals...".format(calculator))
+				# raise Exception("{} cannot process metals..".format(calculator))
+				raise Exception({'data': "cannot process metals or charges"})
 
 		return filtered_smiles

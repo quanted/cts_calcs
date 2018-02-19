@@ -147,7 +147,8 @@ class MeasuredCalc(Calculator):
 			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
-			_response_dict.update({'data': "Cannot filter SMILES"})
+			# _response_dict.update({'data': "Cannot filter SMILES"})
+			_response_dict.update({'data': err})
 			return _response_dict
 
 		_retries = 3
@@ -163,7 +164,7 @@ class MeasuredCalc(Calculator):
 				_response_dict.update({'error': "cannot reach measured calculator"})
 				# return _response_dict
 
-			logging.info("Measured Data: {}".format(_measured_data))
+			# logging.info("Measured Data: {}".format(_measured_data))
 
 			try:
 				_response_dict.update(_measured_data)
