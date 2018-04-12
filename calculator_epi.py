@@ -24,8 +24,8 @@ class EpiCalc(Calculator):
         # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
         self.melting_point = None
-        self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc']
-        self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
+        self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc', 'log_bcf', 'log_baf']
+        self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc', 'log_bcf', 'log_baf']
         self.propMap = {
             'melting_point': {
                'result_key': 'melting_point'
@@ -48,6 +48,13 @@ class EpiCalc(Calculator):
             },
             'koc': {
                 'result_key': 'log_koc'
+            },
+            'log_bcf': {
+                'result_key': 'log_bcf',
+                'methods': {'regression': "regression", 'arnot_gobas': "Arnot-Gobas"}
+            },
+            'log_baf': {
+                'result_key': 'log_baf'
             }
         }
 
