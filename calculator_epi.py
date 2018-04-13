@@ -35,7 +35,7 @@ class EpiCalc(Calculator):
             },
             'water_sol': {
                'result_key': 'water_solubility',
-               'methods': {'wskownt': "WSKOW", 'waternt': "WATERNT"}
+               'methods': {'WSKOW': "WSKOW", 'WATERNT': "WATERNT"}
             },
             'vapor_press': {
                'result_key': 'vapor_pressure'
@@ -51,7 +51,7 @@ class EpiCalc(Calculator):
             },
             'log_bcf': {
                 'result_key': 'log_bcf',
-                'methods': {'regression': "regression", 'arnot_gobas': "Arnot-Gobas"}
+                'methods': {'regression': "REG", 'Arnot-Gobas': "A-G"}
             },
             'log_baf': {
                 'result_key': 'log_baf'
