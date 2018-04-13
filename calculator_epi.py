@@ -54,7 +54,8 @@ class EpiCalc(Calculator):
                 'methods': {'regression': "REG", 'Arnot-Gobas': "A-G"}
             },
             'log_baf': {
-                'result_key': 'log_baf'
+                'result_key': 'log_baf',
+                'methods': {'Arnot-Gobas': "A-G"}
             }
         }
 
