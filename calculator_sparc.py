@@ -26,6 +26,7 @@ class SparcCalc(Calculator):
             "SOLUBILITY": "water_sol",
             "VAPOR_PRESSURE": "vapor_press",
             "WATER_DIFFUSION": "mol_diss",
+            "AIR_DIFFUSION": "mol_diss_air",
             "FULL_SPECIATION": "ion_con",
             "HENRYS_CONSTANT": "henrys_law_con",
             "DISTRIBUTION": "kow_no_ph",
