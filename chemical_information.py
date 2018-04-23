@@ -77,6 +77,11 @@ class ChemInfo(object):
 			'mass': "",
 			'exactMass': ""
 		}
+		self.wrapped_post = {
+			'status': False,
+			'data': None,
+			'request_post': None
+		}
 
 
 	def get_cheminfo(self, request_post):
@@ -113,6 +118,12 @@ class ChemInfo(object):
 
 		# 1. Determine chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = calc.get_chemical_type(chemical)
+
+		if 'error' in chem_type:
+			response_obj = self.wrapped_post
+			response_obj['error'] = chem_type['error']
+			response_obj['request_post'] = request_post
+			return response_obj
 
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 		logging.info("Chemical type: {}".format(chem_type))
@@ -159,7 +170,17 @@ class ChemInfo(object):
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
 			orig_smiles = calc.convertToSMILES({'chemical': chemical}).get('structure')
 
-		filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
+		try:
+			filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
+		except Exception as e:
+			logging.warning("Error filtering SMILES: {}".format(e))
+			logging.warning("Sending error to user..")
+			response_obj = self.wrapped_post
+			response_obj['error'] = str(e)
+			response_obj['data'] = None
+			response_obj['request_post'] = request_post
+			return response_obj
+
 
 		logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
 		logging.info("Filtered SMILES: {}".format(filtered_smiles))
@@ -189,11 +210,10 @@ class ChemInfo(object):
 					"Metabolite Information")
 			})
 
-		wrapped_post = {
-			'status': True,  # 'metadata': '',
-			'data': molecule_obj,
-			'request_post': request_post
-		}
+		wrapped_post = self.wrapped_post
+		wrapped_post['status'] = True  # 'metadata': '',
+		wrapped_post['data'] = molecule_obj
+		wrapped_post['request_post'] = request_post
 		return wrapped_post
 
 
@@ -300,7 +320,7 @@ class SMILESFilter(object):
 
 	def __init__(self):
 		self.max_weight = 1500  # max weight [g/mol] for epi, test, and sparc
-		self.excludestring = {".","[Ag]","[Al]","[Au]","[As]","[As+","[B]","[B-]","[Br-]","[Ca]",
+		self.excludestring = {".","[Ag]","[Al]","[As","[As+","[Au]","[B]","[B-]","[Br-]","[Ca]",
 						"[Ca+","[Cl-]","[Co]","[Co+","[Fe]","[Fe+","[Hg]","[K]","[K+","[Li]",
 						"[Li+","[Mg]","[Mg+","[Na]","[Na+","[Pb]","[Pb2+]","[Pb+","[Pt]",
 						"[Sc]","[Si]","[Si+","[SiH]","[Sn]","[W]"}
@@ -323,12 +343,8 @@ class SMILESFilter(object):
 		Calls single EFS Standardizer filter
 		for filtering SMILES
 		"""
-		try:
-			smiles = request_obj.get('smiles')
-			action = request_obj.get('action')
-		except Exception as e:
-			logging.warning("Exception retrieving mass from jchem: {}".format(e))
-			raise
+		smiles = request_obj.get('smiles')
+		action = request_obj.get('action')
 		post_data = {
 			"structure": smiles,
 			"actions": [
@@ -347,11 +363,13 @@ class SMILESFilter(object):
 		"""
 		calc_object = Calculator()
 
-		logging.debug("{} is being processed by cts SMILES filter..".format(smiles))
-		logging.debug("Checking chemical for any metals..")
+		logging.info("{} is being processed by cts SMILES filter..".format(smiles))
+		logging.info("Checking chemical for any metals..")
 
 		if not self.is_valid_smiles(smiles):
-			raise Exception({'data': "Chemical cannot contain metals.."})
+			logging.warning("User chemical contains metals, sending error to client..")
+			# raise Exception({'data': "Chemical cannot contain metals.."})
+			raise Exception("Chemical cannot contain metals..")
 
 		# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
 		# 1. CTSWS actions "removeExplicitH" and "transform".
@@ -365,22 +383,22 @@ class SMILESFilter(object):
 		}
 		response = calc_object.web_call(url, post_data)
 
-		logging.debug("1. Removing explicit H, then transforming..")
-		logging.debug("request to jchem: {}".format(post_data))
-		logging.debug("response from jchem: {}".format(response))
+		logging.info("1. Removing explicit H, then transforming..")
+		logging.info("request to jchem: {}".format(post_data))
+		logging.info("response from jchem: {}".format(response))
 
 		filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
 
-		logging.debug("filtered smiles so far: {}".format(filtered_smiles))
+		logging.info("filtered smiles so far: {}".format(filtered_smiles))
 		
 		# 2. Get major tautomer from jchem:
 		taut_obj = Tautomerization()
 		taut_obj.postData.update({'calculationType': 'MAJOR'})
 		taut_obj.make_data_request(filtered_smiles, taut_obj)
 
-		logging.debug("2. Obtaining major tautomer from {}".format(filtered_smiles))
-		logging.debug("request to jchem: {}".format(taut_obj.postData))
-		logging.debug("response from jchem: {}".format(taut_obj.results))
+		logging.info("2. Obtaining major tautomer from {}".format(filtered_smiles))
+		logging.info("request to jchem: {}".format(taut_obj.postData))
+		logging.info("response from jchem: {}".format(taut_obj.results))
 
 		# todo: verify this is major taut result smiles, not original smiles for major taut request...
 		major_taut_smiles = None
@@ -391,7 +409,7 @@ class SMILESFilter(object):
 			logging.info("Using smiles {} for next step..".format(filtered_smiles))
 
 		if major_taut_smiles:
-			logging.debug("Major tautomer found: {}.. Using as filtered smiles..".format(major_taut_smiles))
+			logging.info("Major tautomer found: {}.. Using as filtered smiles..".format(major_taut_smiles))
 			filtered_smiles = major_taut_smiles
 
 		# 3. Using major taut smiles for final "neutralize" filter:
@@ -403,13 +421,13 @@ class SMILESFilter(object):
 		}
 		response = calc_object.web_call(url, post_data)
 
-		logging.debug("3. Neutralizing smiles {}".format(filtered_smiles))
-		logging.debug("request to jchem: {}".format(post_data))
-		logging.debug("response from jchem: {}".format(response))
+		logging.info("3. Neutralizing smiles {}".format(filtered_smiles))
+		logging.info("request to jchem: {}".format(post_data))
+		logging.info("response from jchem: {}".format(response))
 
 		final_smiles = response['results'][-1]
-		logging.debug("smiles results after cts filtering: {}".format(response.get('results')))
-		logging.debug("FINAL FITERED SMILES: {}".format(final_smiles))
+		logging.info("smiles results after cts filtering: {}".format(response.get('results')))
+		logging.info("FINAL FITERED SMILES: {}".format(final_smiles))
 
 		return final_smiles
 
@@ -419,14 +437,14 @@ class SMILESFilter(object):
 		returns true if chemical mass is less
 		than 1500 g/mol
 		"""
-		logging.debug("checking mass..")
+		logging.info("checking mass..")
 		try:
 			json_obj = Calculator().getMass({'chemical': chemical}) # get mass from jchem ws
 		except Exception as e:
 			logging.warning("!!! Error in checkMass() {} !!!".format(e))
 			raise e
 		struct_mass = json_obj['data'][0]['mass']
-		logging.debug("structure's mass: {}".format(struct_mass))
+		logging.info("structure's mass: {}".format(struct_mass))
 
 		if struct_mass < 1500  and struct_mass > 0:
 			return True
@@ -477,14 +495,14 @@ class SMILESFilter(object):
 		"""
 		Calculator-dependent SMILES filtering!
 		"""
-		logging.debug("Parsing SMILES by calculator..")
+		logging.info("Parsing SMILES by calculator..")
 		filtered_smiles = structure
 
 		#1. check structure mass..
 		if calculator != 'chemaxon':
-			logging.debug("checking mass for: {}...".format(structure))
+			logging.info("checking mass for: {}...".format(structure))
 			if not self.checkMass(structure):
-				logging.debug("Structure too large, must be < 1500 g/mol..")
+				logging.info("Structure too large, must be < 1500 g/mol..")
 				# raise "Structure too large, must be < 1500 g/mol.."
 				raise Exception({'data': "structure too large"})
 
@@ -493,12 +511,12 @@ class SMILESFilter(object):
 			try:
 				# clear stereoisomers:
 				filtered_smiles = self.clearStereos(structure)
-				logging.debug("stereos cleared: {}".format(filtered_smiles))
+				logging.info("stereos cleared: {}".format(filtered_smiles))
 
 				# transform structure:
 				filtered_smiles = str(filtered_smiles[-1])
 				filtered_smiles = str(self.untransformSMILES(filtered_smiles)[-1])
-				logging.debug("structure transformed..")
+				logging.info("structure transformed..")
 			except Exception as e:
 				logging.warning("!!! Error in parseSmilesByCalculator() {} !!!".format(e))
 				raise {'data': "error filtering chemical"}
