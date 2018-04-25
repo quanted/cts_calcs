@@ -77,6 +77,11 @@ class ChemInfo(object):
 			'mass': "",
 			'exactMass': ""
 		}
+		self.wrapped_post = {
+			'status': False,
+			'data': None,
+			'request_post': None
+		}
 
 
 	def get_cheminfo(self, request_post):
@@ -113,6 +118,12 @@ class ChemInfo(object):
 
 		# 1. Determine chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = calc.get_chemical_type(chemical)
+
+		if 'error' in chem_type:
+			response_obj = self.wrapped_post
+			response_obj['error'] = chem_type['error']
+			response_obj['request_post'] = request_post
+			return response_obj
 
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 		logging.info("Chemical type: {}".format(chem_type))
@@ -159,7 +170,17 @@ class ChemInfo(object):
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
 			orig_smiles = calc.convertToSMILES({'chemical': chemical}).get('structure')
 
-		filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
+		try:
+			filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
+		except Exception as e:
+			logging.warning("Error filtering SMILES: {}".format(e))
+			logging.warning("Sending error to user..")
+			response_obj = self.wrapped_post
+			response_obj['error'] = str(e)
+			response_obj['data'] = None
+			response_obj['request_post'] = request_post
+			return response_obj
+
 
 		logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
 		logging.info("Filtered SMILES: {}".format(filtered_smiles))
@@ -189,11 +210,10 @@ class ChemInfo(object):
 					"Metabolite Information")
 			})
 
-		wrapped_post = {
-			'status': True,  # 'metadata': '',
-			'data': molecule_obj,
-			'request_post': request_post
-		}
+		wrapped_post = self.wrapped_post
+		wrapped_post['status'] = True  # 'metadata': '',
+		wrapped_post['data'] = molecule_obj
+		wrapped_post['request_post'] = request_post
 		return wrapped_post
 
 
@@ -219,7 +239,18 @@ class ACTORWS(object):
 		}
 
 	def make_request(self, url, payload):
-		_response = requests.get(url, params=payload, timeout=10)
+		try:
+			_response = requests.get(url, params=payload, timeout=10)
+		except requests.exceptions.Timeout as e:
+			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
+			return None
+		except requests.exceptions.ConnectionError as e:
+			logging.warning("Connection error for {}.. No data from actorws..".format(url))
+			return None
+		except Exception as e:
+			logging.warning("Exception occurred in chemical information module: {}".format(e))
+			return None
+			
 		if _response.status_code != 200:
 			return {'success': False, 'error': "error connecting to actorws", 'data': None} 
 		return json.loads(_response.content)
@@ -300,7 +331,7 @@ class SMILESFilter(object):
 
 	def __init__(self):
 		self.max_weight = 1500  # max weight [g/mol] for epi, test, and sparc
-		self.excludestring = {".","[Ag]","[Al]","[Au]","[As]","[As+","[B]","[B-]","[Br-]","[Ca]",
+		self.excludestring = {".","[Ag]","[Al]","[As","[As+","[Au]","[B]","[B-]","[Br-]","[Ca]",
 						"[Ca+","[Cl-]","[Co]","[Co+","[Fe]","[Fe+","[Hg]","[K]","[K+","[Li]",
 						"[Li+","[Mg]","[Mg+","[Na]","[Na+","[Pb]","[Pb2+]","[Pb+","[Pt]",
 						"[Sc]","[Si]","[Si+","[SiH]","[Sn]","[W]"}
@@ -312,22 +343,10 @@ class SMILESFilter(object):
 
 	def is_valid_smiles(self, smiles):
 
-		_return_val = self.return_val
-		_return_val['smiles'] = smiles
-
 		if any(x in smiles for x in self.excludestring):
-			return _return_val  # metal in smiles, invalid!
+			return False
 
-		try:
-			processed_smiles = self.filterSMILES(smiles)
-		except Exception as e:
-			logging.warning("!!! Error in smilesfilter {} !!!".format(e))
-			raise "smiles filter exception, possibly invalid smiles..."
-				
-		_return_val["valid"] = True
-		_return_val["processedsmiles"] = processed_smiles
-
-		return _return_val
+		return True
 
 
 	def singleFilter(self, request_obj):
@@ -335,12 +354,8 @@ class SMILESFilter(object):
 		Calls single EFS Standardizer filter
 		for filtering SMILES
 		"""
-		try:
-			smiles = request_obj.get('smiles')
-			action = request_obj.get('action')
-		except Exception as e:
-			logging.info("Exception retrieving mass from jchem: {}".format(e))
-			raise
+		smiles = request_obj.get('smiles')
+		action = request_obj.get('action')
 		post_data = {
 			"structure": smiles,
 			"actions": [
@@ -357,12 +372,19 @@ class SMILESFilter(object):
 		smiles processing before being sent to
 		p-chem calculators
 		"""
+		calc_object = Calculator()
 
 		logging.info("{} is being processed by cts SMILES filter..".format(smiles))
+		logging.info("Checking chemical for any metals..")
+
+		if not self.is_valid_smiles(smiles):
+			logging.warning("User chemical contains metals, sending error to client..")
+			# raise Exception({'data': "Chemical cannot contain metals.."})
+			raise Exception("Chemical cannot contain metals..")
 
 		# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
 		# 1. CTSWS actions "removeExplicitH" and "transform".
-		url = Calculator().efs_server_url + Calculator().efs_standardizer_endpoint
+		url = calc_object.efs_server_url + calc_object.efs_standardizer_endpoint
 		post_data = {
 			'structure': smiles,
 			'actions': [
@@ -370,7 +392,7 @@ class SMILESFilter(object):
 				"transform"
 			]
 		}
-		response = Calculator().web_call(url, post_data)
+		response = calc_object.web_call(url, post_data)
 
 		logging.info("1. Removing explicit H, then transforming..")
 		logging.info("request to jchem: {}".format(post_data))
@@ -394,9 +416,8 @@ class SMILESFilter(object):
 		try:
 			major_taut_smiles = taut_obj.results['result']['structureData']['structure']
 		except KeyError as e:
-			logging.warning("Jchem error requesting major tautomer from {}..".format(filtered_smiles))
-			logging.warning("Exception: {}".format(e))
-			logging.warning("Using smiles {} for next step..".format(filtered_smiles))
+			logging.info("Jchem error requesting major tautomer from {}..".format(filtered_smiles))
+			logging.info("Using smiles {} for next step..".format(filtered_smiles))
 
 		if major_taut_smiles:
 			logging.info("Major tautomer found: {}.. Using as filtered smiles..".format(major_taut_smiles))
@@ -409,7 +430,7 @@ class SMILESFilter(object):
 				"neutralize"
 			]
 		}
-		response = Calculator().web_call(url, post_data)
+		response = calc_object.web_call(url, post_data)
 
 		logging.info("3. Neutralizing smiles {}".format(filtered_smiles))
 		logging.info("request to jchem: {}".format(post_data))
@@ -417,7 +438,7 @@ class SMILESFilter(object):
 
 		final_smiles = response['results'][-1]
 		logging.info("smiles results after cts filtering: {}".format(response.get('results')))
-		logging.warning("FINAL FITERED SMILES: {}".format(final_smiles))
+		logging.info("FINAL FITERED SMILES: {}".format(final_smiles))
 
 		return final_smiles
 
@@ -433,7 +454,6 @@ class SMILESFilter(object):
 		except Exception as e:
 			logging.warning("!!! Error in checkMass() {} !!!".format(e))
 			raise e
-		logging.info("mass response data: {}".format(json_obj))
 		struct_mass = json_obj['data'][0]['mass']
 		logging.info("structure's mass: {}".format(struct_mass))
 
@@ -494,7 +514,8 @@ class SMILESFilter(object):
 			logging.info("checking mass for: {}...".format(structure))
 			if not self.checkMass(structure):
 				logging.info("Structure too large, must be < 1500 g/mol..")
-				raise "Structure too large, must be < 1500 g/mol.."
+				# raise "Structure too large, must be < 1500 g/mol.."
+				raise Exception({'data': "structure too large"})
 
 		#2-3. clear stereos from structure, untransform [N+](=O)[O-] >> N(=O)=O..
 		if calculator == 'epi' or calculator == 'sparc' or calculator == 'measured':
@@ -509,12 +530,13 @@ class SMILESFilter(object):
 				logging.info("structure transformed..")
 			except Exception as e:
 				logging.warning("!!! Error in parseSmilesByCalculator() {} !!!".format(e))
-				raise e
+				raise {'data': "error filtering chemical"}
 
 		# 4. Check for metals and stuff (square brackets):
 		if calculator == 'epi' or calculator == 'measured':
 			if '[' in filtered_smiles or ']' in filtered_smiles:
 				# bubble up to calc for handling error
-				raise Exception("{} cannot process metals...".format(calculator))
+				# raise Exception("{} cannot process metals..".format(calculator))
+				raise Exception({'data': "cannot process metals or charges"})
 
 		return filtered_smiles

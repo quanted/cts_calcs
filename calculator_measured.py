@@ -86,43 +86,6 @@ class MeasuredCalc(Calculator):
 			self.results = response
 			return response
 
-	# def getPropertyValue(self, requested_property, response):
-	# 	"""
-	# 	Returns CTS data object for a requested
-	# 	property (cts format)
-	# 	"""
-	# 	# make sure property is in measured's format:
-	# 	if not requested_property in self.propMap.keys():
-	# 		# requested prop name doesn't match prop keys..
-	# 		raise KeyError(
-	# 			"requested property: {} for Measured data doesn't match Measured's property keys".format(
-	# 				requested_property))
-
-	# 	_data_obj = {
-	# 		'calc': "measured",
-	# 		'prop': requested_property
-	# 	}
-
-	# 	try:
-
-	# 		# properties_dict = response['properties']
-	# 		properties_list = response['data']  # 'data' is a list of objects now
-
-
-	# 		# measured_requested_property = self.propMap[requested_property]['result_key']
-
-	# 		# if measured_requested_property in properties_dict.keys():
-	# 		# 	_data_obj['data'] = properties_dict[measured_requested_property]['propertyvalue']
-	# 		# else:
-	# 		# 	_data_obj['data'] = "property not available".format(measured_requested_property)
-
-	# 		return _data_obj
-
-	# 	except Exception as err:
-	# 		logging.warning("Error at Measured Calc getting property value...: {}".format(err))
-	# 		logging.warning("Data from EPI WS: {}".format(response))
-	# 		_data_obj.update({'data': "N/A"})
-	# 		return _data_obj
 
 	def request_logic(self, url, post_data):
 		"""
@@ -184,7 +147,8 @@ class MeasuredCalc(Calculator):
 			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
-			_response_dict.update({'data': "Cannot filter SMILES"})
+			# _response_dict.update({'data': "Cannot filter SMILES"})
+			_response_dict.update({'data': err})
 			return _response_dict
 
 		_retries = 3
@@ -200,7 +164,7 @@ class MeasuredCalc(Calculator):
 				_response_dict.update({'error': "cannot reach measured calculator"})
 				# return _response_dict
 
-			logging.info("Measured Data: {}".format(_measured_data))
+			# logging.info("Measured Data: {}".format(_measured_data))
 
 			try:
 				_response_dict.update(_measured_data)

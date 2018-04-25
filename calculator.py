@@ -141,7 +141,7 @@ class Calculator(object):
 		return jid
 
 
-	def get_melting_point(self, structure, sessionid):
+	def get_melting_point(self, structure, sessionid, calc=None):
 		"""
 		Gets mass of structure from Measured, tries
 		TEST if not available in Measured, and finally EPI.
@@ -159,7 +159,10 @@ class Calculator(object):
 
 
 		# Attempt at MP workflow as loop..
-		mp_request_calcs = ['measured', 'test', 'epi']  # ordered list of calcs for mp request
+		mp_request_calcs = ['measured', 'test']  # ordered list of calcs for mp request
+		if calc != 'epi':
+			# Note: EPI also requests MP, but gets it from itself if it can't from Measured or TEST.
+			mp_request_calcs.append('epi')
 
 		for calc in mp_request_calcs:
 
@@ -172,7 +175,7 @@ class Calculator(object):
 							data=json.dumps(melting_point_request), 
 							allow_redirects=True,
 							verify=False,
-							timeout=15)
+							timeout=30)
 
 			logging.info("Melting point response: {}".format(mp_response.content))
 
@@ -180,9 +183,8 @@ class Calculator(object):
 				results_object = json.loads(mp_response.content)
 				melting_point = float(results_object['data']['data'])
 			except Exception as e:
-				logging.warning("Unable to get melting point from {}: {}".format(calc, e))
-				melting_point = None  # making sure mp stays None if exception
-
+				logging.warning("Unable to get melting point from {}\n Exception: {}".format(calc, e))
+				logging.warning("Data returned from Measured that triggered exception: {}".format(results_object.get('data')))
 			if isinstance(melting_point, float):
 				logging.info("Melting point value found from {} calc, MP = {}".format(calc, melting_point))
 				return melting_point
@@ -354,22 +356,75 @@ class Calculator(object):
 		url = self.jchem_server_url + self.type_endpoint
 		request_header = {'Content-Type': "*/*"}
 
-		# results =  self.web_call(url, post_data, request_header)
 		response = requests.post(url, data=chemical, headers=request_header, timeout=self.request_timeout)
 		results = json.loads(response.content)
 
-		_type = None
+		_type_response = {
+			'type': None
+		}
 
-		logging.warning("CHEM TYPE RESULTS: {}".format(results))
+		logging.info("CHEM TYPE RESULTS: {}".format(results))
+
+		check_result = self.check_response_for_errors(results)
+
+		if not check_result.get('valid'):
+			# errors found in response..
+			_type_response['error'] = check_result['error']
+			return _type_response
 
 		if 'properties' in results:
-			_type = results['properties'].get('type')
+			_type_response['type'] = results['properties'].get('type')
 
-		if not _type and results.get('type'):
-			_type = results['type']
+		if not _type_response['type'] and results.get('type'):
+			_type_response['type'] = results['type']
+
+		return _type_response
 
 
-		return {'type': _type}
+	def check_response_for_errors(self, results):
+		"""
+		Checks for errors in HTTP responses from web_call.
+		Typically errors to check are from jchem webservices.
+		Inputs:
+			results - response content, a JSON object
+		Output:
+			_checked_response - results object with wrapper for
+			handling any possible errors.
+		"""
+		_errors_list = ['errorMessage', 'errorCode']
+		_check_response = {
+			'valid': False,
+			'error': None
+		}
+		_result_keys = []
+
+		if not isinstance(results, dict):
+			_check_response['error'] = "Error processing calc results.."
+			logging.warning("Excepted response object not a dict object.")
+			return _check_response
+
+		_result_keys = list(results.keys())  # get keys of result object..
+
+		for key in _result_keys:
+			if key in _errors_list:
+				_check_response['error'] = self.handle_error_messages(results)
+
+		if not _check_response.get('error'):
+			_check_response['valid'] = True  # didn't find any errors..
+
+		return _check_response
+
+
+
+	def handle_error_messages(self, results):
+		"""
+		Handles known error that occurred requesting data from jchem
+		"""
+		if results['errorCode'] == 3:
+			# jchem ws can't read molecule file..
+			return "Chemical cannot be standardized.."
+		else:
+			return "Chemical not recognized.."
 
 
 	def web_call(self, url, data, headers=None):
@@ -387,7 +442,22 @@ class Calculator(object):
 				response = requests.get(url, timeout=self.request_timeout)
 			else:
 				response = requests.post(url, data=json.dumps(data), headers=headers, timeout=self.request_timeout)
-			return json.loads(response.content)
+
+			results = json.loads(response.content)
+			valid_object = self.check_response_for_errors(results)
+
+			if valid_object.get('valid'):
+				return results
+
+			else:
+				error_response = {
+					'error': valid_object.get('error'),
+					'data': results,
+					'valid': False
+				}
+				return error_response
+
+			# return json.loads(response.content)
 		except requests.exceptions.RequestException as e:
 			logging.warning("error at web call: {} /error".format(e))
 			raise e

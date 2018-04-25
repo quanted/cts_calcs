@@ -23,9 +23,9 @@ class EpiCalc(Calculator):
         self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
         # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
-        self.melting_point = 0.0
-        self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc']
-        self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc']
+        self.melting_point = None
+        self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc', 'log_bcf', 'log_baf']
+        self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc', 'log_bcf', 'log_baf']
         self.propMap = {
             'melting_point': {
                'result_key': 'melting_point'
@@ -35,7 +35,7 @@ class EpiCalc(Calculator):
             },
             'water_sol': {
                'result_key': 'water_solubility',
-               'methods': {'wskownt': "WSKOW", 'waternt': "WATERNT"}
+               'methods': {'WSKOW': "WSKOW", 'WATERNT': "WATERNT"}
             },
             'vapor_press': {
                'result_key': 'vapor_pressure'
@@ -48,6 +48,14 @@ class EpiCalc(Calculator):
             },
             'koc': {
                 'result_key': 'log_koc'
+            },
+            'log_bcf': {
+                'result_key': 'log_bcf',
+                'methods': {'regression': "REG", 'Arnot-Gobas': "A-G"}
+            },
+            'log_baf': {
+                'result_key': 'log_baf',
+                'methods': {'Arnot-Gobas': "A-G"}
             }
         }
 
@@ -116,7 +124,13 @@ class EpiCalc(Calculator):
         return True
 
 
-
+    def get_mp_from_results(self, results):
+        for data_obj in results['data']:
+                if data_obj.get('prop') == 'melting_point':
+                    logging.info("Found MP in EPI results..")
+                    return float(data_obj['data'])
+                    
+        return None
 
 
     # def request_manager(request):
@@ -147,34 +161,38 @@ class EpiCalc(Calculator):
             logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
-            _response_dict.update({'data': "Cannot filter SMILES for EPI data"})
+            _response_dict.update({'data': "Cannot filter SMILES"})
             return _response_dict
 
         try:
+
+            _get_mp = request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press'
+
             # if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
             #     self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
             # else:
             #     self.melting_point = None
-            self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
+            
+            if _get_mp:
+                self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
+            else:
+                self.melting_point = None
+
             _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc']) # make call for data!
 
-            # _response_dict.update({'data': _result_obj})
-            _response_dict.update(_result_obj)
+            if _get_mp and not self.melting_point:
+                # MP not found from measured or test, getting from results,
+                # and requesting data again with set MP..
+                logging.info("Trying to get MP from EPI request now..")
+                self.melting_point = self.get_mp_from_results(_result_obj)
+                logging.info("Making request to EPI with MP: {}".format(self.melting_point))
+                _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'])  # Make request using MP
 
-            # # # NOTE: EPI now returns 2 values for water solubility
-            # if request_dict.get('prop') == 'water_sol':
-            #     logging.warning("water sol property..")
-            #     for data_obj in _result_obj.get('data', {}):
-            #         # replacing method name with ALL CAPS version:
-            #         logging.warning("water sol data obj: {}".format(data_obj))
-            #         _method_names = self.propMap['water_sol']['methods']
-            #         logging.warning("methods: {}".format(_method_names))
-            #         data_obj['method'] = _method_names.get(data_obj['method'])
+            _response_dict.update(_result_obj)
         
             return _response_dict
 
         except Exception as err:
             logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
             _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
-            logging.info("##### session id: {}".format(request_dict.get('sessionid')))
             return _response_dict
