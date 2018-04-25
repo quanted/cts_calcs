@@ -239,7 +239,18 @@ class ACTORWS(object):
 		}
 
 	def make_request(self, url, payload):
-		_response = requests.get(url, params=payload, timeout=10)
+		try:
+			_response = requests.get(url, params=payload, timeout=10)
+		except requests.exceptions.Timeout as e:
+			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
+			return None
+		except requests.exceptions.ConnectionError as e:
+			logging.warning("Connection error for {}.. No data from actorws..".format(url))
+			return None
+		except Exception as e:
+			logging.warning("Exception occurred in chemical information module: {}".format(e))
+			return None
+			
 		if _response.status_code != 200:
 			return {'success': False, 'error': "error connecting to actorws", 'data': None} 
 		return json.loads(_response.content)
