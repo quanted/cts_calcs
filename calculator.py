@@ -381,6 +381,36 @@ class Calculator(object):
 		return _type_response
 
 
+	def get_smiles_from_name(self, chemical):
+		"""
+		Calls jchem ws /molExport endpoint and assumes the chemical
+		is a name being converted into a SMILES. This is to help determine
+		the intended chemical format in the event that the chemical is a valid
+		SMILES and/or name (e.g., PFOS).
+		"""
+		_url = self.jchem_server_url + self.export_endpoint
+		_post = {
+			'structure': chemical,
+			'inputFormat': "name",
+			'parameters': "smiles"
+		}
+		_response = {
+			'smiles': None,
+			'format': "smiles"
+		}
+
+		_results = self.web_call(_url, _post)
+		_check_results = self.check_response_for_errors(_results)
+
+		if not _check_results.get('valid'):
+			_response['error'] = "Not a valid name.."
+			return _response
+
+		_response['smiles'] = _results.get('structure')
+		return _response
+
+
+
 	def check_response_for_errors(self, results):
 		"""
 		Checks for errors in HTTP responses from web_call.
