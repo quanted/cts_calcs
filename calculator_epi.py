@@ -20,8 +20,8 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
-        # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
+        # self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
+        self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
         self.melting_point = None
         self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc', 'log_bcf', 'log_baf']
@@ -161,17 +161,15 @@ class EpiCalc(Calculator):
             logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
-            _response_dict.update({'data': "Cannot filter SMILES"})
+            _response_dict.update({
+                'data': "Cannot filter SMILES",
+                'valid': False
+            })
             return _response_dict
 
         try:
 
             _get_mp = request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press'
-
-            # if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
-            #     self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
-            # else:
-            #     self.melting_point = None
             
             if _get_mp:
                 self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
@@ -189,10 +187,14 @@ class EpiCalc(Calculator):
                 _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'])  # Make request using MP
 
             _response_dict.update(_result_obj)
+            _response_dict['valid'] = True
         
             return _response_dict
 
         except Exception as err:
             logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
-            _response_dict.update({'data': "cannot reach {} calculator".format(request_dict['calc'])})
+            _response_dict.update({
+                'data': "cannot reach {} calculator".format(request_dict['calc']),
+                'valid': False
+            })
             return _response_dict
