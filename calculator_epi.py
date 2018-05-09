@@ -20,8 +20,8 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        # self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
-        self.urlStruct = "/rest/episuite/estimated"  # newest way - local
+        self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
+        # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
         self.melting_point = None
         self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc', 'log_bcf', 'log_baf']
