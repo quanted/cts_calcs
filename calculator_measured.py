@@ -147,8 +147,10 @@ class MeasuredCalc(Calculator):
 			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
-			# _response_dict.update({'data': "Cannot filter SMILES"})
-			_response_dict.update({'data': err})
+			_response_dict.update({
+				'data': "Cannot filter SMILES",
+				'valid': False
+			})
 			return _response_dict
 
 		_retries = 3
