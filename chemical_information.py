@@ -3,9 +3,10 @@ __author__ = "np"
 import requests
 import logging
 import json
-from .calculator import Calculator
 from .calculator_metabolizer import MetabolizerCalc
-from .jchem_properties import Tautomerization
+from .actorws import ACTORWS
+from .smilesfilter import SMILESFilter
+
 
 
 
@@ -114,9 +115,12 @@ class ChemInfo(object):
 		is_node = request_post.get('is_node')  # bool for tree node or not
 
 		actorws = ACTORWS()
-		calc = Calculator()
+		smiles_filter = SMILESFilter()
+		calc = MetabolizerCalc()  # note: inherits Calculator class as well
+		_actor_results = {}
+		orig_smiles = ""  # initial SMILES pre CTS filter
 
-		# 1. Determine chemical type from user (e.g., smiles, cas, name, etc.):
+		# Determine chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = calc.get_chemical_type(chemical)
 
 		if 'error' in chem_type:
@@ -128,24 +132,15 @@ class ChemInfo(object):
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 		logging.info("Chemical type: {}".format(chem_type))
 
-		_gsid = None
-		_smiles_from_mrv = False
-		_name_or_smiles = chem_type['type'] in ['name', 'common', 'smiles']  # bool for chemical in name/common or smiles format
-		_actor_results = {}  # final key:vals from actorws: smiles, iupac, preferredName, dsstoxSubstanceId, casrn
+		if chem_type.get('type') == 'smiles':
+			# try conversion to smiles assuming chemical is name to break any ties if chem valid name and smiles
+			# inspired by the PFOS problem..
+			converted_name_response = calc.get_smiles_from_name(chemical)
+			if converted_name_response.get('smiles') and not 'error' in converted_name_response:
+				# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
+				orig_smiles = converted_name_response.get('smiles')  # used converted smiles from name
 
-		# Checking type for next step:
-		if chem_type['type'] == 'mrv':
-			logging.info("Getting SMILES from jchem web services..")
-			response = calc.convertToSMILES({'chemical': chemical})
-			chemical = response['structure']
-			logging.info("SMILES of drawn chemical: {}".format(chemical))
-			_smiles_from_mrv = True
-
-		if _name_or_smiles or _smiles_from_mrv:
-			logging.info("Getting gsid from actorws chemicalIdentifier..")
-			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
-			_gsid = chemid_results.get('data', {}).get('gsid')
-			logging.info("gsid from actorws chemid: {}".format(_gsid))
+		_gsid = self.get_chemid_from_actorws(chemical, chem_type.get('type'), actorws)
 
 		# Should be CAS# or have gsid from chemid by this point..
 		if _gsid or chem_type['type'] == 'CAS#':
@@ -160,8 +155,9 @@ class ChemInfo(object):
 			_actor_results.update(dsstox_results)
 
 		# If user enters something other than SMILES, use actorws smiles for orig_smiles
-		orig_smiles = ""
-		if chem_type['type'] == 'smiles':
+		if orig_smiles:
+			pass
+		elif chem_type['type'] == 'smiles':
 			orig_smiles = chemical  # use user-entered smiles as orig_siles
 		elif 'smiles' in _actor_results.get('data', {}):
 			orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
@@ -171,13 +167,17 @@ class ChemInfo(object):
 			orig_smiles = calc.convertToSMILES({'chemical': chemical}).get('structure')
 
 		try:
-			filtered_smiles = SMILESFilter().filterSMILES(orig_smiles)
+			filtered_smiles = smiles_filter.filterSMILES(orig_smiles)
+		except ValueError as e:
+			logging.warning("Error filtering SMILES: {}".format(e))
+			response_obj = self.wrapped_post
+			response_obj['error'] = "Chemical cannot contain metals.."
+			response_obj['request_post'] = request_post
+			return response_obj
 		except Exception as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
-			logging.warning("Sending error to user..")
 			response_obj = self.wrapped_post
-			response_obj['error'] = str(e)
-			response_obj['data'] = None
+			response_obj['error'] = "Cannot process chemical.."
 			response_obj['request_post'] = request_post
 			return response_obj
 
@@ -201,11 +201,11 @@ class ChemInfo(object):
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
 		if is_node:
-			molecule_obj.update({'node_image': calc.nodeWrapper(filtered_smiles, MetabolizerCalc().tree_image_height, MetabolizerCalc().tree_image_width, MetabolizerCalc().image_scale, MetabolizerCalc().metID,'svg', True)})
+			molecule_obj.update({'node_image': calc.nodeWrapper(filtered_smiles, calc.tree_image_height, calc.tree_image_width, calc.image_scale, calc.metID,'svg', True)})
 			molecule_obj.update({
 				'popup_image': Calculator().popupBuilder(
 					{"smiles": filtered_smiles}, 
-					MetabolizerCalc().metabolite_keys, 
+					calc.metabolite_keys, 
 					"{}".format(request_post.get('id')),
 					"Metabolite Information")
 			})
@@ -217,326 +217,23 @@ class ChemInfo(object):
 		return wrapped_post
 
 
+	def get_chemid_from_actorws(self, chemical, chem_type_name, actorws):
+		_gsid = None
+		_smiles_from_mrv = False
+		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles']  # bool for chemical in name/common or smiles format
 
-class ACTORWS(object):
-	"""
-	Uses actor web services to obtain curated
-	CAS#, SMILES, preferred name, iupac, and DTXSID.
-	Location: https://actorws.epa.gov/actorws/
-	"""
-	def __init__(self):
-		self.base_url = "https://actorws.epa.gov/actorws"
-		self.chemid_url = "https://actorws.epa.gov/actorws/chemIdentifier/v01/resolve.json"  # ?identifier=[chemical name or SMILES]
-		self.dsstox_url = "https://actorws.epa.gov/actorws/dsstox/v02/casTable.json"  # ?identifier=[casrn or gsid]
-		self.calc = "actorws"
-		self.props = ['dsstox', 'chemid']
-		self.chemid_result_keys = ['synGsid']  # chemidentifier result key of interest
-		self.dsstox_result_keys = ['casrn', 'dsstoxSubstanceId', 'preferredName', 'smiles', 'iupac']
-		self.result_obj = {
-			'calc': "actorws",
-			'prop': "",
-			'data': {},
-		}
+		# If user drew a chemical, get SMILES of chemical from Jchem WS..
+		if chem_type_name == 'mrv':
+			logging.info("Getting SMILES from jchem web services..")
+			response = calc.convertToSMILES({'chemical': chemical})
+			chemical = response['structure']
+			logging.info("SMILES of drawn chemical: {}".format(chemical))
+			_smiles_from_mrv = True
 
-	def make_request(self, url, payload):
-		try:
-			_response = requests.get(url, params=payload, timeout=10)
-		except requests.exceptions.Timeout as e:
-			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
-			return None
-		except requests.exceptions.ConnectionError as e:
-			logging.warning("Connection error for {}.. No data from actorws..".format(url))
-			return None
-		except Exception as e:
-			logging.warning("Exception occurred in chemical information module: {}".format(e))
-			return None
-			
-		if _response.status_code != 200:
-			return {'success': False, 'error': "error connecting to actorws", 'data': None} 
-		return json.loads(_response.content)
+		if _name_or_smiles or _smiles_from_mrv:
+			logging.info("Getting gsid from actorws chemicalIdentifier..")
+			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
+			_gsid = chemid_results.get('data', {}).get('gsid')
+			logging.info("gsid from actorws chemid: {}".format(_gsid))
 
-
-	##### "PUBLIC" METHODS BELOW #####
-	def get_dsstox_results(self, chemical, id_type):
-		"""
-		Makes request to actowws dsstox for the following
-		result keys: casrn, dsstoxSubstanceId, preferredName, smiles, and iupac
-		Input: cas number or gsid obtained from actorws chemicalIdentifier endpoint
-		Output: Dictionary of above result key:vals
-		"""
-		_payload = {}
-		if id_type == 'gsid':
-			_payload = {'gsid': chemical}
-		elif id_type == 'CAS#':
-			_payload = {'casrn': chemical}
-
-		_dsstox_results = self.make_request(self.dsstox_url, _payload)
-
-		logging.warning("DSSTOX RESULTS: {}".format(_dsstox_results))
-
-		try:
-			_dsstox_results = _dsstox_results['DataList']['list'][0]
-		except Exception as e:
-			logging.warning("Error getting dsstox results key:vals: {}".format(e))
-			logging.warning("Using only Jchem WS results instead..")
-			# raise e  # raise it for now
-
-		_results = self.result_obj
-		_results['prop'] = "dsstox"
-		for _key, _val in _dsstox_results.items():
-			if _key in self.dsstox_result_keys:
-				_results['data'][_key] = _val
-
-		return _results
-
-	def get_chemid_results(self, chemical):
-		"""
-		Makes request to actorws chemicalIdentifier endpoint for
-		'synGsid' to be used for dsstox if cas isn't provided by user.
-
-		Inputs: chemical - either a chemical name or smiles
-		Output: Dictionary with results_obj keys and synGsid
-		"""
-		_chemid_results = self.make_request(self.chemid_url, {'identifier': chemical})
-
-		logging.warning("CHEMID RESULTS: {}".format(_chemid_results))
-
-		try:
-			_chemid_results = _chemid_results['DataRow']
-		except KeyError as e:
-			logging.warning("'DataRow' key not found in chemid results.. Returning None..")
-			return None
-
-		# what key:vals should be with results??
-
-		_results = self.result_obj
-		_results['prop'] = "chemid"
-		_result_key = self.chemid_result_keys[0]  # only one key needed for now
-		
-		if _result_key in _chemid_results:
-			_results['data'].update({'gsid': _chemid_results.get(_result_key)})  # getting synGsid key:val
-
-		# todo: add more error handling, waiting to start new cheminfo workflow w/ actorws first..
-
-		return _results
-
-
-
-
-class SMILESFilter(object):
-	"""
-	This is the smilesfilter.py module as a class and
-	clumped in with other classes related to chem info.
-	"""
-
-	def __init__(self):
-		self.max_weight = 1500  # max weight [g/mol] for epi, test, and sparc
-		self.excludestring = {".","[Ag]","[Al]","[As","[As+","[Au]","[B]","[B-]","[Br-]","[Ca]",
-						"[Ca+","[Cl-]","[Co]","[Co+","[Fe]","[Fe+","[Hg]","[K]","[K+","[Li]",
-						"[Li+","[Mg]","[Mg+","[Na]","[Na+","[Pb]","[Pb2+]","[Pb+","[Pt]",
-						"[Sc]","[Si]","[Si+","[SiH]","[Sn]","[W]"}
-		self.return_val = {
-			"valid" : False,
-			"smiles": "",
-			"processedsmiles" : ""
-		}
-
-	def is_valid_smiles(self, smiles):
-
-		if any(x in smiles for x in self.excludestring):
-			return False
-
-		return True
-
-
-	def singleFilter(self, request_obj):
-		"""
-		Calls single EFS Standardizer filter
-		for filtering SMILES
-		"""
-		smiles = request_obj.get('smiles')
-		action = request_obj.get('action')
-		post_data = {
-			"structure": smiles,
-			"actions": [
-				action
-			]
-		}
-		url = Calculator().efs_server_url + Calculator().efs_standardizer_endpoint
-		return Calculator().web_call(url, post_data)
-
-
-	def filterSMILES(self, smiles):
-		"""
-		cts ws call to jchem to perform various
-		smiles processing before being sent to
-		p-chem calculators
-		"""
-		calc_object = Calculator()
-
-		logging.info("{} is being processed by cts SMILES filter..".format(smiles))
-		logging.info("Checking chemical for any metals..")
-
-		if not self.is_valid_smiles(smiles):
-			logging.warning("User chemical contains metals, sending error to client..")
-			# raise Exception({'data': "Chemical cannot contain metals.."})
-			raise Exception("Chemical cannot contain metals..")
-
-		# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
-		# 1. CTSWS actions "removeExplicitH" and "transform".
-		url = calc_object.efs_server_url + calc_object.efs_standardizer_endpoint
-		post_data = {
-			'structure': smiles,
-			'actions': [
-				"removeExplicitH",
-				"transform"
-			]
-		}
-		response = calc_object.web_call(url, post_data)
-
-		logging.info("1. Removing explicit H, then transforming..")
-		logging.info("request to jchem: {}".format(post_data))
-		logging.info("response from jchem: {}".format(response))
-
-		filtered_smiles = response['results'][-1] # picks last item, format: [filter1 smiles, filter1 + filter2 smiles]
-
-		logging.info("filtered smiles so far: {}".format(filtered_smiles))
-		
-		# 2. Get major tautomer from jchem:
-		taut_obj = Tautomerization()
-		taut_obj.postData.update({'calculationType': 'MAJOR'})
-		taut_obj.make_data_request(filtered_smiles, taut_obj)
-
-		logging.info("2. Obtaining major tautomer from {}".format(filtered_smiles))
-		logging.info("request to jchem: {}".format(taut_obj.postData))
-		logging.info("response from jchem: {}".format(taut_obj.results))
-
-		# todo: verify this is major taut result smiles, not original smiles for major taut request...
-		major_taut_smiles = None
-		try:
-			major_taut_smiles = taut_obj.results['result']['structureData']['structure']
-		except KeyError as e:
-			logging.info("Jchem error requesting major tautomer from {}..".format(filtered_smiles))
-			logging.info("Using smiles {} for next step..".format(filtered_smiles))
-
-		if major_taut_smiles:
-			logging.info("Major tautomer found: {}.. Using as filtered smiles..".format(major_taut_smiles))
-			filtered_smiles = major_taut_smiles
-
-		# 3. Using major taut smiles for final "neutralize" filter:
-		post_data = {
-			'structure': filtered_smiles, 
-			'actions': [
-				"neutralize"
-			]
-		}
-		response = calc_object.web_call(url, post_data)
-
-		logging.info("3. Neutralizing smiles {}".format(filtered_smiles))
-		logging.info("request to jchem: {}".format(post_data))
-		logging.info("response from jchem: {}".format(response))
-
-		final_smiles = response['results'][-1]
-		logging.info("smiles results after cts filtering: {}".format(response.get('results')))
-		logging.info("FINAL FITERED SMILES: {}".format(final_smiles))
-
-		return final_smiles
-
-
-	def checkMass(self, chemical):
-		"""
-		returns true if chemical mass is less
-		than 1500 g/mol
-		"""
-		logging.info("checking mass..")
-		try:
-			json_obj = Calculator().getMass({'chemical': chemical}) # get mass from jchem ws
-		except Exception as e:
-			logging.warning("!!! Error in checkMass() {} !!!".format(e))
-			raise e
-		struct_mass = json_obj['data'][0]['mass']
-		logging.info("structure's mass: {}".format(struct_mass))
-
-		if struct_mass < 1500  and struct_mass > 0:
-			return True
-		else:
-			return False
-
-
-	def clearStereos(self, smiles):
-		"""
-		clears stereoisomers from smiles
-		"""
-		try:
-			response = self.singleFilter({'smiles':smiles, 'action': "clearStereo"})
-			filtered_smiles = response['results'] # get stereoless structure
-		except Exception as e:
-			logging.warning("!!! Error in clearStereos() {} !!!".format(e))
-			raise e
-		return filtered_smiles
-
-
-	def transformSMILES(self, smiles):
-		"""
-		N(=O)=O >> [N+](=O)[O-]
-		"""
-		try:
-			response = self.singleFilter({'smiles':smiles, 'action': "transform"})
-			filtered_smiles = response['results'] # get stereoless structure
-		except Exception as e:
-			logging.warning("!!! Error in transformSMILES() {} !!!".format(e))
-			raise e
-		return filtered_smiles
-
-
-	def untransformSMILES(self, smiles):
-		"""
-		[N+](=O)[O-] >> N(=O)=O
-		"""
-		try:
-			response = self.singleFilter({'smiles':smiles, 'action': "untransform"})
-			filtered_smiles = response['results'] # get stereoless structure
-		except Exception as e:
-			logging.warning("!!! Error in untransformSMILES() {} !!!".format(e))
-			raise e
-		return filtered_smiles
-
-
-	def parseSmilesByCalculator(self, structure, calculator):
-		"""
-		Calculator-dependent SMILES filtering!
-		"""
-		logging.info("Parsing SMILES by calculator..")
-		filtered_smiles = structure
-
-		#1. check structure mass..
-		if calculator != 'chemaxon':
-			logging.info("checking mass for: {}...".format(structure))
-			if not self.checkMass(structure):
-				logging.info("Structure too large, must be < 1500 g/mol..")
-				# raise "Structure too large, must be < 1500 g/mol.."
-				raise Exception({'data': "structure too large"})
-
-		#2-3. clear stereos from structure, untransform [N+](=O)[O-] >> N(=O)=O..
-		if calculator == 'epi' or calculator == 'sparc' or calculator == 'measured':
-			try:
-				# clear stereoisomers:
-				filtered_smiles = self.clearStereos(structure)
-				logging.info("stereos cleared: {}".format(filtered_smiles))
-
-				# transform structure:
-				filtered_smiles = str(filtered_smiles[-1])
-				filtered_smiles = str(self.untransformSMILES(filtered_smiles)[-1])
-				logging.info("structure transformed..")
-			except Exception as e:
-				logging.warning("!!! Error in parseSmilesByCalculator() {} !!!".format(e))
-				raise {'data': "error filtering chemical"}
-
-		# 4. Check for metals and stuff (square brackets):
-		if calculator == 'epi' or calculator == 'measured':
-			if '[' in filtered_smiles or ']' in filtered_smiles:
-				# bubble up to calc for handling error
-				# raise Exception("{} cannot process metals..".format(calculator))
-				raise Exception({'data': "cannot process metals or charges"})
-
-		return filtered_smiles
+		return _gsid
