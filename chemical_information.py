@@ -114,14 +114,14 @@ class ChemInfo(object):
 		get_sd = request_post.get('get_structure_data')  # bool for getting <cml> format image for marvin sketch
 		is_node = request_post.get('is_node')  # bool for tree node or not
 
-		actorws = ACTORWS()
-		smiles_filter = SMILESFilter()
-		calc = MetabolizerCalc()  # note: inherits Calculator class as well
+		actorws_obj = ACTORWS()
+		smiles_filter_obj = SMILESFilter()
+		calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
 		_actor_results = {}
 		orig_smiles = ""  # initial SMILES pre CTS filter
 
 		# Determine chemical type from user (e.g., smiles, cas, name, etc.):
-		chem_type = calc.get_chemical_type(chemical)
+		chem_type = calc_obj.get_chemical_type(chemical)
 
 		if 'error' in chem_type:
 			response_obj = self.wrapped_post
@@ -135,12 +135,12 @@ class ChemInfo(object):
 		if chem_type.get('type') == 'smiles':
 			# try conversion to smiles assuming chemical is name to break any ties if chem valid name and smiles
 			# inspired by the PFOS problem..
-			converted_name_response = calc.get_smiles_from_name(chemical)
+			converted_name_response = calc_obj.get_smiles_from_name(chemical)
 			if converted_name_response.get('smiles') and not 'error' in converted_name_response:
 				# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
 				orig_smiles = converted_name_response.get('smiles')  # used converted smiles from name
 
-		_gsid = self.get_chemid_from_actorws(chemical, chem_type.get('type'), actorws)
+		_gsid = self.get_chemid_from_actorws(chemical, chem_type.get('type'), actorws_obj, calc_obj)
 
 		# Should be CAS# or have gsid from chemid by this point..
 		if _gsid or chem_type['type'] == 'CAS#':
@@ -151,7 +151,7 @@ class ChemInfo(object):
 			else:
 				chem_id = chemical  # use CAS# for ACTORWS request
 			logging.info("Getting results from actorws dsstox..")
-			dsstox_results = actorws.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			dsstox_results = actorws_obj.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 
 		# If user enters something other than SMILES, use actorws smiles for orig_smiles
@@ -164,10 +164,10 @@ class ChemInfo(object):
 			logging.info("Using actorws smiles as original smiles..")
 		else:
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
-			orig_smiles = calc.convertToSMILES({'chemical': chemical}).get('structure')
+			orig_smiles = calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
 
 		try:
-			filtered_smiles = smiles_filter.filterSMILES(orig_smiles)
+			filtered_smiles = smiles_filter_obj.filterSMILES(orig_smiles)
 		except ValueError as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = self.wrapped_post
@@ -185,7 +185,7 @@ class ChemInfo(object):
 		logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
 		logging.info("Filtered SMILES: {}".format(filtered_smiles))
 
-		jchem_response = calc.getChemDetails({'chemical': filtered_smiles})  # get chemical details
+		jchem_response = calc_obj.getChemDetails({'chemical': filtered_smiles})  # get chemical details
 
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
@@ -195,17 +195,17 @@ class ChemInfo(object):
 				# using chemaxon 'iupac' instead of actorws
 				molecule_obj[key] = val  # replace or add any values from chemaxon deat
 
-		for key in actorws.dsstox_result_keys:
+		for key in actorws_obj.dsstox_result_keys:
 			if key not in molecule_obj and key != 'preferredName':
 				# Note: using preferredName from chemaxon instead..
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
 		if is_node:
-			molecule_obj.update({'node_image': calc.nodeWrapper(filtered_smiles, calc.tree_image_height, calc.tree_image_width, calc.image_scale, calc.metID,'svg', True)})
+			molecule_obj.update({'node_image': calc_obj.nodeWrapper(filtered_smiles, calc_obj.tree_image_height, calc_obj.tree_image_width, calc_obj.image_scale, calc_obj.metID,'svg', True)})
 			molecule_obj.update({
-				'popup_image': Calculator().popupBuilder(
+				'popup_image': calc_obj.popupBuilder(
 					{"smiles": filtered_smiles}, 
-					calc.metabolite_keys, 
+					calc_obj.metabolite_keys, 
 					"{}".format(request_post.get('id')),
 					"Metabolite Information")
 			})
@@ -217,7 +217,7 @@ class ChemInfo(object):
 		return wrapped_post
 
 
-	def get_chemid_from_actorws(self, chemical, chem_type_name, actorws):
+	def get_chemid_from_actorws(self, chemical, chem_type_name, actorws_obj, calc_obj):
 		_gsid = None
 		_smiles_from_mrv = False
 		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles']  # bool for chemical in name/common or smiles format
@@ -225,14 +225,14 @@ class ChemInfo(object):
 		# If user drew a chemical, get SMILES of chemical from Jchem WS..
 		if chem_type_name == 'mrv':
 			logging.info("Getting SMILES from jchem web services..")
-			response = calc.convertToSMILES({'chemical': chemical})
+			response = calc_obj.convertToSMILES({'chemical': chemical})
 			chemical = response['structure']
 			logging.info("SMILES of drawn chemical: {}".format(chemical))
 			_smiles_from_mrv = True
 
 		if _name_or_smiles or _smiles_from_mrv:
 			logging.info("Getting gsid from actorws chemicalIdentifier..")
-			chemid_results = actorws.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
+			chemid_results = actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 			_gsid = chemid_results.get('data', {}).get('gsid')
 			logging.info("gsid from actorws chemid: {}".format(_gsid))
 
