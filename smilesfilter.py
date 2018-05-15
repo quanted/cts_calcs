@@ -1,6 +1,7 @@
 import requests
 import json
 import logging
+import os
 from .calculator import Calculator
 from .jchem_properties import Tautomerization
 
@@ -23,13 +24,20 @@ class SMILESFilter(object):
 			"smiles": "",
 			"processedsmiles" : ""
 		}
+		self.baseUrl = os.environ['CTS_EFS_SERVER']
+		self.is_valid_url = self.baseUrl + '/ctsws/rest/isvalidchemical'
 
 	def is_valid_smiles(self, smiles):
-
-		if any(x in smiles for x in self.excludestring):
+		"""
+		Makes request to ctsws /isvalidchemical endpoint to check
+		if user smiles is valid. Returns boolean.
+		"""
+		is_valid_response = requests.post(self.is_valid_url, data=json.dumps({'smiles': smiles}), headers={'Content-Type': 'application/json'}, timeout=5)
+		is_valid = json.loads(is_valid_response.content).get('result')  # result should be "true" or "false"
+		if is_valid == "true":
+			return True
+		else:
 			return False
-
-		return True
 
 
 	def singleFilter(self, request_obj):
