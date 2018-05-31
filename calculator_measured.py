@@ -147,8 +147,10 @@ class MeasuredCalc(Calculator):
 			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
-			# _response_dict.update({'data': "Cannot filter SMILES"})
-			_response_dict.update({'data': err})
+			_response_dict.update({
+				'data': "Cannot filter SMILES",
+				'valid': False
+			})
 			return _response_dict
 
 		_retries = 3
@@ -158,6 +160,7 @@ class MeasuredCalc(Calculator):
 				_response = self.makeDataRequest(_filtered_smiles) # make call for data!
 				logging.info("Response from Measured: {}".format(_response))
 				_measured_data = json.loads(_response.content)
+				_measured_data['valid'] = True
 				logging.info("Measured Data: {}".format(_measured_data))
 			except Exception as e:
 				logging.warning("Exception making request to Measured: {}".format(e))
