@@ -67,8 +67,11 @@ class ACTORWS(object):
 			_dsstox_results = _dsstox_results['DataList']['list'][0]
 		except Exception as e:
 			logging.warning("Error getting dsstox results key:vals: {}".format(e))
-			logging.warning("Using only Jchem WS results instead..")
-			# raise e  # raise it for now
+			logging.warning("Using only Jchem WS results instead, setting dsstox value to N/A")
+			_results = self.result_obj
+			_results['prop'] = "dsstox"
+			_results['data'] = {'dsstox': "N/A"}
+			return _results
 
 		_results = self.result_obj
 		_results['prop'] = "dsstox"
