@@ -39,7 +39,10 @@ class ACTORWS(object):
 			return None
 			
 		if _response.status_code != 200:
-			return {'success': False, 'error': "error connecting to actorws", 'data': None} 
+			# return {'success': False, 'error': "error connecting to actorws", 'data': None}
+			logging.warning("Exception in actorws.py making request to actorws: {}".format(_response))
+			raise Exception("ACTORWS request was not successful.")
+
 		return json.loads(_response.content)
 
 
@@ -59,11 +62,9 @@ class ACTORWS(object):
 		elif id_type == 'CAS#':
 			_payload = {'casrn': chemical}
 
-		_dsstox_results = self.make_request(self.dsstox_url, _payload)
-
-		logging.warning("DSSTOX RESULTS: {}".format(_dsstox_results))
-
 		try:
+			_dsstox_results = self.make_request(self.dsstox_url, _payload)
+			logging.warning("DSSTOX RESULTS: {}".format(_dsstox_results))
 			_dsstox_results = _dsstox_results['DataList']['list'][0]
 		except Exception as e:
 			logging.warning("Error getting dsstox results key:vals: {}".format(e))
@@ -90,15 +91,16 @@ class ACTORWS(object):
 		Inputs: chemical - either a chemical name or smiles
 		Output: Dictionary with results_obj keys and synGsid
 		"""
-		_chemid_results = self.make_request(self.chemid_url, {'identifier': chemical})
-
-		logging.warning("CHEMID RESULTS: {}".format(_chemid_results))
-
+		
 		try:
+			_chemid_results = self.make_request(self.chemid_url, {'identifier': chemical})
 			_chemid_results = _chemid_results['DataRow']
-		except KeyError as e:
-			logging.warning("'DataRow' key not found in chemid results.. Returning None..")
-			return None
+		except Exception as e:
+			logging.warning("Exception getting chemid results from actorws: {}".format(e))
+			_results = self.result_obj
+			_results['prop'] = "chemid"
+			_results['data'] = {'gsid': None}
+			return _results
 
 		_results = self.result_obj
 		_results['prop'] = "chemid"
