@@ -1,6 +1,8 @@
 __author__ = 'np'
 
-from jinja2 import Template
+# from jinja2 import Template
+from django.template import Template
+from django.template import Context
 import requests
 import json
 import logging
@@ -527,6 +529,9 @@ class Calculator(object):
 			if 'image' in root:
 				img = root['image']
 
+			if not height:
+				height = root.get('height')  # sets height if not provided
+
 		# 3. Wrap imageUrl with <img>
 		# <img> wrapper for image byte string:
 		if img_type and img_type == 'svg':
@@ -537,8 +542,8 @@ class Calculator(object):
 				html = '<div style="background-color:white;">' + img + '</div>'
 			
 		else:
-			# html = self.imgTmpl(isProduct).render(Context(dict(smiles=smiles, img=img, height=height, width=width, scale=scale, key=key)))
-			html = self.imgTmpl(isProduct).render({'smiles': smiles, 'img': img, 'height': height, 'width': width, 'scale': scale, 'key': key})
+			context = {'smiles': smiles, 'img': img, 'height': height, 'width': width, 'scale': scale, 'key': key}
+			html = self.imgTmpl(isProduct).render(Context(context))
 
 		return html
 
@@ -546,16 +551,17 @@ class Calculator(object):
 	def imgTmpl(self, isProduct):
 		if isProduct:
 			imgTmpl = """
-			<img class="metabolite" id="{{key|default("")}}"
+			<img class="metabolite" id="{{key|default:""}}"
 				alt="{{smiles}}" src="data:image/png;base64,{{img}}"
 				width={{width}} height={{height}} /> 
 			"""        
 		else:
 			imgTmpl = """
-			<img class="metabolite" id="{{key|default("")}}"
+			<img class="metabolite" id="{{key|default:""}}"
 				alt="{{smiles}}" src="data:image/png;base64,{{img}}"
 				width={{width}} height={{height}} hidden /> 
 			"""
+		imgTmpl = imgTmpl.replace('\t', '').replace('\n', '')
 		return Template(imgTmpl)
 
 
