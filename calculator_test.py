@@ -167,7 +167,9 @@ class TestWSCalc(Calculator):
 
 		self.postData = {"smiles" : ""}
 		self.name = "test"
-		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/"
+
+		# Example request: https://comptox.epa.gov/dashboard/web-test/MP?smiles=CCCC&method=nn
+		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/{}"  # input = property type (see propMap)
 
 		# hc - hierarchical clustering, sm - single model,
 		# nn - nearest neighbor, gc - group contribution
@@ -197,10 +199,63 @@ class TestWSCalc(Calculator):
 			# 'kow_no_ph': 
 		}
 
+		# TESTWS API responses map:
+		self.response_map = {
+			# NOTE: MP TESTWS endpoint is only returning '*ValMass', but with 'massUnits'="*C"
+			'melting_point': {
+				'result_keys': ['id', 'smiles', 'expValMass', 'predValMass', 'massUnits'],
+				'mass': None,  # NOTE: Doesn't seems to be returning mass for MP
+				'data': ['predValMass', 'expValMass']
+			},
+			# NOTE: BP TESTWS endpoint is only returning '*ValMass', but with 'massUnits'="*C"
+			'boiling_point': {
+				'result_keys': ['id', 'smiles', 'expValMass', 'predValMass', 'massUnits'],
+				'mass': None,  # NOTE: Doesn't seems to be returning mass for BP
+				'data': ['predValMass', 'expValMass']
+			},
+			'water_sol': {
+				'result_keys': ['id', 'smiles', 'expValMolarLog', 'expValMass',
+					'predValMolarLog', 'predValMass', 'molarLogUnits', 'massUnits'],
+				'mass': ['predValMass', 'expValMass'],
+				'data': ['predValMolarLog', 'expValMolarLog']
+			},
+			'vapor_press': {
+				'result_keys': ['id', 'smiles', 'expValMolarLog', 'expValMass', 
+					'predValMolarLog', 'predValMass', 'molarLogUnits', 'massUnits'],
+				'mass': ['predValMass', 'expValMass'],
+				'data': ['predValMolarLog', 'expValMolarLog']
+			}
+		}
+
+
+
+	def convertWaterSolubility(self, _response_dict):
+		"""
+		Converts water solubility from log(mol/L) => mg/L.
+		Expecting water sol data from TESTWS to have the following keys:
+		"expValMolarLog", "expValMass","predValMolarLog","predValMass","molarLogUnits","massUnits"
+		"""
+
+		_ws_result = None
+		# if isinstance(_response_dict.get('mass'), float) or isinstance(_response_dict.get('mass'), int):
+		if _response_dict.get('mass'):
+				_ws_result = 1000 * float(_response_dict['mass']) * 10**-(float(_response_dict['data']))
+		else:
+			# request mass from Calculator
+			json_obj = self.getMass({'chemical': _response_dict['chemical']})
+			mass = json_obj['data'][0]['mass']
+			_response_dict.update({'mass': mass})
+			_ws_result = 1000 * float(_response_dict['mass']) * 10**-(float(_response_dict['data']))
+		_response_dict.update({'data': _ws_result})
+		return _response_dict
+
+
+
 	def makeDataRequest(self, structure, calc, prop, method):
 		test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
 		# url = self.baseUrl + self.urlStruct.format('FDAMethod', test_prop)
-		_url = self.baseUrl + test_prop
+		# _url = self.baseUrl + test_prop
+		_url = self.baseUrl.format(test_prop)
 		_payload = {'smiles': structure, 'method': method}
 		try:
 			# response = requests.post(url, data=json.dumps(post), headers=headers, timeout=10)
@@ -216,6 +271,7 @@ class TestWSCalc(Calculator):
 
 		self.results = response
 		return response
+
 
 
 	def data_request_handler(self, request_dict):		
@@ -241,27 +297,30 @@ class TestWSCalc(Calculator):
 			return _response_dict
 		# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-		logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
+		# logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
+		# logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
 
-		# try:
-		logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
+		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), "fda")
 
-		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), "hc")
-
-		logging.info("TEST WS response data for {}: {}".format(request_dict.get('prop'), _response))
-
-		# _test_data = _response_obj['predictions']  # list of predictions
-		# _response_dict['data'] = _test_data
-
-		# sometimes TEST data successfully returns but with an error:
 		if _response.status_code != 200:
-			_response_dict.update({'data': "TEST could not process chemical"})
-		else:
-			_response_dict.update({'data': json.loads(_response.content)})
-		
-		# TODO: Use TEST WS mass value (or node's cheminfo) to convert WS
-		# if request_dict.get('prop') == 'water_sol':
-		# 		# _response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
-		# 		_response_dict = TestCalc().convertWaterSolubility(_response_dict)
+			_response_dict.update({'data': "Cannot reach TESTWS"})
+			return _response_dict
+
+		_response_obj = json.loads(_response.content)
+		_test_data = _response_obj['predictions'][0]  # list of predictions (getting first because only one chemical comes back for GET requests)
+
+		if 'error' in _test_data:
+			_response_dict.update({'data': "Cannot parse SMILES"})
+			return _response_dict
+
+		_response_map = self.response_map[request_dict['prop']]
+
+		for data_key in _response_map['data']:
+			if _test_data.get(data_key):
+				# key is available, so use it:
+				_response_dict['data'] = _test_data[data_key]
+
+		if request_dict['prop'] == 'water_sol':
+			_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
 
 		return _response_dict
