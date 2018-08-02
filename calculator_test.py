@@ -174,6 +174,7 @@ class TestWSCalc(Calculator):
 		# hc - hierarchical clustering, sm - single model,
 		# nn - nearest neighbor, gc - group contribution
 		self.methods = ['fda', 'hc', 'sm', 'nn', 'gc']
+		self.method = "fda"  # default method to use (for single method)
 		self.methods_map = {
 			'Hierarchical clustering': 'hc',
 			'FDA': 'fda',
@@ -300,7 +301,7 @@ class TestWSCalc(Calculator):
 		# logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
 		# logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
 
-		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), "fda")
+		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
 
 		if _response.status_code != 200:
 			_response_dict.update({'data': "Cannot reach TESTWS"})
@@ -319,6 +320,9 @@ class TestWSCalc(Calculator):
 			if _test_data.get(data_key):
 				# key is available, so use it:
 				_response_dict['data'] = _test_data[data_key]
+				
+		if not 'data' in _response_dict:
+			_response_dict['data'] = "N/A"
 
 		if request_dict['prop'] == 'water_sol':
 			_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
