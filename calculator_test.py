@@ -168,12 +168,13 @@ class TestWSCalc(Calculator):
 		self.postData = {"smiles" : ""}
 		self.name = "test"
 
-		# Example request: https://comptox.epa.gov/dashboard/web-test/MP?smiles=CCCC&method=nn
+		# Example Request: https://comptox.epa.gov/dashboard/web-test/MP?smiles=CCCC&method=nn
 		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/{}"  # input = property type (see propMap)
 
 		# hc - hierarchical clustering, sm - single model,
 		# nn - nearest neighbor, gc - group contribution
-		self.methods = ['fda', 'hc', 'sm', 'nn', 'gc']
+		# self.methods = ['fda', 'hc', 'sm', 'nn', 'gc']
+		self.methods = ['fda', 'hc', 'nn', 'gc']  # NOTE: 'fda' works but is supposed to be phased out, 'sm' is supposed to work but is returning blank 'predictions'
 		self.method = "fda"  # default method to use (for single method)
 		self.methods_map = {
 			'Hierarchical clustering': 'hc',
