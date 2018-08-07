@@ -321,15 +321,18 @@ class TestWSCalc(Calculator):
 
 		_response_map = self.response_map[request_dict['prop']]
 
+		# searches for TESTWS data using known result keys:
 		for data_key in _response_map['data']:
 			if _test_data.get(data_key):
-				# key is available, so use it:
 				_response_dict['data'] = _test_data[data_key]
 				
+		# returns "N/A" for data if there isn't any TESTWS data found:
 		if not 'data' in _response_dict:
 			_response_dict['data'] = "N/A"
+			return _response_dict
 
 		if request_dict['prop'] == 'water_sol':
+			# convert WS units if that's the requested property
 			_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
 
 		return _response_dict
