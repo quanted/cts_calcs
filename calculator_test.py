@@ -302,6 +302,10 @@ class TestWSCalc(Calculator):
 		# logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
 		# logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
 
+		if request_dict.get('method') and request_dict['method'] in self.methods:
+			# Uses method provided in request to get data from TESTWS, otherwise uses default
+			self.method = request_dict.get('method')
+
 		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
 
 		if _response.status_code != 200:
