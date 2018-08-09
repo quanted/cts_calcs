@@ -171,11 +171,9 @@ class TestWSCalc(Calculator):
 		# Example Request: https://comptox.epa.gov/dashboard/web-test/MP?smiles=CCCC&method=nn
 		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/{}"  # input = property type (see propMap)
 
-		# hc - hierarchical clustering, sm - single model,
-		# nn - nearest neighbor, gc - group contribution
-		# self.methods = ['fda', 'hc', 'sm', 'nn', 'gc']
-		self.methods = ['fda', 'hc', 'nn', 'gc']  # NOTE: 'fda' works but is supposed to be phased out, 'sm' is supposed to work but is returning blank 'predictions'
-		self.method = "fda"  # default method to use (for single method)
+		# self.methods = ['fda', 'hc', 'nn', 'gc']  # NOTE: 'fda' works but is supposed to be phased out, 'sm' is supposed to work but is returning blank 'predictions'
+		self.methods = ['hc', 'nn', 'gc']
+		self.method = "hc"  # default method to use (for single method)
 		self.methods_map = {
 			'Hierarchical clustering': 'hc',
 			'FDA': 'fda',
@@ -201,31 +199,26 @@ class TestWSCalc(Calculator):
 			# 'kow_no_ph': 
 		}
 
+		self.result_keys = ['id', 'smiles', 'expValMass', 'expValMolarLog', 'predValMass',
+			'predValMolarLog', 'massUnits', 'molarLogUnits']
+
+		self.cts_testws_data_key = 'predValMass'
+
 		# TESTWS API responses map:
 		self.response_map = {
 			# NOTE: MP TESTWS endpoint is only returning '*ValMass', but with 'massUnits'="*C"
 			'melting_point': {
-				'result_keys': ['id', 'smiles', 'expValMass', 'predValMass', 'massUnits'],
-				'mass': None,  # NOTE: Doesn't seems to be returning mass for MP
-				'data': ['predValMass', 'expValMass']
+				'data': ['predValMass']
 			},
 			# NOTE: BP TESTWS endpoint is only returning '*ValMass', but with 'massUnits'="*C"
 			'boiling_point': {
-				'result_keys': ['id', 'smiles', 'expValMass', 'predValMass', 'massUnits'],
-				'mass': None,  # NOTE: Doesn't seems to be returning mass for BP
-				'data': ['predValMass', 'expValMass']
+				'data': ['predValMass']
 			},
 			'water_sol': {
-				'result_keys': ['id', 'smiles', 'expValMolarLog', 'expValMass',
-					'predValMolarLog', 'predValMass', 'molarLogUnits', 'massUnits'],
-				'mass': ['predValMass', 'expValMass'],
-				'data': ['predValMolarLog', 'expValMolarLog']
+				'data': ['predValMass']
 			},
 			'vapor_press': {
-				'result_keys': ['id', 'smiles', 'expValMolarLog', 'expValMass', 
-					'predValMolarLog', 'predValMass', 'molarLogUnits', 'massUnits'],
-				'mass': ['predValMass', 'expValMass'],
-				'data': ['predValMolarLog', 'expValMolarLog']
+				'data': ['predValMass']
 			}
 		}
 
@@ -237,17 +230,11 @@ class TestWSCalc(Calculator):
 		Expecting water sol data from TESTWS to have the following keys:
 		"expValMolarLog", "expValMass","predValMolarLog","predValMass","molarLogUnits","massUnits"
 		"""
-
-		_ws_result = None
-		# if isinstance(_response_dict.get('mass'), float) or isinstance(_response_dict.get('mass'), int):
-		if _response_dict.get('mass'):
-				_ws_result = 1000 * float(_response_dict['mass']) * 10**-(float(_response_dict['data']))
-		else:
-			# request mass from Calculator
-			json_obj = self.getMass({'chemical': _response_dict['chemical']})
-			mass = json_obj['data'][0]['mass']
-			_response_dict.update({'mass': mass})
-			_ws_result = 1000 * float(_response_dict['mass']) * 10**-(float(_response_dict['data']))
+		# Requests mass from Jchem:
+		json_obj = self.getMass({'chemical': _response_dict['chemical']})
+		mass = json_obj['data'][0]['mass']
+		_response_dict.update({'mass': mass})
+		_ws_result = 1000 * float(_response_dict['mass']) * 10**-(float(_response_dict['data']))
 		_response_dict.update({'data': _ws_result})
 		return _response_dict
 
@@ -319,20 +306,28 @@ class TestWSCalc(Calculator):
 			_response_dict.update({'data': "Cannot parse SMILES"})
 			return _response_dict
 
-		_response_map = self.response_map[request_dict['prop']]
+		# _response_map = self.response_map[request_dict['prop']]
+		# # searches for TESTWS data using known result keys:
+		# for data_key in _response_map['data']:
+		# 	if _test_data.get(data_key):
+		# 		_response_dict['data'] = _test_data[data_key]
 
-		# searches for TESTWS data using known result keys:
-		for data_key in _response_map['data']:
-			if _test_data.get(data_key):
-				_response_dict['data'] = _test_data[data_key]
+
+		if _test_data.get(self.cts_testws_data_key):
+			_response_dict['data'] = _test_data[self.cts_testws_data_key]
+
 				
 		# returns "N/A" for data if there isn't any TESTWS data found:
-		if not 'data' in _response_dict:
+		if not 'data' in _response_dict or not _response_dict.get('data'):
 			_response_dict['data'] = "N/A"
 			return _response_dict
 
-		if request_dict['prop'] == 'water_sol':
-			# convert WS units if that's the requested property
-			_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
+		# NOTE: TESTWS returns WS in the units CTS wants (mg/L)
+		# if request_dict['prop'] == 'water_sol':
+		# 	# convert WS units if that's the requested property
+		# 	_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
+
+		# Make sure method name is all caps (it's an acronym):
+		_response_dict['method'] = _response_dict.get('method').upper()
 
 		return _response_dict
