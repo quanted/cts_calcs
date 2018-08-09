@@ -171,16 +171,18 @@ class TestWSCalc(Calculator):
 		# Example Request: https://comptox.epa.gov/dashboard/web-test/MP?smiles=CCCC&method=nn
 		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/{}"  # input = property type (see propMap)
 
-		# self.methods = ['fda', 'hc', 'nn', 'gc']  # NOTE: 'fda' works but is supposed to be phased out, 'sm' is supposed to work but is returning blank 'predictions'
-		self.methods = ['hc', 'nn', 'gc']
+		self.methods = ['hc', 'nn', 'gc']  # general property methods
 		self.method = "hc"  # default method to use (for single method)
-		self.methods_map = {
-			'Hierarchical clustering': 'hc',
-			'FDA': 'fda',
-			'Group contribution': 'gc',
-			'Nearest neighbor': 'nn'
-			# sm - single mode returning error still
-		}
+		self.bcf_method = "sm"
+
+		# self.methods_map = {
+		# 	'Hierarchical clustering': 'hc',
+		# 	'FDA': 'fda',
+		# 	'Group contribution': 'gc',
+		# 	'Nearest neighbor': 'nn'
+		# 	# sm - single mode returning error still
+		# }
+
 		# map workflow parameters to test
 		self.propMap = {
 			'melting_point': {
@@ -194,6 +196,9 @@ class TestWSCalc(Calculator):
 			},
 			'vapor_press': {
 			   'urlKey': 'VP'
+			},
+			'log_bcf': {
+				'urlKey': 'BCF'
 			}
 			# 'henrys_law_con': ,
 			# 'kow_no_ph': 
@@ -219,6 +224,9 @@ class TestWSCalc(Calculator):
 			},
 			'vapor_press': {
 				'data': ['predValMass']
+			},
+			'log_bcf': {
+				'data': ['predValMolarLog']
 			}
 		}
 
