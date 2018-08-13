@@ -172,7 +172,7 @@ class TestWSCalc(Calculator):
 		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/{}"  # input = property type (see propMap)
 
 		self.methods = ['hc', 'nn', 'gc']  # general property methods
-		self.method = "hc"  # default method to use (for single method)
+		self.method = None
 		self.bcf_method = "sm"
 
 		# self.methods_map = {
@@ -297,9 +297,11 @@ class TestWSCalc(Calculator):
 		# logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
 		# logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
 
-		if request_dict.get('method') and request_dict['method'] in self.methods:
+		if request_dict.get('method') and request_dict['method'] in self.methods + [self.bcf_method]:
 			# Uses method provided in request to get data from TESTWS, otherwise uses default
 			self.method = request_dict.get('method')
+			# Make sure method name is all caps (it's an acronym):
+			_response_dict['method'] = _response_dict.get('method').upper()
 
 		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
 
@@ -320,7 +322,6 @@ class TestWSCalc(Calculator):
 		# 	if _test_data.get(data_key):
 		# 		_response_dict['data'] = _test_data[data_key]
 
-
 		if _test_data.get(self.cts_testws_data_key):
 			_response_dict['data'] = _test_data[self.cts_testws_data_key]
 
@@ -334,8 +335,5 @@ class TestWSCalc(Calculator):
 		# if request_dict['prop'] == 'water_sol':
 		# 	# convert WS units if that's the requested property
 		# 	_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
-
-		# Make sure method name is all caps (it's an acronym):
-		_response_dict['method'] = _response_dict.get('method').upper()
 
 		return _response_dict
