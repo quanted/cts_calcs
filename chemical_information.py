@@ -220,7 +220,7 @@ class ChemInfo(object):
 	def get_chemid_from_actorws(self, chemical, chem_type_name, actorws_obj, calc_obj):
 		_gsid = None
 		_smiles_from_mrv = False
-		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles']  # bool for chemical in name/common or smiles format
+		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles', 'systematic']  # bool for chemical in name/common or smiles format
 
 		# If user drew a chemical, get SMILES of chemical from Jchem WS..
 		if chem_type_name == 'mrv':

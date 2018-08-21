@@ -316,24 +316,25 @@ class TestWSCalc(Calculator):
 			_response_dict.update({'data': "Cannot parse SMILES"})
 			return _response_dict
 
-		# _response_map = self.response_map[request_dict['prop']]
-		# # searches for TESTWS data using known result keys:
-		# for data_key in _response_map['data']:
-		# 	if _test_data.get(data_key):
-		# 		_response_dict['data'] = _test_data[data_key]
-
 		if _test_data.get(self.cts_testws_data_key):
 			_response_dict['data'] = _test_data[self.cts_testws_data_key]
-
-				
-		# returns "N/A" for data if there isn't any TESTWS data found:
+	
+		# Returns "N/A" for data if there isn't any TESTWS data found:
 		if not 'data' in _response_dict or not _response_dict.get('data'):
 			_response_dict['data'] = "N/A"
 			return _response_dict
 
-		# NOTE: TESTWS returns WS in the units CTS wants (mg/L)
-		# if request_dict['prop'] == 'water_sol':
-		# 	# convert WS units if that's the requested property
-		# 	_response_dict = self.convertWaterSolubility(_response_dict) # update response dict data
+		# Reformats TESTWS VP result, e.g., "3.14*10^-15" -> "3.14e-15":
+		if request_dict['prop'] == 'vapor_press':
+			try:
+				split_val = _response_dict['data'].split("*")  # splits up number for reformatting
+				n = split_val[0]  # gets float portion
+				p = split_val[1].split("^")[1]  # gets power portion
+				new_num = "{}e{}".format(n, p)
+				_response_dict['data'] = new_num
+			except Exception as e:
+				logging.warning("Failed trying to reformat TESTWS VP.. Returning as-is..")
+				logging.warning("Exception: {}".format(e))
+				pass
 
 		return _response_dict
