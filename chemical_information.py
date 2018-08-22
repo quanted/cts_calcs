@@ -117,12 +117,14 @@ class ChemInfo(object):
 		actorws_obj = ACTORWS()
 		smiles_filter_obj = SMILESFilter()
 		calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
-		_actor_results = {}
-		orig_smiles = ""  # initial SMILES pre CTS filter
+		_actor_results = {}  # dict for actorws results
+		orig_smiles = None  # initial SMILES pre CTS filter
+		is_name = False  # bool for whether smiles was actually acronym
 
-		# Determine chemical type from user (e.g., smiles, cas, name, etc.):
+		# Determines chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = calc_obj.get_chemical_type(chemical)
 
+		# Returns error back if problem getting chemical type:
 		if 'error' in chem_type:
 			response_obj = self.wrapped_post
 			response_obj['error'] = chem_type['error']
@@ -132,17 +134,18 @@ class ChemInfo(object):
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 		logging.info("Chemical type: {}".format(chem_type))
 
+		# Checks that chemical is actually name that's an acronym and not a SMILES:
 		if chem_type.get('type') == 'smiles':
-			# try conversion to smiles assuming chemical is name to break any ties if chem valid name and smiles
-			# inspired by the PFOS problem..
-			converted_name_response = calc_obj.get_smiles_from_name(chemical)
-			if converted_name_response.get('smiles') and not 'error' in converted_name_response:
-				# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
-				orig_smiles = converted_name_response.get('smiles')  # used converted smiles from name
+			is_name = self.is_actually_name(chemical)
 
+		# Switches chem type to "name" if smiles was actually an acronym:
+		if is_name:
+			chem_type = "name"
+
+		# Gets chemid from actorws using SMILES or name:
 		_gsid = self.get_chemid_from_actorws(chemical, chem_type.get('type'), actorws_obj, calc_obj)
 
-		# Should be CAS# or have gsid from chemid by this point..
+		# Gets DSSTOX from actorws using GSID or CAS#:
 		if _gsid or chem_type['type'] == 'CAS#':
 			id_type = 'CAS#'
 			if _gsid:
@@ -154,18 +157,18 @@ class ChemInfo(object):
 			dsstox_results = actorws_obj.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 
-		# If user enters something other than SMILES, use actorws smiles for orig_smiles
-		if orig_smiles:
-			pass
-		elif chem_type['type'] == 'smiles':
-			orig_smiles = chemical  # use user-entered smiles as orig_siles
-		elif 'smiles' in _actor_results.get('data', {}):
+		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
+		if 'smiles' in _actor_results.get('data', {}):
 			orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
 			logging.info("Using actorws smiles as original smiles..")
+		elif chem_type['type'] == 'smiles':
+			# NOTE: Use this over actorws smiles? Or keep how it is?
+			orig_smiles = chemical  # use user-entered smiles as orig_siles
 		else:
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
 			orig_smiles = calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
 
+		# Gets filtered SMILES:
 		try:
 			filtered_smiles = smiles_filter_obj.filterSMILES(orig_smiles)
 		except ValueError as e:
@@ -181,25 +184,28 @@ class ChemInfo(object):
 			response_obj['request_post'] = request_post
 			return response_obj
 
-
 		logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
 		logging.info("Filtered SMILES: {}".format(filtered_smiles))
 
-		jchem_response = calc_obj.getChemDetails({'chemical': filtered_smiles})  # get chemical details
+		# Gets chemical details from jchem ws:
+		jchem_response = calc_obj.getChemDetails({'chemical': filtered_smiles})
 
+		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
-		# Loop _actor_results, replace certain keys in molecule_obj with actorws vals:
+		# Replaces certain keys in molecule_obj with actorws values:
 		for key, val in _actor_results.get('data', {}).items():
 			if key != 'iupac' and key != 'smiles':
 				# using chemaxon 'iupac' instead of actorws
 				molecule_obj[key] = val  # replace or add any values from chemaxon deat
 
+		# Fills any empty keys with "N/A" for values:
 		for key in actorws_obj.dsstox_result_keys:
 			if key not in molecule_obj and key != 'preferredName':
 				# Note: using preferredName from chemaxon instead..
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
+		# Adds popup image with cheminfo table if it's a gentrans product (i.e., node):
 		if is_node:
 			molecule_obj.update({'node_image': calc_obj.nodeWrapper(filtered_smiles, calc_obj.tree_image_height, calc_obj.tree_image_width, calc_obj.image_scale, calc_obj.metID,'svg', True)})
 			molecule_obj.update({
@@ -214,7 +220,29 @@ class ChemInfo(object):
 		wrapped_post['status'] = True  # 'metadata': '',
 		wrapped_post['data'] = molecule_obj
 		wrapped_post['request_post'] = request_post
+
 		return wrapped_post
+
+
+
+	def is_actually_name(self, smiles):
+		"""
+		Known as "the PFOS problem," which is an example chemical of
+		an issue where the chemical name is interpretted by JchemWS
+		as a SMILES. It tries to convert the chemical into a SMILES, which
+		should trigger an error if it actually is one.
+
+		Returns: (True, actual SMILES from JchemWS) if chemical was actual a name,
+		(False, original smiles from input) if chemical was actually a smiles.
+		"""
+		converted_name_response = calc_obj.get_smiles_from_name(chemical)
+		if converted_name_response.get('smiles') and not 'error' in converted_name_response:
+			# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
+			# jchem_smiles = converted_name_response.get('smiles')  # used converted smiles from name
+			return True
+		else:
+			# if an error was thrown, it was actually smiles so returns original version:
+			return False
 
 
 	def get_chemid_from_actorws(self, chemical, chem_type_name, actorws_obj, calc_obj):
