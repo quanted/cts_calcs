@@ -136,7 +136,7 @@ class ChemInfo(object):
 
 		# Checks that chemical is actually name that's an acronym and not a SMILES:
 		if chem_type.get('type') == 'smiles':
-			is_name = self.is_actually_name(chemical)
+			is_name = self.is_actually_name(chemical, calc_obj)
 
 		# Switches chem type to "name" if smiles was actually an acronym:
 		if is_name:
@@ -225,7 +225,7 @@ class ChemInfo(object):
 
 
 
-	def is_actually_name(self, smiles):
+	def is_actually_name(self, chemical, calc_obj):
 		"""
 		Known as "the PFOS problem," which is an example chemical of
 		an issue where the chemical name is interpretted by JchemWS

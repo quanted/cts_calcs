@@ -47,7 +47,8 @@ class EpiCalc(Calculator):
                 'result_key': 'log_kow'
             },
             'koc': {
-                'result_key': 'log_koc'
+                'result_key': 'log_koc',
+                'methods': {'MCI': "MCI", 'Kow': "Kow"}
             },
             'log_bcf': {
                 'result_key': 'log_bcf',
