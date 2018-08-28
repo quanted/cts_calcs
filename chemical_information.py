@@ -118,6 +118,7 @@ class ChemInfo(object):
 		smiles_filter_obj = SMILESFilter()
 		calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
 		_actor_results = {}  # dict for actorws results
+		_gsid = None
 		orig_smiles = None  # initial SMILES pre CTS filter
 		is_name = False  # bool for whether smiles was actually acronym
 
@@ -134,36 +135,43 @@ class ChemInfo(object):
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 		logging.info("Chemical type: {}".format(chem_type))
 
-		# Checks that chemical is actually name that's an acronym and not a SMILES:
+		# Checks chemical to make sure it's not actually an acronym instead of smiles:
 		if chem_type.get('type') == 'smiles':
 			is_name = self.is_actually_name(chemical, calc_obj)
-
-		# Switches chem type to "name" if smiles was actually an acronym:
-		if is_name:
-			chem_type = "name"
-
-		# Gets chemid from actorws using SMILES or name:
-		_gsid = self.get_chemid_from_actorws(chemical, chem_type.get('type'), actorws_obj, calc_obj)
-
-		# Gets DSSTOX from actorws using GSID or CAS#:
-		if _gsid or chem_type['type'] == 'CAS#':
-			id_type = 'CAS#'
-			if _gsid:
-				chem_id = _gsid  # use gsid for ACTORWS request
-				id_type = 'gsid'
-			else:
-				chem_id = chemical  # use CAS# for ACTORWS request
-			logging.info("Getting results from actorws dsstox..")
-			dsstox_results = actorws_obj.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			# Switches chem type to "name" if smiles was actually an acronym:
+			if is_name:
+				chem_type = "name"
+		
+		# ACTORWS requests handling for getting DSSTOX data
+		if chem_type.get('type') == 'CAS#':
+			# Gets dsstox results using user-entered CAS#:
+			dsstox_results = actorws_obj.get_dsstox_results(chemical, "CAS#")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			_actor_results.update(dsstox_results)
+		else:
+			# Gets chemid from actorws using SMILES or name, then gets dsstox results:
+			_gsid = self.get_chemid_from_actorws(chemical, chem_type['type'], actorws_obj, calc_obj)
+			dsstox_results = actorws_obj.get_dsstox_results(_gsid, "gsid")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 
+
+		# # Gets DSSTOX from actorws using GSID or CAS#:
+		# if _gsid or chem_type['type'] == 'CAS#':
+		# 	id_type = 'CAS#'
+		# 	if _gsid:
+		# 		chem_id = _gsid  # use gsid for ACTORWS request
+		# 		id_type = 'gsid'
+		# 	else:
+		# 		chem_id = chemical  # use CAS# for ACTORWS request
+		# 	logging.info("Getting results from actorws dsstox..")
+		# 	dsstox_results = actorws_obj.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+		# 	_actor_results.update(dsstox_results)
+
 		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
-		if 'smiles' in _actor_results.get('data', {}):
+		if chem_type['type'] == 'smiles':
+			orig_smiles = chemical  # use user-entered smiles as orig_siles
+		elif 'smiles' in _actor_results.get('data', {}):
 			orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
 			logging.info("Using actorws smiles as original smiles..")
-		elif chem_type['type'] == 'smiles':
-			# NOTE: Use this over actorws smiles? Or keep how it is?
-			orig_smiles = chemical  # use user-entered smiles as orig_siles
 		else:
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
 			orig_smiles = calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
@@ -171,6 +179,8 @@ class ChemInfo(object):
 		# Gets filtered SMILES:
 		try:
 			filtered_smiles = smiles_filter_obj.filterSMILES(orig_smiles)
+			logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
+			logging.info("Filtered SMILES: {}".format(filtered_smiles))
 		except ValueError as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = self.wrapped_post
@@ -184,20 +194,21 @@ class ChemInfo(object):
 			response_obj['request_post'] = request_post
 			return response_obj
 
-		logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
-		logging.info("Filtered SMILES: {}".format(filtered_smiles))
-
 		# Gets chemical details from jchem ws:
 		jchem_response = calc_obj.getChemDetails({'chemical': filtered_smiles})
 
 		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
+		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
+		molecule_obj['smiles'] = filtered_smiles  
+
 		# Replaces certain keys in molecule_obj with actorws values:
 		for key, val in _actor_results.get('data', {}).items():
-			if key != 'iupac' and key != 'smiles':
-				# using chemaxon 'iupac' instead of actorws
-				molecule_obj[key] = val  # replace or add any values from chemaxon deat
+			if key != 'iupac' and key != 'smiles' and key != 'preferredName':
+				# using chemaxon 'iupac' and 'preferredName' instead of actorws,
+				# 'smiles' already set to filtered_smiles
+				molecule_obj[key] = val
 
 		# Fills any empty keys with "N/A" for values:
 		for key in actorws_obj.dsstox_result_keys:
