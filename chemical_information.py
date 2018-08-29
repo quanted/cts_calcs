@@ -153,19 +153,6 @@ class ChemInfo(object):
 			dsstox_results = actorws_obj.get_dsstox_results(_gsid, "gsid")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 
-
-		# # Gets DSSTOX from actorws using GSID or CAS#:
-		# if _gsid or chem_type['type'] == 'CAS#':
-		# 	id_type = 'CAS#'
-		# 	if _gsid:
-		# 		chem_id = _gsid  # use gsid for ACTORWS request
-		# 		id_type = 'gsid'
-		# 	else:
-		# 		chem_id = chemical  # use CAS# for ACTORWS request
-		# 	logging.info("Getting results from actorws dsstox..")
-		# 	dsstox_results = actorws_obj.get_dsstox_results(chem_id, id_type)  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
-		# 	_actor_results.update(dsstox_results)
-
 		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
 		if chem_type['type'] == 'smiles':
 			orig_smiles = chemical  # use user-entered smiles as orig_siles
