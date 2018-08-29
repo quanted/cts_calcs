@@ -188,19 +188,19 @@ class ChemInfo(object):
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
-		molecule_obj['smiles'] = filtered_smiles  
+		molecule_obj['smiles'] = filtered_smiles
 
 		# Replaces certain keys in molecule_obj with actorws values:
 		for key, val in _actor_results.get('data', {}).items():
-			if key != 'iupac' and key != 'smiles' and key != 'preferredName':
-				# using chemaxon 'iupac' and 'preferredName' instead of actorws,
-				# 'smiles' already set to filtered_smiles
+			if key != 'iupac' and key != 'smiles':
+				# Note: using actorws's 'smiles' for molecule_obj's 'orig_smiles' value, and filtered_smiles for molecule_obj's 'smiles' value.
+				# Note: using jchem's 'iupac' instead of actorws's.
 				molecule_obj[key] = val
 
 		# Fills any empty keys with "N/A" for values:
 		for key in actorws_obj.dsstox_result_keys:
-			if key not in molecule_obj and key != 'preferredName':
-				# Note: using preferredName from chemaxon instead..
+			# if key not in molecule_obj and key != 'preferredName':
+			if key not in molecule_obj:
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
 		# Adds popup image with cheminfo table if it's a gentrans product (i.e., node):
