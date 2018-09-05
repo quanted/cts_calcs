@@ -312,7 +312,7 @@ class MajorMicrospecies(JchemProperty):
         self.url = self.url_pattern.format('majorMicrospecies')
         self.postData = {
             "pH": 7.0,
-            "takeMajorTautomericForm": False
+            "takeMajorTautomericForm": True
         }
 
     def getMajorMicrospecies(self):
@@ -334,9 +334,9 @@ class Tautomerization(JchemProperty):
         self.url = self.url_pattern.format('tautomerization')
         self.postData = {
             "calculationType": "DOMINANT",
-            # "calculationType": "MAJOR",
             "maxStructureCount": 1000,
-            "considerPH": False,
+            "considerPH": True,
+            "pH": 7.0,
             "enableMaxPathLength": True,
             "maxPathLength": 4,
             "rationalTautomerGenerationMode": False,
