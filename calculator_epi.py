@@ -195,7 +195,7 @@ class EpiCalc(Calculator):
         except Exception as err:
             logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
             _response_dict.update({
-                'data': "cannot reach {} calculator".format(request_dict['calc']),
+                'data': "Cannot reach EPI calculator",
                 'valid': False
             })
             return _response_dict

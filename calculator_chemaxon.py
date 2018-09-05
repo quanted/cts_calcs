@@ -238,7 +238,7 @@ class JchemCalc(Calculator):
                 logging.warning("Exception occurred getting chemaxon data: {}".format(err))
 
                 _response_dict.update({
-                    'data': "cannot reach chemaxon calculator"
+                    'data': "Cannot reach ChemAxon calculator"
                 })
                 return _response_dict
                 # result_json = json.dumps(_response_dict)
