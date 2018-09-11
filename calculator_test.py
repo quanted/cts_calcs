@@ -213,20 +213,20 @@ class TestWSCalc(Calculator):
 		self.response_map = {
 			# NOTE: MP TESTWS endpoint is only returning '*ValMass', but with 'massUnits'="*C"
 			'melting_point': {
-				'data': ['predValMass']
+				'data_type': 'predValMass'
 			},
 			# NOTE: BP TESTWS endpoint is only returning '*ValMass', but with 'massUnits'="*C"
 			'boiling_point': {
-				'data': ['predValMass']
+				'data_type': 'predValMass'
 			},
 			'water_sol': {
-				'data': ['predValMass']
+				'data_type': 'predValMass'
 			},
 			'vapor_press': {
-				'data': ['predValMass']
+				'data_type': 'predValMass'
 			},
 			'log_bcf': {
-				'data': ['predValMolarLog']
+				'data_type': 'predValMolarLog'
 			}
 		}
 
@@ -316,8 +316,12 @@ class TestWSCalc(Calculator):
 			_response_dict.update({'data': "Cannot parse SMILES"})
 			return _response_dict
 
-		if _test_data.get(self.cts_testws_data_key):
-			_response_dict['data'] = _test_data[self.cts_testws_data_key]
+		# Gets response key for property:
+		data_type = self.response_map[request_dict['prop']]['data_type']
+
+		# Sets response data to property's data key (based on desired units)
+		if _test_data.get(data_type):
+			_response_dict['data'] = _test_data[data_type]
 	
 		# Returns "N/A" for data if there isn't any TESTWS data found:
 		if not 'data' in _response_dict or not _response_dict.get('data'):
