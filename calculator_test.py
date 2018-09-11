@@ -330,15 +330,24 @@ class TestWSCalc(Calculator):
 
 		# Reformats TESTWS VP result, e.g., "3.14*10^-15" -> "3.14e-15":
 		if request_dict['prop'] == 'vapor_press':
-			try:
-				split_val = _response_dict['data'].split("*")  # splits up number for reformatting
-				n = split_val[0]  # gets float portion
-				p = split_val[1].split("^")[1]  # gets power portion
-				new_num = "{}e{}".format(n, p)
-				_response_dict['data'] = new_num
-			except Exception as e:
-				logging.warning("Failed trying to reformat TESTWS VP.. Returning as-is..")
-				logging.warning("Exception: {}".format(e))
-				pass
+			_response_dict['data'] = self.convert_testws_scinot(_response_dict['data'])
 
 		return _response_dict
+
+
+
+	def convert_testws_scinot(self, pchem_data):
+		"""
+		Converts TESTWS scientific notation format.
+		Ex: "3.14*10^-15" -> "3.14e-15"
+		"""
+		try:
+			split_val = pchem_data.split("*")  # splits up number for reformatting
+			n = split_val[0]  # gets float portion
+			p = split_val[1].split("^")[1]  # gets power portion
+			new_num = "{}e{}".format(n, p)
+			return new_num
+		except Exception as e:
+			logging.warning("Failed trying to reformat TESTWS VP.. Returning as-is..")
+			logging.warning("Exception: {}".format(e))
+			return pchem_data
