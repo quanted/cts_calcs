@@ -144,19 +144,20 @@ class SparcCalc(Calculator):
 
 
         try:
-            # if 'ion_con' in request_dict['props']:
+            # Runs ion_con endpoint if it's user's requested property
             if request_dict.get('prop') == 'ion_con':
                 response = self.makeCallForPka() # response as d ict returned..
                 pka_data = self.getPkaResults(response)
                 _response_dict.update({'data': pka_data, 'prop': 'ion_con'})
                 return _response_dict
 
-            # if 'kow_wph' in request_dict['props']:
+            # Runs kow_wph endpoint if it's user's requested property
             elif request_dict.get('prop') == 'kow_wph':
                 response = self.makeCallForLogD() # response as dict returned..
                 _response_dict.update({'data': self.getLogDForPH(response, request_dict['ph']), 'prop': 'kow_wph'})
                 return _response_dict
 
+            # Runs multiprop request if request prop is not kow_wph or ion_con
             else:
                 _post = self.get_sparc_query()
                 _url = self.base_url + self.multiproperty_url
@@ -164,14 +165,17 @@ class SparcCalc(Calculator):
 
                 if 'calculationResults' in _multi_response:
                     _multi_response = self.parseMultiPropResponse(_multi_response['calculationResults'], request_dict)
-                    for prop_obj in _multi_response:
-                        # if prop_obj['prop'] in request_dict['props'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
-                        if prop_obj['prop'] == request_dict['prop'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
-                            _prop = prop_obj['prop']
-                            _data = prop_obj['data']
-                            prop_obj.update(_response_dict)
-                            prop_obj.update({'prop': _prop, 'data': _data})
-                            return prop_obj
+                    return _multi_response
+
+                    # # Loops result props in response:
+                    # for prop_obj in _multi_response:
+                    #     if prop_obj['prop'] == request_dict['prop'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
+                    #         # Returns user-requsted result prop:
+                    #         _prop = prop_obj['prop']
+                    #         _data = prop_obj['data']
+                    #         prop_obj.update(_response_dict)
+                    #         prop_obj.update({'prop': _prop, 'data': _data})
+                    #         return prop_obj
 
         except Exception as err:
             logging.warning("!!! Exception occurred getting SPARC data: {} !!!".format(err))
