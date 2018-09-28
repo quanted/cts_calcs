@@ -183,7 +183,7 @@ class Pka(JchemProperty):
             logging.warning("no key 'mostBasic' in results")
             return pkaValList
 
-    def getParent(self):
+    def getParent(self, test=False):
         """
 		Gets parent image from result and adds structure
 		info such as formula, iupac, mass, and smiles.
@@ -191,13 +191,15 @@ class Pka(JchemProperty):
 		"""
         try:
             parentDict = {'image': self.results['result']['image']['image'], 'key': 'parent'}
-            parentDict.update(Calculator().getStructInfo(self.results['result']['structureData']['structure']))
+            if not test:
+                # Adds additional chem info from jchemws:
+                parentDict.update(Calculator().getStructInfo(self.results['result']['structureData']['structure']))
             return parentDict
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
 
-    def getMicrospecies(self):
+    def getMicrospecies(self, test=False):
         """
 		Gets microspecies from pKa result and appends 
 		structure info (i.e., formula, iupac, mass, and smiles)
@@ -210,8 +212,9 @@ class Pka(JchemProperty):
                 for ms in self.results['microspecies']:
                     msStructDict = {}  # list element in msList
                     msStructDict.update({'image': ms['image']['image'], 'key': ms['key']})
-                    structInfo = Calculator().getStructInfo(ms['structureData']['structure'])
-                    msStructDict.update(structInfo)
+                    if not test:
+                        structInfo = Calculator().getStructInfo(ms['structureData']['structure'])
+                        msStructDict.update(structInfo)
                     msList.append(msStructDict)
                 return msList
             except KeyError as ke:
@@ -315,12 +318,13 @@ class MajorMicrospecies(JchemProperty):
             "takeMajorTautomericForm": True
         }
 
-    def getMajorMicrospecies(self):
+    def getMajorMicrospecies(self, test=False):
         majorMsDict = {}
         try:
             majorMsDict.update({'image': self.results['result']['image']['image'], 'key': 'majorMS'})
-            structInfo = Calculator().getStructInfo(self.results['result']['structureData']['structure'])
-            majorMsDict.update(structInfo)  # add smiles, iupac, mass, formula key:values
+            if not test:
+                structInfo = Calculator().getStructInfo(self.results['result']['structureData']['structure'])
+                majorMsDict.update(structInfo)  # add smiles, iupac, mass, formula key:values
             return majorMsDict
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
@@ -351,7 +355,7 @@ class Tautomerization(JchemProperty):
             "ringChainTautomerizationAllowed": False
         }
 
-    def getTautomers(self):
+    def getTautomers(self, test=False):
         """
         returns dict w/ key 'tautStructs' and
         value is a list of tautomer images
@@ -364,8 +368,9 @@ class Tautomerization(JchemProperty):
 
             for taut in tauts:
                 tautStructDict = {'image': taut['image']['image'], 'key': 'taut'}
-                structInfo = Calculator().getStructInfo(taut['structureData']['structure'])
-                tautStructDict.update(structInfo)
+                if not test:
+                    structInfo = Calculator().getStructInfo(taut['structureData']['structure'])
+                    tautStructDict.update(structInfo)
                 tautStructDict.update({'dist': 100 * round(taut['dominantTautomerDistribution'], 4)})
                 tautImageList.append(tautStructDict)
 
@@ -389,14 +394,15 @@ class Stereoisomer(JchemProperty):
             "filterInvalid3DStructures": False
         }
 
-    def getStereoisomers(self):
+    def getStereoisomers(self, test=False):
         stereoList = []
         logging.warning("stereo results: {}".format(self.results))
         try:
             for stereo in self.results['result']:
                 stereoDict = {'image': stereo['image']['image'], 'key': 'stereo'}
-                structInfo = Calculator().getStructInfo(stereo['structureData']['structure'])
-                stereoDict.update(structInfo)
+                if not test:
+                    structInfo = Calculator().getStructInfo(stereo['structureData']['structure'])
+                    stereoDict.update(structInfo)
                 stereoList.append(stereoDict)
             return stereoList
         except KeyError as ke:

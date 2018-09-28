@@ -1,0 +1,16 @@
+{
+    "structure": "CC(N)C(O)=O",
+    "parameters": {
+        "result-display": {
+            "include": ["structureData", "image"],
+            "parameters": {
+                "structureData": "smiles"
+            }
+        },
+        "stereoisomerismType": "TETRAHEDRAL",
+        "maxStructureCount": 100,
+        "protectDoubleBondStereo": false,
+        "protectTetrahedralStereo": false,
+        "filterInvalid3DStructures": false
+    }
+}
