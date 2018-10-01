@@ -1,0 +1,600 @@
+{
+    "headers": {
+        "intrinsicSolubility": {
+            "name": "intrinsicSolubility",
+            "type": "DOUBLE",
+            "source": "CALCULATOR"
+        },
+        "category": {
+            "name": "category",
+            "type": "TEXT",
+            "source": "CALCULATOR"
+        },
+        "pHDependentSolubility": {
+            "name": "pHDependentSolubility",
+            "type": "CHART",
+            "source": "CALCULATOR"
+        },
+        "unit": {
+            "name": "unit",
+            "type": "TEXT",
+            "source": "CALCULATOR"
+        }
+    },
+    "intrinsicSolubility": 169.23086532148588,
+    "category": "HIGH",
+    "pHDependentSolubility": {
+        "key": "pHDependentSolubility",
+        "xAxis": "pH",
+        "yAxis": "solubility",
+        "yMin": 0.2789,
+        "yMax": 2.2786,
+        "values": [
+            {
+                "pH": 0,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 0.1,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 0.2,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 0.3,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 0.4,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 0.5,
+                "solubility": 2.2581
+            },
+            {
+                "pH": 0.6,
+                "solubility": 2.1593
+            },
+            {
+                "pH": 0.7,
+                "solubility": 2.0608
+            },
+            {
+                "pH": 0.8,
+                "solubility": 1.9626
+            },
+            {
+                "pH": 0.9,
+                "solubility": 1.8649
+            },
+            {
+                "pH": 1,
+                "solubility": 1.7678
+            },
+            {
+                "pH": 1.1,
+                "solubility": 1.6715
+            },
+            {
+                "pH": 1.2,
+                "solubility": 1.576
+            },
+            {
+                "pH": 1.3,
+                "solubility": 1.4816
+            },
+            {
+                "pH": 1.4,
+                "solubility": 1.3886
+            },
+            {
+                "pH": 1.5,
+                "solubility": 1.2973
+            },
+            {
+                "pH": 1.6,
+                "solubility": 1.2079
+            },
+            {
+                "pH": 1.7,
+                "solubility": 1.1209
+            },
+            {
+                "pH": 1.8,
+                "solubility": 1.0368
+            },
+            {
+                "pH": 1.9,
+                "solubility": 0.956
+            },
+            {
+                "pH": 2,
+                "solubility": 0.879
+            },
+            {
+                "pH": 2.1,
+                "solubility": 0.8064
+            },
+            {
+                "pH": 2.2,
+                "solubility": 0.7385
+            },
+            {
+                "pH": 2.3,
+                "solubility": 0.6759
+            },
+            {
+                "pH": 2.4,
+                "solubility": 0.6187
+            },
+            {
+                "pH": 2.5,
+                "solubility": 0.5673
+            },
+            {
+                "pH": 2.6,
+                "solubility": 0.5216
+            },
+            {
+                "pH": 2.7,
+                "solubility": 0.4815
+            },
+            {
+                "pH": 2.8,
+                "solubility": 0.4468
+            },
+            {
+                "pH": 2.9,
+                "solubility": 0.4172
+            },
+            {
+                "pH": 3,
+                "solubility": 0.3921
+            },
+            {
+                "pH": 3.1,
+                "solubility": 0.371
+            },
+            {
+                "pH": 3.2,
+                "solubility": 0.3536
+            },
+            {
+                "pH": 3.3,
+                "solubility": 0.3392
+            },
+            {
+                "pH": 3.4,
+                "solubility": 0.3274
+            },
+            {
+                "pH": 3.5,
+                "solubility": 0.3178
+            },
+            {
+                "pH": 3.6,
+                "solubility": 0.31
+            },
+            {
+                "pH": 3.7,
+                "solubility": 0.3038
+            },
+            {
+                "pH": 3.8,
+                "solubility": 0.2987
+            },
+            {
+                "pH": 3.9,
+                "solubility": 0.2947
+            },
+            {
+                "pH": 4,
+                "solubility": 0.2914
+            },
+            {
+                "pH": 4.1,
+                "solubility": 0.2888
+            },
+            {
+                "pH": 4.2,
+                "solubility": 0.2867
+            },
+            {
+                "pH": 4.3,
+                "solubility": 0.2851
+            },
+            {
+                "pH": 4.4,
+                "solubility": 0.2838
+            },
+            {
+                "pH": 4.5,
+                "solubility": 0.2827
+            },
+            {
+                "pH": 4.6,
+                "solubility": 0.2819
+            },
+            {
+                "pH": 4.7,
+                "solubility": 0.2812
+            },
+            {
+                "pH": 4.8,
+                "solubility": 0.2807
+            },
+            {
+                "pH": 4.9,
+                "solubility": 0.2803
+            },
+            {
+                "pH": 5,
+                "solubility": 0.2799
+            },
+            {
+                "pH": 5.1,
+                "solubility": 0.2797
+            },
+            {
+                "pH": 5.2,
+                "solubility": 0.2795
+            },
+            {
+                "pH": 5.3,
+                "solubility": 0.2793
+            },
+            {
+                "pH": 5.4,
+                "solubility": 0.2792
+            },
+            {
+                "pH": 5.5,
+                "solubility": 0.2791
+            },
+            {
+                "pH": 5.6,
+                "solubility": 0.279
+            },
+            {
+                "pH": 5.7,
+                "solubility": 0.279
+            },
+            {
+                "pH": 5.8,
+                "solubility": 0.2789
+            },
+            {
+                "pH": 5.9,
+                "solubility": 0.2789
+            },
+            {
+                "pH": 6,
+                "solubility": 0.2789
+            },
+            {
+                "pH": 6.1,
+                "solubility": 0.2789
+            },
+            {
+                "pH": 6.2,
+                "solubility": 0.2789
+            },
+            {
+                "pH": 6.3,
+                "solubility": 0.279
+            },
+            {
+                "pH": 6.4,
+                "solubility": 0.279
+            },
+            {
+                "pH": 6.5,
+                "solubility": 0.2791
+            },
+            {
+                "pH": 6.6,
+                "solubility": 0.2792
+            },
+            {
+                "pH": 6.7,
+                "solubility": 0.2794
+            },
+            {
+                "pH": 6.8,
+                "solubility": 0.2796
+            },
+            {
+                "pH": 6.9,
+                "solubility": 0.2798
+            },
+            {
+                "pH": 7,
+                "solubility": 0.2801
+            },
+            {
+                "pH": 7.1,
+                "solubility": 0.2805
+            },
+            {
+                "pH": 7.2,
+                "solubility": 0.2809
+            },
+            {
+                "pH": 7.3,
+                "solubility": 0.2815
+            },
+            {
+                "pH": 7.4,
+                "solubility": 0.2823
+            },
+            {
+                "pH": 7.5,
+                "solubility": 0.2832
+            },
+            {
+                "pH": 7.6,
+                "solubility": 0.2844
+            },
+            {
+                "pH": 7.7,
+                "solubility": 0.2858
+            },
+            {
+                "pH": 7.8,
+                "solubility": 0.2877
+            },
+            {
+                "pH": 7.9,
+                "solubility": 0.29
+            },
+            {
+                "pH": 8,
+                "solubility": 0.2929
+            },
+            {
+                "pH": 8.1,
+                "solubility": 0.2965
+            },
+            {
+                "pH": 8.2,
+                "solubility": 0.301
+            },
+            {
+                "pH": 8.3,
+                "solubility": 0.3066
+            },
+            {
+                "pH": 8.4,
+                "solubility": 0.3136
+            },
+            {
+                "pH": 8.5,
+                "solubility": 0.3222
+            },
+            {
+                "pH": 8.6,
+                "solubility": 0.3328
+            },
+            {
+                "pH": 8.7,
+                "solubility": 0.3458
+            },
+            {
+                "pH": 8.8,
+                "solubility": 0.3616
+            },
+            {
+                "pH": 8.9,
+                "solubility": 0.3807
+            },
+            {
+                "pH": 9,
+                "solubility": 0.4036
+            },
+            {
+                "pH": 9.1,
+                "solubility": 0.4309
+            },
+            {
+                "pH": 9.2,
+                "solubility": 0.4629
+            },
+            {
+                "pH": 9.3,
+                "solubility": 0.5002
+            },
+            {
+                "pH": 9.4,
+                "solubility": 0.5429
+            },
+            {
+                "pH": 9.5,
+                "solubility": 0.5914
+            },
+            {
+                "pH": 9.6,
+                "solubility": 0.6456
+            },
+            {
+                "pH": 9.7,
+                "solubility": 0.7054
+            },
+            {
+                "pH": 9.8,
+                "solubility": 0.7706
+            },
+            {
+                "pH": 9.9,
+                "solubility": 0.8408
+            },
+            {
+                "pH": 10,
+                "solubility": 0.9156
+            },
+            {
+                "pH": 10.1,
+                "solubility": 0.9945
+            },
+            {
+                "pH": 10.2,
+                "solubility": 1.077
+            },
+            {
+                "pH": 10.3,
+                "solubility": 1.1625
+            },
+            {
+                "pH": 10.4,
+                "solubility": 1.2507
+            },
+            {
+                "pH": 10.5,
+                "solubility": 1.3411
+            },
+            {
+                "pH": 10.6,
+                "solubility": 1.4333
+            },
+            {
+                "pH": 10.7,
+                "solubility": 1.527
+            },
+            {
+                "pH": 10.8,
+                "solubility": 1.6219
+            },
+            {
+                "pH": 10.9,
+                "solubility": 1.7178
+            },
+            {
+                "pH": 11,
+                "solubility": 1.8146
+            },
+            {
+                "pH": 11.1,
+                "solubility": 1.9119
+            },
+            {
+                "pH": 11.2,
+                "solubility": 2.0099
+            },
+            {
+                "pH": 11.3,
+                "solubility": 2.1082
+            },
+            {
+                "pH": 11.4,
+                "solubility": 2.2069
+            },
+            {
+                "pH": 11.5,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 11.6,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 11.7,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 11.8,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 11.9,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.1,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.2,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.3,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.4,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.5,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.6,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.7,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.8,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 12.9,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.1,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.2,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.3,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.4,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.5,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.6,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.7,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.8,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 13.9,
+                "solubility": 2.2786
+            },
+            {
+                "pH": 14,
+                "solubility": 2.2786
+            }
+        ]
+    },
+    "unit": "MGPERML"
+}

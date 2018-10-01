@@ -1,0 +1,13 @@
+{
+	"structure": "CC(N)C(O)=O",
+    "parameters": {
+        "result-display": {
+            "include": ["structureData", "image"],
+            "parameters": {
+                "structureData": "smiles"
+            }
+        },
+        "pHStep": 0.1,
+        "doublePrecision": 2
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "headers": {
+        "result": {
+            "name": "result",
+            "type": "MOLECULE",
+            "source": "CALCULATOR"
+        }
+    },
+    "result": {
+        "headers": {
+            "structureData": {
+                "name": "structureData",
+                "type": "STRUCTUREDATA",
+                "source": "GENERATED"
+            },
+            "image": {
+                "name": "image",
+                "type": "IMAGE",
+                "source": "GENERATED"
+            }
+        },
+        "structureData": {
+            "structure": "CC([NH3+])C([O-])=O",
+            "format": "smiles",
+            "contentUrl": "http://localhost:8080/webservices/rest-v0/util/export/struc_0617ecba2f41dfaeab8545fec26acd4e?format=smiles&contentName=structure",
+            "contentBaseUrl": "http://localhost:8080/webservices/rest-v0/util/export/struc_0617ecba2f41dfaeab8545fec26acd4e"
+        },
+        "image": {
+            "width": 300,
+            "height": 161,
+            "type": "png",
+            "image": "iVBORw0KGgoAAAANSUhEUgAAASwAAAChCAYAAAB9JILHAAAIm0lEQVR42u3df2hV1wHA8dD8xhAcBqugtBT/KGMMxYQUm2AKCVgNQYLBFRQ2KxJK/xijkEH6RzrRCYMqiOvWsrnhhqBW/wjMFaFBRIZEqohthY4JEykom2idE+u4O/d5UoIk0aTVnJv3KXy49r2HpeeGL+eenHdvRZZlFQBFYBAAwQIQLECwAAQLQLAAwQIQLADBAgQLQLAABAsQLADBAhAsQLAABAtAsADBAhAsAMECBAtAsAAECxAsAMHiMU5i6TRO/71JvL5u3brTtbW1d+vr6+9s2bLlr+G1FuOMYJFUsPbt2/fHGKjlwTNBVfCTpUuXXg3HVmONYJFKsHrzmdUk723u6Og4a6wRLJII1rZt2/4Sjj2TvJ/PtpYZawSLJILV2Nh4KxxrjCeCxRMP1lQe5++orq6+ZywRLMywQLCYZrAWDw4OHsm3KuSGhoYOhdeeHftc/l44dk/x3+k21ggWTyVYXV1dZ8KxP25VyBfRB/v6+kbGfXZ9b2/vyUn+nmV79uw5YKwRLGbtkvDhdauBgYGjufDn78fXGvPINTc3XwzHpcYawWI2gpXPsF6Ll4UPv/fWihUrPqusrLyfXzrmm0nDa88ZZwSLp27nzp0H582bdzuPkd3rCBaFcPny5V2tra0XjAWCRRFU2XuFYFEUNQsXLrxuHBAskpMvpIfjmrFF92vXru3ITXNx/3iw33giWDxpL2zevPlEfp+rfNE9X8OawW8jD8av+3QYTwSL1LdPLAq+Cj4PGowJgkXq0eqPs6y3jQeCRerBqgrOBf8NlhgTBIvUo9UWfB0cNh4IFkWI1gEL8AgWRQnWkuDL4IugzpggWKQerTctwCNYFClao3GrgwV4BIvkg9URF+CPGQ8EiyJE6714abjeeCBYpB6s+cGNuABvBzyCRWEW4H9uPBAsirIDPl/PmhNPiV658reZcytYzN1oLY/BGhYsBIsiRGtvvDRcU+RQPcy5FSzmZrCagutxAb7KDAvBoigL8NsFC8GiCNE6FW9BsyzBCL3+qEBNFSshEyzmXrCaU1yAz2Pzzjtfngp/XiBYggXjo/VBvDTsTmyGtfrSpewDwRIsmGgB/nIqO+DHYvPxx9mfw7FFsAQLxkdrU5xl/TN/RNhMLFiwav/Klb+ZsZaWfYsmiM3ieGkoWIIF3wRrWQzWjIVgZRPtjXpcLS3vL58kNj+LJgzWVJxbwWJuButE/G1ha4pbFeIsa7EZlmAhVt1xljSU8N6q5XE9aybBWvzhh9mRtrYDd3LDw9mh8Nqzzr1gUbxY1QVX4m1n5qe8GfTq1ezX+W8OpxusgYF/nAnH/iDf0f9MMLhr140R51+wKF6wfhpnV/0F2L3+vR07rp/8Li4JX3rp9/ecf8GiWLEae6T9udS+TzhFbDZ/y2DlM6zX4mWhnwPBokDB2p3ahtEn6aOPsoOrV//pdr6OFf691c+AYFG8r+QcKMP//11vvHH+gp8DwaI4wRqZS3cdnaYqa1iCRXFi9ePUtjE8ZTWvvnrsup8FwaIY2xg+j4+vL4sn52zdeuazcFwzbtF9R+RnQrBIPFhDKW5jeMJe2L37PydefvkPd/NF93wNy8+CYJF+rJbEDaJ/K/ptkREs5n6wDsfZVZvxQLBIOVZt8beCB40HgkXqwRqNd2NYYjwQLFKO1Y/mwtNxECzKYxvDlfj8wTpjgmCRcrB+FWdXG4wHgkXKsVoWF9pHbWNAsEg9WMdisH5gPBAsUo5VR7wU3G88ECxSjlVVvAzMnzW4yJggWKQcrP44u3rLeCBYpByrpnHbGBqMCYJFEbYxdBoPBIuUY/VifKjEiPFAsEg9WIfj9wWXGw8Eq7xszHp6TmX19Xey2tq7WW/vyfBab8KxWh/3XO117hCscjI6+m7W1ZU/LfiV7MEtdXOd2apV50vvPfz5/DFZ+f3RZ2g4aHpwJ9CZ+kXwr+CmuzEgWOWlM+voOBuONRO815A1N1+MIRsfrOOlUzRDIVhZ04OF8m/rPecPwSonAwNHw7FnykvFoaFDDwWrIXh+po4Fi4KKmflhnFn93d0YEKxy09h4a5LZ1Zia+JlU1q72uhsDglWuKivvP/Iz1dX3EonVxhirT92NAcEyw0p6hhX+eS64HVyzqx3BKt81rLVTfKY3Gxw8ktAl4SYL7ghW+WovbV/IsokWsOuy1tYLE/yWcLa3NeRPcv5fsNb5Q7DKzc2b27P29k9KWxzG78PKXzt9es8E+7BS2dZwyVoWglWeekq72/Nd7rm+vpFJd7rP7raGMe/HaG1y7hAsUv8eYUO8rcwVN+1DsChCtDbEWZbvEyJYFCJax2O0mo0HgkXqwRp7tNeIBXgEiyJE65dxltVvPBAsUg9WXbyn+41gvjFBsEg9Wt353q5tFuARLIrgdxUVw/+uqPg6c8tkBIvkVVS8GHwVnMsswCNYFCBab8evAL1pPBAsUg9WXfBFcD1oMiYIFqlHa0OcZVmAR7AoRLROxGi1GQ8Ei9SDtSQuwI9agEewKNIC/FbjgWBRhAX4KxbgESyKEq3uOMs6YDwQLIoQrcMxWm5Bg2CRfLCej5eGncYDwQIEC0CwYOpLyOwbxgPBAgQLHm1j1tNzKquvv1N6/mL+LMbJnr8IgsWsGR19N+vqOhP+/Eo2/gnXq1adL71njBAsEtGZdXScDceaCd5ryJqbL8aQGSsEi1k2MHA0HHumvFQcGjpkrBAsZl9j461JZldjauJnjBWCxSyrrLz/yM9UV98zVggWZlgIFkxzDWvtFJ/pzQYHjxgrBIsUtJe2L2RZ3QTv1WWtrRf8lhDBIh03b27P2ts/KW1xGL8PK3/t9Ok9xgjBIjU9pd3t+S73XF/fiJ3uCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFsB37v8FyOUWE7srFwAAAABJRU5ErkJggg==",
+            "imageUrl": "http://localhost:8080/webservices/rest-v0/util/display/struc_0617ecba2f41dfaeab8545fec26acd4e_300x161_s28.png"
+        }
+    }
+}

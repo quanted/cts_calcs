@@ -1,0 +1,27 @@
+{
+	"structure": "",
+    "parameters": {
+        "result-display": {
+            "include": ["structureData", "image"],
+            "parameters": {
+                "structureData": "smiles"
+            }
+        },
+        "calculationType": "DOMINANT",
+        "maxStructureCount": 1000,
+        "considerPH": true,
+        "pH": 7.0,
+        "enableMaxPathLength": true,
+        "maxPathLength": 4,
+        "rationalTautomerGenerationMode": false,
+        "singleFragmentMode": true,
+        "protectAromaticity": true,
+        "protectCharge": true,
+        "excludeAntiAromaticCompounds": true,
+        "protectDoubleBondStereo": false,
+        "protectAllTetrahedralStereoCenters": false,
+        "protectLabeledTetrahedralStereoCenters": false,
+        "protectEsterGroups": true,
+        "ringChainTautomerizationAllowed": false
+    }
+}
