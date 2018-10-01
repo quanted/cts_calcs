@@ -84,6 +84,22 @@ class ChemInfo(object):
 			'request_post': None
 		}
 
+	def create_cheminfo_table(self, workflow_obj):
+		"""
+		Creates object for workflow output page's user-input table.
+		"""
+		data = [
+			{'Entered chemical': workflow_obj.chem_struct},
+			{'Initial SMILES': workflow_obj.orig_smiles},
+			{'Standardized SMILES': workflow_obj.smiles},
+			{'IUPAC': workflow_obj.name},
+			{'Formula': workflow_obj.formula},
+			{'CAS #': workflow_obj.cas},
+			{'Average Mass': workflow_obj.mass},
+			{'Monoisotopic Mass': workflow_obj.exactMass}
+		]
+		return data
+
 
 	def get_cheminfo(self, request_post):
 		"""
