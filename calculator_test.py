@@ -280,8 +280,8 @@ class TestWSCalc(Calculator):
 		for key in request_dict.keys():
 			if not key == 'nodes':
 				_response_dict[key] = request_dict.get(key)
-		# _response_dict.update({'request_post': request_dict})
-		_response_dict.update({'request_post': {'service': "pchemprops"}})  # TODO: get rid of 'request_post' and double data
+		_response_dict.update({'request_post': request_dict})
+		# _response_dict.update({'request_post': {'service': "pchemprops"}})  # TODO: get rid of 'request_post' and double data
 
 
 		# filter smiles before sending to TEST:

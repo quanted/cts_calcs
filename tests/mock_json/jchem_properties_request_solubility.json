@@ -1,0 +1,15 @@
+{
+    "structure": "CC(N)C(O)=O",
+    "parameters": {
+        "result-display": {
+            "include": ["structureData", "image"],
+            "parameters": {
+                "structureData": "smiles"
+            }
+        },
+        "pHLower": 0.0,
+        "pHUpper": 14.0,
+        "pHStep": 0.1,
+        "unit": "MGPERML"
+    }
+}

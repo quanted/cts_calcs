@@ -65,24 +65,85 @@ class ChemInfo(object):
 	Captures the objects and key:vals used for obtaining
 	chemical data.
 	"""
-	def __init__(self, chemical=None):
-		self.chem_obj = {
-			'chemical': chemical,  # user-entered molecule of any chemaxon format
-			'orig_smiles': "",  # 'chemical' converted to smiles (pre-filtering)
-			'smiles': "",  # result of orig_smiles after cts filtering (standardized smiles)
-			'preferredName': "",
-			'iupac': "",
-			'formula': "",
-			'cas': "",
-			'dtxsid': "",
-			'mass': "",
-			'exactMass': ""
-		}
+	def __init__(self, chemical=""):
+		self.chem_obj = [
+			{
+				'name': "chemical",
+				'label': "Entered Chemical",
+				'value': chemical
+			},
+			{
+				'name': "orig_smiles",
+				'label': "Initial SMILES",
+				'value': ""
+			},
+			{
+				'name': "smiles",
+				'label': "Standardized SMILES",
+				'value': ""
+			},
+			{
+				'name': "preferredName",
+				'label': "Preferred Name",
+				'value': ""
+			},
+			{
+				'name': "iupac",
+				'label': "IUPAC",
+				'value': ""
+			},
+			{
+				'name': "formula",
+				'label': "Formula",
+				'value': ""
+			},
+			{
+				'name': "casrn",
+				'label': "Preferred CAS",
+				'value': ""
+			},
+			{
+				'name': "cas",
+				'label': "Associated CAS",
+				'value': ""
+			},
+			{
+				'name': "dtxsid",
+				'label': "DTXSID",
+				'value': ""
+			},
+			{
+				'name': "mass",
+				'label': "Average Mass (g/mol)",
+				'value': float
+			},
+			{
+				'name': "exactmass",
+				'label': "Monoisotopic Mass (g/mol)",
+				'value': float
+			}
+		]
 		self.wrapped_post = {
 			'status': False,
 			'data': None,
 			'request_post': None
 		}
+
+	def create_cheminfo_table(self, workflow_obj):
+		"""
+		Creates object for workflow output page's user-input table.
+		"""
+		data = [
+			{'Entered chemical': workflow_obj.chem_struct},
+			{'Initial SMILES': workflow_obj.orig_smiles},
+			{'Standardized SMILES': workflow_obj.smiles},
+			{'IUPAC': workflow_obj.name},
+			{'Formula': workflow_obj.formula},
+			{'CAS #': workflow_obj.cas},
+			{'Average Mass': workflow_obj.mass},
+			{'Monoisotopic Mass': workflow_obj.exactMass}
+		]
+		return data
 
 
 	def get_cheminfo(self, request_post):
