@@ -7,6 +7,8 @@ import logging
 import sys
 from numpy import testing as npt
 from tabulate import tabulate
+from unittest.mock import Mock, patch
+from nose.tools import assert_is_not_none
 
 # local requirements (running pytest at qed level):
 _path = os.path.dirname(os.path.abspath(__file__))
@@ -115,32 +117,75 @@ class TestCalculators(unittest.TestCase):
 
 
 
-	# def test_tautomerization(self):
+	# def test_get_melting_point(self):
 	# 	"""
-	# 	Testing Tautomerization class getTautomers function,
-	# 	which grabs tautomers of parent chemical.
+	# 	Testing calculator module's get_melting_point function.
 	# 	"""
-	# 	print(">>> Running tautomers test..")
 
-	# 	expected_results = [2, 99.66, 0.33]
+	# 	print(">>> Running calculator get_melting_point test..")
 
-	# 	test_json = self.get_example_result_json('tautomerization')
-	# 	test_obj = self.jc.getPropObject('tautomerization')
-	# 	test_obj.results = test_json
 
-	# 	tauts = test_obj.getTautomers(True)
 
-	# 	taut_dist_1 = tauts[0]['dist']
-	# 	taut_dist_2 = tauts[1]['dist']
+	def test_get_chem_details(self):
+		"""
+		Testing calculator module's getChemDetails function, which
+		calls JchemWS for chemical information/details.
+		"""
 
-	# 	results = [len(tauts), taut_dist_1, taut_dist_2]
+		print(">>> Running calculator getChemDetails test..")
 
-	# 	try:
-	# 		npt.assert_allclose(results, expected_results, rtol=1e-2, atol=0, err_msg='', verbose=True)
-	# 	finally:
-	# 		tab = [results, expected_results]
-	# 		print("\n")
-	# 		print(inspect.currentframe().f_code.co_name)
-	# 		print(tabulate(tab, headers='keys', tablefmt='rst'))
+		test_chemical = "CC(=O)OC1=C(C=CC=C1)C(O)=O"  # chemical used in expected request and results
+
+		# Gets expected response JSON:
+		expected_json = self.get_example_result_json("chem_details")
+
+		# Testing getChemDetails with mock of web_call function:
+		with patch('qed.cts_app.cts_calcs.calculator.Calculator.web_call') as service_mock:
 			
-	# 	return
+			# Sets web_call mock to return expected json when getChemDetails calls it:
+			service_mock.return_value = expected_json
+			
+			# Calls getChemDetails, which will use the mock web_call for unit testing:
+			response = self.calc_obj.getChemDetails({'chemical': test_chemical})
+
+		try:
+			# Compares function response with expected json:
+			self.assertDictEqual(response, expected_json)
+		finally:
+			tab = [[response], [expected_json]]
+			print("\n")
+			print(inspect.currentframe().f_code.co_name)
+			print(tabulate(tab, headers='keys', tablefmt='rst'))
+
+
+
+	def test_smiles_to_image(self):
+		"""
+		Testing calculator module's smilesToImage function, which calls
+		JchemWS for converting a SMILES to an image.
+		"""
+
+		print(">>> Running calculator smilesToImage test..")
+
+		test_chemical = "CC(=O)OC1=C(C=CC=C1)C(O)=O"
+
+		expected_json = self.get_example_result_json("smilestoimage")  # gets expected response json
+
+		# Testing function with a mock of web_call function:
+		with patch('qed.cts_app.cts_calcs.calculator.Calculator.web_call') as service_mock:
+
+			# Sets web_call mock to return expected json when test function calls it:
+			service_mock.return_value = expected_json
+
+			# Calls test function, which will use the mock web_call for unit testing:
+			response = self.calc_obj.smilesToImage({'smiles': test_chemical})
+
+			try:
+				# Compares function response with expected json:
+				self.assertDictEqual(response, expected_json)
+			finally:
+				tab = [[response], [expected_json]]
+				print("\n")
+				print(inspect.currentframe().f_code.co_name)
+				print(tabulate(tab, headers='keys', tablefmt='rst'))
+
