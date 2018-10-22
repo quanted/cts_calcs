@@ -159,18 +159,3 @@ class JchemCalc(Calculator):
                     'data': "Cannot reach ChemAxon calculator"
                 })
                 return _response_dict
-
-
-
-    def validate_response(self, response):
-        """
-        Validates jchem response.
-        Returns False if data is null, or any other
-        values that indicate an error
-        """
-        if response.status_code != 200:
-            logging.warning("cts_celery calculator_chemaxon -- jchem server response status not 200, but: {}".format(response.status_code))
-            return False
-
-        # TODO: verify if blank data, finding the source of the empty water sol values... 
-        return True
