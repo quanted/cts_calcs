@@ -5,11 +5,13 @@ import os
 from .calculator import Calculator
 
 
-class JchemProperty(object):
+class JchemProperty(Calculator):
     """
-    Jchem Physicochemical Properties
+    Jchem Webservices Physicochemical Properties API handling.
     """
     def __init__(self):
+
+        Calculator.__init__(self)  # inherit calculator base class
         
         self.request_timeout = 10
         self.headers = {'Content-Type': 'application/json'}
@@ -22,26 +24,16 @@ class JchemProperty(object):
         self.postData = {}  # POST data in json
         self.ph = 7.0
 
-
-
     # def getJchemPropData(self, chemical, prop, ph=7.0, method=None, mass=None):
     def getJchemPropData(self, request_dict):
         """
         Calls jchem web services from chemaxon and
         wraps data in a CTS data object (keys: calc, prop, method, data)
         """
-
-        # resultDict = {"calc": "chemaxon", "prop": prop}
-
         prop_obj = self.getPropObject(request_dict.get('prop'))
         prop_obj.results = self.make_data_request(request_dict.get('chemical'), prop_obj, request_dict.get('method'))
-        
-        logging.warning("MADE REQUEST AT GETJCHEMPROPDATA")
-        logging.warning("Prop Obj: {}".format(dir(prop_obj)))
 
         prop_obj.results = prop_obj.get_data(request_dict)
-
-        logging.warning("!!!!! RESULTS: {}".format(prop_obj.results))
 
         _result_dict = {
             'calc': 'chemaxon',
@@ -55,7 +47,6 @@ class JchemProperty(object):
             _result_dict['method'] = request_dict.get('method')
 
         return _result_dict
-
 
     @classmethod
     def getPropObject(self, prop):
@@ -81,8 +72,6 @@ class JchemProperty(object):
         else:
             raise ValueError("Error initializing jchem property class..")
 
-
-
     def make_data_request(self, structure, prop_obj, method=None):
         url = self.baseUrl + prop_obj.url
         prop_obj.postData.update({
@@ -98,12 +87,8 @@ class JchemProperty(object):
             "parameters": prop_obj.postData
         }
 
-        logging.info("JCHEM REQUEST URL: {}".format(url))
-        # logging.info("JCHEM REQUEST POST: {}".format(post_data))
-
         if method:
             post_data['parameters']['method'] = method
-
 
         _valid_result = False  # for retry logic
         _retries = 0
@@ -111,15 +96,10 @@ class JchemProperty(object):
             # retry data request to chemaxon server until max retries or a valid result is returned
             try:
                 response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
-                logging.warning("RESPONSE: {}".format(response))
                 _valid_result = self.validate_response(response)
                 if _valid_result:
-                    # self.results = json.loads(response.content)
                     prop_obj.results = json.loads(response.content)
-                    # logging.warning("RETURNING: {}".format(response.content))
                     return json.loads(response.content)
-                    # logging.info("Response from jchem server: {}".format(prop_obj.results))
-                    break
                 _retries += 1
             except Exception as e:
                 logging.warning("Exception in jchem_calculator.py: {}".format(e))
@@ -138,6 +118,54 @@ class JchemProperty(object):
             logging.warning("cts_celery calculator_chemaxon -- jchem server response: {} \n {}".format(response, response.content))
             return False
         return True
+
+    def booleanize(self, value):
+        """
+        django checkbox comes back as 'on' or 'off',
+        or True/False depending on version, so this
+        makes sure they're True/False
+        """
+        if value == 'on' or value == 'true':
+            return True
+        if value == 'off' or value == 'false':
+            return False
+        if isinstance(value, bool):
+            return value
+
+    def getSpeciationResults(self, jchemResultObjects):
+        """
+        Loops jchemPropObjects (speciation results) from chemaxon,
+        grabs the results and creates an object, jchemDictResults, that's
+        used for chemspec_tables and data downloads.
+        """
+        jchem_results_obj = {}
+        for key, value in jchemResultObjects.items():
+            
+            if not value:
+                continue
+
+            if key == 'pKa':
+                jchem_results_obj.update({
+                    'pka': jchemResultObjects['pKa'].getMostAcidicPka(),
+                    'pkb': jchemResultObjects['pKa'].getMostBasicPka(),
+                    'pka_parent': jchemResultObjects['pKa'].getParent(),
+                    'pka_microspecies': jchemResultObjects['pKa'].getMicrospecies(),
+                    'pka_chartdata': jchemResultObjects['pKa'].getChartData()
+                })
+            elif key == 'majorMicrospecies':
+                jchem_results_obj.update({key: jchemResultObjects['majorMicrospecies'].getMajorMicrospecies()})
+            elif key == 'isoelectricPoint':
+                jchem_results_obj.update({
+                    key: jchemResultObjects['isoelectricPoint'].getIsoelectricPoint(),
+                    'isopt_chartdata': jchemResultObjects['isoelectricPoint'].getChartData()
+                })
+            elif key == 'tautomerization':
+                jchem_results_obj.update({'tautomers': jchemResultObjects['tautomerization'].getTautomers()})
+            elif key == 'stereoisomers':
+                jchem_results_obj.update({key: jchemResultObjects['stereoisomers'].getStereoisomers()})
+
+        return jchem_results_obj
+
 
 
 class Pka(JchemProperty):
@@ -193,7 +221,7 @@ class Pka(JchemProperty):
             parentDict = {'image': self.results['result']['image']['image'], 'key': 'parent'}
             if not test:
                 # Adds additional chem info from jchemws:
-                parentDict.update(Calculator().getStructInfo(self.results['result']['structureData']['structure']))
+                parentDict.update(self.getStructInfo(self.results['result']['structureData']['structure']))
             return parentDict
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
@@ -213,7 +241,7 @@ class Pka(JchemProperty):
                     msStructDict = {}  # list element in msList
                     msStructDict.update({'image': ms['image']['image'], 'key': ms['key']})
                     if not test:
-                        structInfo = Calculator().getStructInfo(ms['structureData']['structure'])
+                        structInfo = self.getStructInfo(ms['structureData']['structure'])
                         msStructDict.update(structInfo)
                     msList.append(msStructDict)
                 return msList
@@ -246,15 +274,6 @@ class Pka(JchemProperty):
           +  pchem - most acidic and most basic),
           +  speciation - acidic/basic, major microspecies, isoelectric point
         """
-        
-        # initially just getting acidic/basic pka values,
-        # after all, there are classes for microspecies and isoelectr point
-
-        # self.make_data_request(request_dict.get('chemical'), self, None)
-
-        # Sorts all pKa values (acidic or basic) in ascending order
-        # _pkas = self.getMostAcidicPka() + self.getMostBasicPka()
-        # _pkas.sort()
 
         # Now want it back to pKa and pKb like it used to be:
         pka_values = {
@@ -266,8 +285,8 @@ class Pka(JchemProperty):
             # if both lists are empty, return "none"
             pka_values = None
 
-        # return {'pKa': _pkas}
         return pka_values
+
 
 
 class IsoelectricPoint(JchemProperty):
@@ -308,6 +327,7 @@ class IsoelectricPoint(JchemProperty):
             return valsList
 
 
+
 class MajorMicrospecies(JchemProperty):
     def __init__(self):
         JchemProperty.__init__(self)
@@ -323,12 +343,13 @@ class MajorMicrospecies(JchemProperty):
         try:
             majorMsDict.update({'image': self.results['result']['image']['image'], 'key': 'majorMS'})
             if not test:
-                structInfo = Calculator().getStructInfo(self.results['result']['structureData']['structure'])
+                structInfo = self.getStructInfo(self.results['result']['structureData']['structure'])
                 majorMsDict.update(structInfo)  # add smiles, iupac, mass, formula key:values
             return majorMsDict
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
+
 
 
 class Tautomerization(JchemProperty):
@@ -369,7 +390,7 @@ class Tautomerization(JchemProperty):
             for taut in tauts:
                 tautStructDict = {'image': taut['image']['image'], 'key': 'taut'}
                 if not test:
-                    structInfo = Calculator().getStructInfo(taut['structureData']['structure'])
+                    structInfo = self.getStructInfo(taut['structureData']['structure'])
                     tautStructDict.update(structInfo)
                 tautStructDict.update({'dist': 100 * round(taut['dominantTautomerDistribution'], 4)})
                 tautImageList.append(tautStructDict)
@@ -379,6 +400,7 @@ class Tautomerization(JchemProperty):
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
+
 
 
 class Stereoisomer(JchemProperty):
@@ -396,18 +418,18 @@ class Stereoisomer(JchemProperty):
 
     def getStereoisomers(self, test=False):
         stereoList = []
-        logging.warning("stereo results: {}".format(self.results))
         try:
             for stereo in self.results['result']:
                 stereoDict = {'image': stereo['image']['image'], 'key': 'stereo'}
                 if not test:
-                    structInfo = Calculator().getStructInfo(stereo['structureData']['structure'])
+                    structInfo = self.getStructInfo(stereo['structureData']['structure'])
                     stereoDict.update(structInfo)
                 stereoList.append(stereoDict)
             return stereoList
         except KeyError as ke:
             logging.warning("key error: {} @ jchem rest".format(ke))
             return None
+
 
 
 class Solubility(JchemProperty):
@@ -445,7 +467,6 @@ class Solubility(JchemProperty):
                 if item_ph == ph:
                     return item_ws
             return "N/A"
-            # return 1000.0 * self.results['intrinsicSolubility']
         except KeyError as ke:
             logging.warning("key error: {}".format(ke))
             return None
@@ -455,8 +476,6 @@ class Solubility(JchemProperty):
         Converts WS values of Log into mg/L.
         Units of mass in mol/g
         """
-        logging.info("MASS FOR CONVERSION: {}".format(mass))
-        logging.info("LOG VAL FOR CONVERSION: {}".format(log_val))
         try:
             return 1000 * float(mass) * 10**(log_val)
         except TypeError as e:
@@ -464,19 +483,13 @@ class Solubility(JchemProperty):
             return None
 
     def get_data(self, request_dict):
-        logging.warning("REQUEST DICT AT WS GET_DATA: {}".format(request_dict))
-        # self.make_data_request(request_dict.get('chemical'), self, None)
-        logging.warning("PH: {}".format(request_dict.get('ph')))
         if request_dict.get('prop') == 'water_sol_ph':
             # pH dependent water solubility
-            logging.warning("Getting ph water sol")
             _result = self.getPHDependentSolubility(request_dict.get('ph'))
             _result = self.convertLogToMGPERL(_result, request_dict.get('mass'))
             return _result
         elif request_dict.get('prop') == 'water_sol':
-            logging.warning("Getting intrinsic water sol")
             _result = self.getIntrinsicSolubility()
-            # logging.warning("result: {}".format(_result))
             return _result
         else:
             return None
@@ -509,8 +522,8 @@ class LogP(JchemProperty):
             return None
 
     def get_data(self, request_dict):
-        # self.make_data_request(request_dict.get('chemical'), self, request_dict('method'))
         return self.getLogP()
+
 
 
 class LogD(JchemProperty):
@@ -548,5 +561,4 @@ class LogD(JchemProperty):
             return None
 
     def get_data(self, request_dict):
-        # self.make_data_request(request_dict.get('chemical'), self, request_dict('method'))
         return self.getLogD(request_dict.get('ph'))

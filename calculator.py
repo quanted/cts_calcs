@@ -113,7 +113,7 @@ class Calculator(object):
 			'node': None,
 			'request_post': None,
 			'data': None,
-			'error': False,  # ehh?
+			'error': False,
 		}
 
 
@@ -295,7 +295,6 @@ class Calculator(object):
 		chemStruct = request_obj.get('chemical')  # chemical in <cml> format (marvin sketch)
 		data = {
 			"structure": chemStruct,
-			# "inputFormat": "mrv",
 			"parameters": "smiles"
 		}
 		url = self.jchem_server_url + self.export_endpoint
@@ -364,8 +363,6 @@ class Calculator(object):
 		_type_response = {
 			'type': None
 		}
-
-		logging.info("CHEM TYPE RESULTS: {}".format(results))
 
 		check_result = self.check_response_for_errors(results)
 
