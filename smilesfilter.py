@@ -47,9 +47,10 @@ class SMILESFilter(object):
 		the excludestring list. Returns True if smiles is valid,
 		and False if the smiles has one of the exluded characters.
 		"""
-		for exclude_char in self.excludestring:
-			if exclude_char in smiles:
-				return False
+		# for exclude_char in self.excludestring:
+		# NOTE: Now just checking for ionic bond (i.e., ".") since CTSWS checks metals:
+		if exclude_char in self.excludestring[0]:
+			return False
 		return True
 
 
