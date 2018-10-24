@@ -49,7 +49,7 @@ class SMILESFilter(object):
 		"""
 		# for exclude_char in self.excludestring:
 		# NOTE: Now just checking for ionic bond (i.e., ".") since CTSWS checks metals:
-		if exclude_char in self.excludestring[0]:
+		if smiles in self.excludestring[0]:
 			return False
 		return True
 
