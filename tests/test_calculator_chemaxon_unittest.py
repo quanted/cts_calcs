@@ -81,25 +81,6 @@ class TestChemaxonCalculator(unittest.TestCase):
 
 
 
-	def get_example_result_json(self, prop):
-		"""
-		Gets .json file of example Jchem WS result for unit testing.
-		"""
-		# filename_structure = "jchem_unittest_object_{}.json"  # {} = property (e.g., pka, tautomer)
-		
-		filename = self.filename_structure.format(prop)
-		
-		project_root = os.path.abspath(os.path.dirname(__file__))
-		filename = os.path.join(project_root, filename)
-
-		filein = open(filename, 'r')
-		file_data = filein.read()
-		filein.close()
-
-		return json.loads(file_data)
-
-
-
 	@patch('qed.cts_app.cts_calcs.calculator_chemaxon.requests.post')
 	@patch('qed.cts_app.cts_calcs.calculator_chemaxon.JchemProperty.getJchemPropData')
 	@patch('qed.cts_app.cts_calcs.calculator_chemaxon.SMILESFilter.parseSmilesByCalculator')

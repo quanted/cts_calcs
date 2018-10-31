@@ -66,17 +66,11 @@ class EpiCalc(Calculator):
 
     
     def makeDataRequest(self, structure, calc):
-        # _post = self.getPostData(calc, prop)
         _post = {'structure': structure}
         if self.melting_point != None:
             _post['melting_point'] = self.melting_point
 
-
-        # _url = self.baseUrl + self.getUrl(prop)
         _url = self.baseUrl + self.urlStruct
-
-        logging.info("EPI URL: {}".format(_url))
-        logging.info("EPI POST: {}".format(_post))
 
         return self.request_logic(_url, _post)
 
@@ -95,7 +89,6 @@ class EpiCalc(Calculator):
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     self.results = json.loads(response.content)
-                    # break
                     return self.results
                 _retries += 1
             except Exception as e:
@@ -118,9 +111,6 @@ class EpiCalc(Calculator):
             logging.warning("epi server response: {}".format(response.content))
             return False
 
-        # successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
-        # json_obj = json.loads(response.content)
-
         # TODO: verify if blank data, finding the source of the empty water sol values...
         return True
 
@@ -134,22 +124,16 @@ class EpiCalc(Calculator):
         return None
 
 
-    # def request_manager(request):
+
     def data_request_handler(self, request_dict):
         """
-        less_simple_proxy takes a request and
-        makes the proper call to the TEST web services.
-        it relies on the epi_calculator to do such.
-        input: {"calc": [calculator], "prop": [property]}
-        output: returns data from TEST server
+        Makes requests to the EPI Suite server
         """
 
         EPI_URL = os.environ.get("CTS_EPI_SERVER")
 
         _filtered_smiles = ''
         _response_dict = {}
-
-        logging.info("Request dict to epi: {}".format(request_dict))
 
         # fill any overlapping keys from request:
         for key in request_dict.keys():
@@ -159,7 +143,6 @@ class EpiCalc(Calculator):
 
         try:
             _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-            logging.info("EPI Filtered SMILES: {}".format(_filtered_smiles))
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             _response_dict.update({
@@ -182,9 +165,7 @@ class EpiCalc(Calculator):
             if _get_mp and not self.melting_point:
                 # MP not found from measured or test, getting from results,
                 # and requesting data again with set MP..
-                logging.info("Trying to get MP from EPI request now..")
                 self.melting_point = self.get_mp_from_results(_result_obj)
-                logging.info("Making request to EPI with MP: {}".format(self.melting_point))
                 _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'])  # Make request using MP
 
             _response_dict.update(_result_obj)

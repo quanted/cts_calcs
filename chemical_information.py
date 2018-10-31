@@ -226,15 +226,12 @@ class ChemInfo(object):
 
 		# Gets filtered SMILES:
 		try:
-			filtered_smiles = smiles_filter_obj.filterSMILES(orig_smiles)
-			logging.info("Original smiles before cts filtering: {}".format(orig_smiles))
-			logging.info("Filtered SMILES: {}".format(filtered_smiles))
-		except ValueError as e:
-			logging.warning("Error filtering SMILES: {}".format(e))
-			response_obj = self.wrapped_post
-			response_obj['error'] = "Chemical cannot contain metals.."
-			response_obj['request_post'] = request_post
-			return response_obj
+			filtered_smiles = smiles_filter_obj.filterSMILES(orig_smiles)			
+			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
+				response_obj = self.wrapped_post
+				response_obj['request_post'] = request_post
+				response_obj['error'] = filtered_smiles['error']
+				return response_obj
 		except Exception as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = self.wrapped_post

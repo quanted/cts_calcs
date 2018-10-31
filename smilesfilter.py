@@ -49,7 +49,7 @@ class SMILESFilter(object):
 		"""
 		# for exclude_char in self.excludestring:
 		# NOTE: Now just checking for ionic bond (i.e., ".") since CTSWS checks metals:
-		if smiles in self.excludestring[0]:
+		if self.excludestring[0] in smiles:
 			return False
 		return True
 
@@ -84,12 +84,12 @@ class SMILESFilter(object):
 
 		# Checks SMILES for invalid characters:
 		if not self.check_smiles_against_exludestring(smiles):
-			raise ValueError("Chemical cannot contain the following: {}".format(self.excludestring))
+			return {'error': "Chemical cannot contain salts or mixtures.."}
 
 		# Calls CTSWS /isvalidchemical endpoint:
 		if not self.is_valid_smiles(smiles):
 			logging.warning("User chemical contains metals, sending error to client..")
-			raise ValueError("Chemical cannot contain metals..")
+			return {'error': "Chemical cannot contain metals.."}
 
 		# Updated approach (todo: more efficient to have CTSWS use major taut instead of canonical)
 		# 1. CTSWS actions "removeExplicitH" and "transform".

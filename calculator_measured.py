@@ -70,8 +70,6 @@ class MeasuredCalc(Calculator):
 		_post['structure'] = structure
 		_url = self.baseUrl + self.urlStruct
 
-		logging.info("Measured URL: {}".format(_url))
-
 		# return self.request_logic(_url, _post)
 
 		try:
@@ -144,7 +142,6 @@ class MeasuredCalc(Calculator):
 
 		try:
 			_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
 			_response_dict.update({
@@ -158,7 +155,6 @@ class MeasuredCalc(Calculator):
 
 			try:
 				_response = self.makeDataRequest(_filtered_smiles) # make call for data!
-				logging.info("Response from Measured: {}".format(_response))
 				_measured_data = json.loads(_response.content)
 				_measured_data['valid'] = True
 				logging.info("Measured Data: {}".format(_measured_data))

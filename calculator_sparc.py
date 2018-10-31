@@ -192,9 +192,6 @@ class SparcCalc(Calculator):
         _post = self.get_sparc_query()
         _url = self.base_url + self.multiproperty_url
 
-        logging.info("SPARC URL: {}".format(_url))
-        logging.info("SPARC POST: {}".format(_post))
-
         return self.request_logic(_url, _post)
 
 
@@ -241,8 +238,6 @@ class SparcCalc(Calculator):
             return False
 
         response_type = response_obj.get('type')  # get SPARC property name
-
-        logging.info("Validating {} property".format(response_type))
 
         # prop specific validation:
         if response_type == 'LOGD':
