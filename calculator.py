@@ -402,7 +402,7 @@ class Calculator(object):
 		_check_results = self.check_response_for_errors(_results)
 
 		if not _check_results.get('valid'):
-			_response['error'] = "Not a valid name.."
+			_response['error'] = "Not a valid name"
 			return _response
 
 		_response['smiles'] = _results.get('structure')
@@ -428,7 +428,7 @@ class Calculator(object):
 		_result_keys = []
 
 		if not isinstance(results, dict):
-			_check_response['error'] = "Error processing calc results.."
+			_check_response['error'] = "Error processing calc results"
 			logging.warning("Excepted response object not a dict object.")
 			return _check_response
 
@@ -451,9 +451,9 @@ class Calculator(object):
 		"""
 		if results['errorCode'] == 3:
 			# jchem ws can't read molecule file..
-			return "Chemical cannot be standardized.."
+			return "Chemical cannot be standardized"
 		else:
-			return "Chemical not recognized.."
+			return "Chemical not recognized"
 
 
 	def web_call(self, url, data, headers=None):

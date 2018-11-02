@@ -235,7 +235,7 @@ class ChemInfo(object):
 		except Exception as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = self.wrapped_post
-			response_obj['error'] = "Cannot process chemical.."
+			response_obj['error'] = "Cannot process chemical"
 			response_obj['request_post'] = request_post
 			return response_obj
 
