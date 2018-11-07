@@ -84,7 +84,7 @@ class SMILESFilter(object):
 
 		# Checks SMILES for invalid characters:
 		if not self.check_smiles_against_exludestring(smiles):
-			return {'error': "Chemical cannot contain salts or mixtures"}
+			return {'error': "Chemical cannot be a salt or mixture"}
 
 		# Calls CTSWS /isvalidchemical endpoint:
 		if not self.is_valid_smiles(smiles):
