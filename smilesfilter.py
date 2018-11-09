@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from .calculator import Calculator
-from .jchem_properties import Tautomerization
+from .jchem_properties import Tautomerization, ElementalAnalysis
 
 
 
@@ -27,6 +27,8 @@ class SMILESFilter(object):
 		self.baseUrl = os.environ['CTS_EFS_SERVER']
 		self.is_valid_url = self.baseUrl + '/ctsws/rest/isvalidchemical'
 
+
+
 	def is_valid_smiles(self, smiles):
 		"""
 		Makes request to ctsws /isvalidchemical endpoint to check
@@ -38,6 +40,29 @@ class SMILESFilter(object):
 			return True
 		else:
 			return False
+
+
+
+	def check_for_carbon(self, smiles):
+		"""
+		Makes request to jchem_properties's ElementalAnalysis class,
+		which returns the composition of a chemical from JchemWS
+		elemental analysis endpoint.
+		"""
+
+		# Makes request to get chemical composition:
+		analysis_class = ElementalAnalysis()
+		analysis_class.make_data_request(smiles, analysis_class)  # sets 'results' attr to json object of response
+		chemical_composition = analysis_class.get_elemental_analysis()  # returns list of chemical components
+
+		# Looks through composition data until carbon is found:
+		for composite_data in chemical_composition:
+			# Gets element out of composite result (e.g., "C (44.34%)"):
+			element = composite_data.split("(")[0].replace(" ", "")
+			if element == "C":
+				return True
+
+		return False
 
 
 
@@ -81,6 +106,10 @@ class SMILESFilter(object):
 		p-chem calculators
 		"""
 		calc_object = Calculator()
+
+		# Performs carbon check:
+		if not self.check_for_carbon(smiles):
+			return {'error': "CTS only accepts organic chemicals"}
 
 		# Checks SMILES for invalid characters:
 		if not self.check_smiles_against_exludestring(smiles):

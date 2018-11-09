@@ -8,7 +8,10 @@ from .calculator import Calculator
 class JchemProperty(Calculator):
     """
     Jchem Webservices Physicochemical Properties API handling.
+    This module in particular handles Jchem's "Advanced Properties"
+    requests (section 4.2.x in docs) using the /calculate endpoint.
     """
+
     def __init__(self):
 
         Calculator.__init__(self)  # inherit calculator base class
@@ -23,6 +26,8 @@ class JchemProperty(Calculator):
         self.url = ''  # url to jchem ws endpoint
         self.postData = {}  # POST data in json
         self.ph = 7.0
+
+
 
     # def getJchemPropData(self, chemical, prop, ph=7.0, method=None, mass=None):
     def getJchemPropData(self, request_dict):
@@ -48,6 +53,8 @@ class JchemProperty(Calculator):
 
         return _result_dict
 
+
+
     @classmethod
     def getPropObject(self, prop):
         """
@@ -69,8 +76,12 @@ class JchemProperty(Calculator):
             return LogP()
         elif prop == 'logD' or prop == 'kow_wph':
             return LogD()
+        elif prop == 'elementalAnalysis':
+            return ElementalAnalysis()
         else:
             raise ValueError("Error initializing jchem property class..")
+
+
 
     def make_data_request(self, structure, prop_obj, method=None):
         url = self.baseUrl + prop_obj.url
@@ -108,6 +119,8 @@ class JchemProperty(Calculator):
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
         return None
 
+
+
     def validate_response(self, response):
         """
         Validates jchem response.
@@ -118,6 +131,8 @@ class JchemProperty(Calculator):
             logging.warning("cts_celery calculator_chemaxon -- jchem server response: {} \n {}".format(response, response.content))
             return False
         return True
+
+
 
     def booleanize(self, value):
         """
@@ -131,6 +146,8 @@ class JchemProperty(Calculator):
             return False
         if isinstance(value, bool):
             return value
+
+
 
     def getSpeciationResults(self, jchemResultObjects):
         """
@@ -565,3 +582,31 @@ class LogD(JchemProperty):
 
     def get_data(self, request_dict):
         return self.getLogD(request_dict.get('ph'))
+
+
+
+class ElementalAnalysis(JchemProperty):
+    def __init__(self):
+        JchemProperty.__init__(self)
+        self.name = 'elementalAnalysis'
+        self.url = self.url_pattern.format('elementalAnalysis')
+        self.methods = None
+        self.result_key = 'composition'
+        self.postData = {
+            "singleFragmentMode": True,
+            "symbolID": True
+        }
+
+    def get_elemental_analysis(self):
+        """
+        Returns value from expected result_key for
+        elemental analysis.
+        """
+        try:
+            return self.results[self.result_key]
+        except KeyError as ke:
+            logging.warning("ker error: {}".format(ke))
+            return None
+
+    def get_data(self, request_dict):
+        return self.get_elemental_analysis()
