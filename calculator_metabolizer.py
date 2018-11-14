@@ -116,7 +116,7 @@ class MetabolizerCalc(Calculator):
             _products_dict.update({
                 "id": self.metID,
                 "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
-                "data": {'smiles': _parent, 'routes': root['route'], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 4), 'production': round(root.get('production'), 4), 'globalAccumulation': round(root.get('globalAccumulation'))},
+                "data": {'smiles': _parent, 'routes': root['route'], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 4), 'production': round(root.get('production'), 4), 'globalAccumulation': round(root.get('globalAccumulation'), 4)},
                 "children": []
             })
 
@@ -127,7 +127,7 @@ class MetabolizerCalc(Calculator):
                 _products_dict.update({
                     "id": self.metID,
                     "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
-                    "data": {'smiles': root['smiles'], 'routes': root['route'].split(',')[-1], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 4), 'production': round(root.get('production'), 4), 'globalAccumulation': round(root.get('globalAccumulation'))},
+                    "data": {'smiles': root['smiles'], 'routes': root['route'].split(',')[-1], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 4), 'production': round(root.get('production'), 4), 'globalAccumulation': round(root.get('globalAccumulation'), 4)},
                     "children": []
                 })
                 # self.products_list.append(root['smiles'])
