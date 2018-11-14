@@ -534,9 +534,9 @@ class Calculator(object):
 		if img_type and img_type == 'svg':
 
 			if key:
-				html = '<div style="background-color:white;"' + 'id="' + str(key) + '">' + img + '</div>'            
+				html = '<div class="cts-chem-wrap" style="background-color:white;"' + 'id="' + str(key) + '">' + img + '</div>'            
 			else:
-				html = '<div style="background-color:white;">' + img + '</div>'
+				html = '<div class="cts-chem-wrap" style="background-color:white;">' + img + '</div>'
 			
 		else:
 			context = {'smiles': smiles, 'img': img, 'height': height, 'width': width, 'scale': scale, 'key': key}
