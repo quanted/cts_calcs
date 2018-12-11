@@ -357,7 +357,7 @@ class Calculator(object):
 		url = self.jchem_server_url + self.type_endpoint
 		request_header = {'Content-Type': "*/*"}
 
-		response = requests.post(url, data=chemical, headers=request_header, timeout=self.request_timeout)
+		response = requests.post(url, data=chemical.encode('utf-8'), headers=request_header, timeout=self.request_timeout)
 		results = json.loads(response.content)
 
 		_type_response = {
