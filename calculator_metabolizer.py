@@ -130,6 +130,9 @@ class MetabolizerCalc(Calculator):
             
         else:
             if root['generation'] > 0 and root['generation'] <= gen_limit:
+
+                likelihood = self.setLikelyhoodValue(root)
+
                 # continue walking tree until generation limit is met..
                 _products_dict.update({
                     "id": self.metID,
@@ -141,7 +144,7 @@ class MetabolizerCalc(Calculator):
                         'accumulation': round(root.get('accumulation'), 4),
                         'production': round(root.get('production'), 4),
                         'globalAccumulation': round(root.get('globalAccumulation'), 4),
-                        'likelihood': root.get('likelihood')
+                        'likelihood': likelihood
                     },
                     "children": []
                 })
@@ -214,3 +217,18 @@ class MetabolizerCalc(Calculator):
         url = self.efs_server_url + self.efs_metabolizer_endpoint
         self.request_timeout = 60
         return self.web_call(url, request_obj)
+
+
+
+    def setLikelyhoodValue(self, product_data):
+        """
+        Checks likelihood value from CTSWS, keeps value as
+        "LIKELY" if likelihood > 10%, "UNLIKELY" if < 0.1%, and
+        sets likelihood as "PROBABLE" if it's between 0.1% and 10%.
+        """
+        global_accumulation = product_data.get('globalAccumulation')
+
+        if global_accumulation > 0.001 and global_accumulation < 0.1:
+            return "PROBABLE"
+        else:
+            return product_data.get('likelihood')
