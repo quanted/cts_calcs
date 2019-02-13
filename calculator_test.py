@@ -169,7 +169,9 @@ class TestWSCalc(Calculator):
 		self.name = "test"
 
 		# Example Request: https://comptox.epa.gov/dashboard/web-test/MP?smiles=CCCC&method=nn
-		self.baseUrl = "https://comptox.epa.gov/dashboard/web-test/{}"  # input = property type (see propMap)
+		self.baseUrl = os.environ.get('CTS_TEST_SERVER')
+		if not self.baseUrl:
+			self.baseUrl = "https://comptox.epa.gov/dashboard/web-test"
 
 		self.methods = ['hc', 'nn', 'gc']  # general property methods
 		self.method = None
@@ -250,9 +252,7 @@ class TestWSCalc(Calculator):
 
 	def makeDataRequest(self, structure, calc, prop, method):
 		test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
-		# url = self.baseUrl + self.urlStruct.format('FDAMethod', test_prop)
-		# _url = self.baseUrl + test_prop
-		_url = self.baseUrl.format(test_prop)
+		_url = self.baseUrl + "/{}".format(test_prop) 
 		_payload = {'smiles': structure, 'method': method}
 		try:
 			# response = requests.post(url, data=json.dumps(post), headers=headers, timeout=10)
