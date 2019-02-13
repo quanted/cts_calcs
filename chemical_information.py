@@ -38,9 +38,9 @@ class Molecule(object):
 		for key in self.__dict__.keys():
 			if key != 'orig_smiles' and key != 'chemical':
 				try:
-					if key == 'structureData' and get_structure_data == None:
-						pass
-					elif key == 'cas':
+					# if key == 'structureData' and get_structure_data == None:
+					# 	pass
+					if key == 'cas':
 						# check if object with 'error' key instead of string of CAS#..
 						if isinstance(chem_details_response['data'][0][key], dict):
 							self.__setattr__(key, "N/A")
