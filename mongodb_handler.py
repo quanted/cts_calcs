@@ -13,12 +13,12 @@ class MongoDBHandler:
 
 	def __init__(self):
 		# MongoDB Settings:
-		self.mongodb_conn = pymongo.MongoClient(port=27017)
-		self.db = self.mongodb_conn.cts  # opens cts database
-		self.chem_info_collection = self.db.chem_info  # chem info data collection
+		self.db = None  # opens cts database (set in connection function)
+		self.chem_info_collection = None  # chem info data collection (set in connection function)
 		# self.pchem_collection = self.db.pchem  # pchem data collection
 		# self.products_collection = self.db.products  # transformation products collection
 		self.db_conn_timeout = 1
+		self.is_connected = False
 
 		# Keys for chem info collection document entry:
 		self.chem_info_keys = ["chemical", "orig_smiles", "smiles", "preferredName", 
@@ -27,7 +27,19 @@ class MongoDBHandler:
 		# Keys for pchem collection document entry:
 		# self.pchem_keys = ["smiles", "calc", "prop", "data", "method"]
 
-		self.test_db_connection()
+	def connect_to_db(self):
+		"""
+		Tries to connect to mongodb.
+		"""
+		try:
+			self.mongodb_conn = pymongo.MongoClient(port=27017)
+			self.is_connected = True
+			self.db = self.mongodb_conn.cts  # opens cts database
+			self.chem_info_collection = self.db.chem_info  # chem info data collection
+			self.test_db_connection()
+		except pymongo.errors.ConnectionFailure as e:
+			logging.warning("Unable to connect to db: {}".format(e))
+			self.is_connected = False
 
 	def test_db_connection(self):
 		"""
