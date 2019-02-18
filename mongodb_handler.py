@@ -32,7 +32,7 @@ class MongoDBHandler:
 		Tries to connect to mongodb.
 		"""
 		try:
-			self.mongodb_conn = pymongo.MongoClient(port=27017)
+			self.mongodb_conn = pymongo.MongoClient(port=27017, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
 			self.is_connected = True
 			self.db = self.mongodb_conn.cts  # opens cts database
 			self.chem_info_collection = self.db.chem_info  # chem info data collection
