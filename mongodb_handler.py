@@ -40,6 +40,10 @@ class MongoDBHandler:
 		except pymongo.errors.ConnectionFailure as e:
 			logging.warning("Unable to connect to db: {}".format(e))
 			self.is_connected = False
+		except pymongo.errors.ConfigurationError as e:
+			logging.warning("Config error setting up mongodb client: {}".format(e))
+			logging.warning("Unable to connect to db.")
+			self.is_connected = False
 
 	def test_db_connection(self):
 		"""
