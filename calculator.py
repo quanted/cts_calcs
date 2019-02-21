@@ -143,7 +143,8 @@ class Calculator(object):
 		return jid
 
 
-	def get_melting_point(self, structure, sessionid, calc=None):
+	# def get_melting_point(self, structure, sessionid, calc=None):
+	def get_melting_point(self, structure, sessionid, calc_obj):
 		"""
 		Gets mass of structure from Measured, tries
 		TEST if not available in Measured, and finally EPI.
@@ -156,9 +157,8 @@ class Calculator(object):
 			'sessionid': sessionid
 		}
 
-		# melting_point = 0.0
 		melting_point = None
-
+		calc = calc_obj.name
 
 		# Attempt at MP workflow as loop..
 		mp_request_calcs = ['measured', 'test']  # ordered list of calcs for mp request
@@ -166,32 +166,40 @@ class Calculator(object):
 			# Note: EPI also requests MP, but gets it from itself if it can't from Measured or TEST.
 			mp_request_calcs.append('epi')
 
+		if calc == 'test':
+			melting_point_request['method'] = "hc"  # method used for MP value
+
 		for calc in mp_request_calcs:
 
 			melting_point_request['calc'] = calc
 
 			logging.info("Requesting melting point from {}..".format(calc))
 
-			mp_response = requests.post(
-							os.environ.get('CTS_REST_SERVER') + '/cts/rest/{}/run'.format(calc), 
-							data=json.dumps(melting_point_request), 
-							allow_redirects=True,
-							verify=False,
-							timeout=30)
+			# Calls calculator's data_request_handler which makes request to calc server:
+			response_obj = calc_obj.data_request_handler(melting_point_request)
 
-			logging.info("Melting point response: {}".format(mp_response.content))
+			if calc == 'test':
+				melting_point = response_obj['data']
+			elif not response_obj.get('valid'):
+				# epi or measured mp request not valid, sets mp to None
+				melting_point = None
+			else:
+				# Finds mp data from list of data objects for epi or measured:
+				for data_obj in response_obj['data']:
+					if data_obj['prop'] == "melting_point":
+						melting_point = data_obj['data']
 
 			try:
-				results_object = json.loads(mp_response.content)
-				melting_point = float(results_object['data']['data'])
+				# results_object = json.loads(mp_response.content)
+				melting_point = float(melting_point)
 			except Exception as e:
 				logging.warning("Unable to get melting point from {}\n Exception: {}".format(calc, e))
-				logging.warning("Data returned from Measured that triggered exception: {}".format(results_object.get('data')))
+				logging.warning("Data returned from Measured that triggered exception: {}".format(response_obj.get('data')))
 			if isinstance(melting_point, float):
 				logging.info("Melting point value found from {} calc, MP = {}".format(calc, melting_point))
 				return melting_point
 
-		# if no MP found from all 3 calcs, return None for MP
+		# if no MP found from all 3 calcs, returns None for MP
 		return None
 
 

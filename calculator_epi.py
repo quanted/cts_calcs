@@ -156,7 +156,9 @@ class EpiCalc(Calculator):
             _get_mp = request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press'
             
             if _get_mp:
-                self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
+                # self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
+                self.melting_point = self.get_melting_point(_filtered_smiles, 
+                                        request_dict.get('sessionid'), self)
             else:
                 self.melting_point = None
 
