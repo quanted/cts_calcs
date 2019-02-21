@@ -85,32 +85,6 @@ class MeasuredCalc(Calculator):
 			return response
 
 
-	def request_logic(self, url, post_data):
-		"""
-		Handles retries and validation of responses
-		"""
-
-		_valid_result = False  # for retry logic
-		_retries = 0
-		while not _valid_result and _retries < self.max_retries:
-			# retry data request to chemaxon server until max retries or a valid result is returned
-			try:
-				response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
-				_valid_result = self.validate_response(response)
-				if _valid_result:
-					self.results = json.loads(response.content)
-					# break
-					return self.results
-				_retries += 1
-			except Exception as e:
-				logging.warning("Exception in calculator_measured.py: {}".format(e))
-				_retries += 1
-
-			logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
-		self.results = "calc server not found"
-		return self.results
-
-
 	def validate_response(self, response):
 		"""
 		Validates sparc response.
