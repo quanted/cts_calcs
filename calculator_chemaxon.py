@@ -28,8 +28,9 @@ class JchemCalc(Calculator):
         self.props = ['water_sol', 'ion_con', 'kow_no_ph', 'kow_wph', 'water_sol_ph']  # available pchem props
         self.prop_name = prop_name  # prop name for JchemCalc instance
         self.format_url = '/rest-v0/util/analyze'  # returns chemical's format (e.g., "smiles", "casrn")
+        self.jchem_prop_obj = JchemProperty()
 
-        # chemaxon speciation request
+        # Chemaxon speciation request object:
         self.speciation_request = {
             'run_type': None,
             'chem_struct': None,
@@ -104,28 +105,19 @@ class JchemCalc(Calculator):
                 'method': 'POST',
             })
 
-
             # TODO: CTS API URL has env var somewhere...
             # chemspec_obj = chemspec_output.chemspecOutputPage(request)
             # speciation_response = requests.post('http://localhost:8000/cts/rest/speciation/run', data=json.dumps(_model_params))
-            speciation_response = requests.post(
-                                    os.environ.get('CTS_REST_SERVER') + '/cts/rest/speciation/run', 
-                                    data=json.dumps(_model_params), 
-                                    allow_redirects=True,
-                                    verify=False)
+            # speciation_response = requests.post(
+            #                         os.environ.get('CTS_REST_SERVER') + '/cts/rest/speciation/run', 
+            #                         data=json.dumps(_model_params), 
+            #                         allow_redirects=True,
+            #                         verify=False)
+            # speciation_data = json.loads(speciation_response.content)
 
+            speciation_data = self.get_speciation_results(_model_params)
 
-            speciation_data = json.loads(speciation_response.content)
-
-            data_obj = {
-                'calc': "chemaxon", 
-                'prop': "speciation_results",
-                'node': request_dict['node'],
-                'chemical': _filtered_smiles,
-                'workflow': 'chemaxon',
-                'run_type': 'batch',
-                'request_post': {'service': "speciation"}
-            }
+            data_obj['request_post'] = {'service': "speciation"}
             data_obj.update(speciation_data)
 
             return data_obj
@@ -143,12 +135,12 @@ class JchemCalc(Calculator):
 
                 if request_dict['prop'] == 'kow_wph' or request_dict['prop'] == 'kow_no_ph':
                     _response_dict.update({'method': request_dict['method']})
-                    _results = JchemProperty().getJchemPropData(_response_dict)
+                    _results = self.jchem_prop_obj.getJchemPropData(_response_dict)
                     _response_dict.update({'data': _results['data'], 'method': request_dict['method']})
                     return _response_dict
 
                 else:
-                    _results = JchemProperty().getJchemPropData(_response_dict)
+                    _results = self.jchem_prop_obj.getJchemPropData(_response_dict)
                     _response_dict.update({'data': _results['data'], 'method': None})
                     return _response_dict
 
@@ -159,3 +151,55 @@ class JchemCalc(Calculator):
                     'data': "Cannot reach ChemAxon calculator"
                 })
                 return _response_dict
+
+
+
+    def get_speciation_results(self, request):
+        """
+        Gets speciation results from jchem_properties.
+        """
+        jchemPropObjects = {}
+
+        if request['get_pka']:
+            # Makes call for pKa:
+            pkaObj = JchemProperty.getPropObject('pKa')
+            pkaObj.postData.update({
+                "pHLower": request['pKa_pH_lower'],
+                "pHUpper": request['pKa_pH_upper'],
+                "pHStep": request['pKa_pH_increment'],
+            })
+            self.jchem_prop_obj.make_data_request(request['smiles'], pkaObj)
+            jchemPropObjects['pKa'] = pkaObj
+
+            # Makes call for majorMS:
+            majorMsObj = JchemProperty.getPropObject('majorMicrospecies')
+            majorMsObj.postData.update({'pH': request['pH_microspecies']})
+            self.jchem_prop_obj.make_data_request(request['smiles'], majorMsObj)
+            jchemPropObjects['majorMicrospecies'] = majorMsObj
+
+            # Makes call for isoPt:
+            isoPtObj = JchemProperty.getPropObject('isoelectricPoint')
+            isoPtObj.postData.update({'pHStep': request['isoelectricPoint_pH_increment']})
+            self.jchem_prop_obj.make_data_request(request['smiles'], isoPtObj)
+            jchemPropObjects['isoelectricPoint'] = isoPtObj
+
+        if request['get_taut']:
+            # Makes tautomer request:
+            tautObj = JchemProperty.getPropObject('tautomerization')
+            tautObj.postData.update({
+                "maxStructureCount": request['tautomer_maxNoOfStructures'],
+                "pH": request['tautomer_pH']
+            })
+            self.jchem_prop_obj.make_data_request(request['smiles'], tautObj)
+            jchemPropObjects['tautomerization'] = tautObj
+
+        if request['get_stereo']:
+            # Makes stereoisomer request:
+            stereoObj = JchemProperty.getPropObject('stereoisomer')
+            stereoObj.postData.update({'maxStructureCount': request['stereoisomers_maxNoOfStructures']})
+            self.jchem_prop_obj.make_data_request(request['smiles'], stereoObj)
+            jchemPropObjects['stereoisomers'] = stereoObj
+
+        speciation_results = self.jchem_prop_obj.getSpeciationResults(jchemPropObjects)
+
+        return speciation_results
