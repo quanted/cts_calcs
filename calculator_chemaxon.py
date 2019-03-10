@@ -39,7 +39,7 @@ class JchemCalc(Calculator):
             'iupac': None,
             'formula': None,
             'mass': None,
-            'get_pka': True,
+            'get_pka': None,
             'get_taut': None,
             'get_stereo': None,
             'pKa_decimals': None,
@@ -83,7 +83,8 @@ class JchemCalc(Calculator):
                 'node': request_dict['node'],
                 'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
-                'run_type': 'batch'
+                # 'run_type': 'batch'
+                'run_type': "single"
             }
 
             try:
@@ -93,17 +94,17 @@ class JchemCalc(Calculator):
                 data_obj.update({'data': 'speciation POST needed'})
                 return data_obj
 
-            _model_params = self.speciation_request
-            for key, value in _model_params.items():
-                if key in _spec_inputs:
-                    _model_params.update({key: _spec_inputs[key]})
+            # _model_params = self.speciation_request
+            # for key, value in _model_params.items():
+            #     if key in _spec_inputs:
+            #         _model_params.update({key: _spec_inputs[key]})
 
-            _model_params.update({
-                'smiles': _filtered_smiles,
-                'run_type': 'single',
-                'chemical': request_dict['chemical'],
-                'method': 'POST',
-            })
+            # _model_params.update({
+            #     'smiles': _filtered_smiles,
+            #     'run_type': 'single',
+            #     'chemical': request_dict['chemical'],
+            #     'method': 'POST',
+            # })
 
             # TODO: CTS API URL has env var somewhere...
             # chemspec_obj = chemspec_output.chemspecOutputPage(request)
@@ -115,7 +116,8 @@ class JchemCalc(Calculator):
             #                         verify=False)
             # speciation_data = json.loads(speciation_response.content)
 
-            speciation_data = self.get_speciation_results(_model_params)
+            # speciation_data = self.get_speciation_results(_model_params)
+            speciation_data = self.get_speciation_results(request_dict)
 
             data_obj['request_post'] = {'service': "speciation"}
             data_obj.update(speciation_data)

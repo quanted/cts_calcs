@@ -3,10 +3,7 @@ import json
 import logging
 import os
 from .calculator import Calculator
-from .calculator_measured import MeasuredCalc
-from .calculator_test import TestCalc
 from .chemical_information import SMILESFilter
-
 
 
 
@@ -79,7 +76,6 @@ class EpiCalc(Calculator):
         """
         Handles retries and validation of responses
         """
-
         _valid_result = False  # for retry logic
         _retries = 0
         while not _valid_result and _retries < self.max_retries:
@@ -110,9 +106,8 @@ class EpiCalc(Calculator):
             logging.warning("epi server response status: {}".format(response.status_code))
             logging.warning("epi server response: {}".format(response.content))
             return False
-
-        # TODO: verify if blank data, finding the source of the empty water sol values...
         return True
+
 
 
     def get_mp_from_results(self, results):
@@ -120,7 +115,6 @@ class EpiCalc(Calculator):
                 if data_obj.get('prop') == 'melting_point':
                     logging.info("Found MP in EPI results..")
                     return float(data_obj['data'])
-                    
         return None
 
 
@@ -129,9 +123,7 @@ class EpiCalc(Calculator):
         """
         Makes requests to the EPI Suite server
         """
-
-        EPI_URL = os.environ.get("CTS_EPI_SERVER")
-
+        
         _filtered_smiles = ''
         _response_dict = {}
 
@@ -156,7 +148,6 @@ class EpiCalc(Calculator):
             _get_mp = request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press'
             
             if _get_mp:
-                # self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'), 'epi')
                 self.melting_point = self.get_melting_point(_filtered_smiles, 
                                         request_dict.get('sessionid'), self)
             else:
