@@ -18,7 +18,7 @@ class OperaCalc(Calculator):
         self.name = "opera"
         self.baseUrl = os.environ['CTS_OPERA_SERVER']
         self.urlStruct = "/opera/rest/run"
-        self.request_timeout = 120
+        self.request_timeout = 180
         self.props = ['kow_no_ph', 'melting_point', 'boiling_point', 'vapor_press', 'water_sol', 'ion_con', 'kow_wph', 'log_bcf', 'koc']
         self.opera_props = ['LogP_pred', 'MP_pred', 'BP_pred', 'LogVP_pred', 'LogWS_pred', 'pKa_a_pred',
             'pKa_b_pred', 'LogD55_pred', 'LogD74_pred', 'LogBCF_pred', 'LogKoc_pred']
@@ -39,16 +39,21 @@ class OperaCalc(Calculator):
                 'result_key': "LogVP_pred",
                 'methods': None
             },
+            'henrys_law_con': {
+                'result_key': "LogHL_pred",
+                'methods': None
+            },
             'water_sol': {
                 'result_key': "LogWS_pred",
                 'methods': None
             },
             'ion_con': {
                 'result_key': ["pKa_a_pred", "pKa_b_pred"],
-                'methods': None
+                'methods': {'pKa_a_pred': "pKa", 'pKa_b_pred': "pKb"}
             },
             'kow_wph': {
-                'result_key': ["LogD55_pred", "LogD74_pred"],  # is this correct?
+                # 'result_key': ["LogD55_pred", "LogD74_pred"],  # is this correct?
+                'result_key': "LogD74_pred",  # is data for 5.5 and 7.4 pH values?
                 'methods': None
             },
             'log_bcf': {
@@ -69,15 +74,35 @@ class OperaCalc(Calculator):
         for smiles_data_obj in opera_results:
             for prop in requested_props:
                 prop_name = self.propMap[prop]['result_key']  # gets opera prop name
-                if not prop_name in list(smiles_data_obj.keys()):
-                    # Checks CTS-related opera props, matches them with requested CTS name
-                    continue
-                curated_dict = {}
-                curated_dict['prop'] = prop
-                curated_dict['data'] = smiles_data_obj[prop_name]
-                curated_dict['calc'] = "opera"
-                curated_list.append(curated_dict)
+                # if not prop_name in list(smiles_data_obj.keys()):
+                #     continue
+                if isinstance(prop_name, list):
+                    # Handles props with multiple results/methods:
+                    _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj)
+                    # curated_list += _curated_results
+                    curated_list.append(_curated_results)
+                else:
+                    curated_dict = {}
+                    curated_dict['prop'] = prop
+                    curated_dict['data'] = smiles_data_obj[prop_name]
+                    curated_dict['calc'] = "opera"
+                    curated_list.append(curated_dict)
         return curated_list
+
+    def parse_prop_with_multi_results(self, prop, prop_name, smiles_data_obj):
+        """
+        Further parses any property with methods into individual
+        data objects.
+        """
+        curated_dict = {}
+        curated_dict['prop'] = prop
+        curated_dict['calc'] = "opera"
+        curated_dict['data'] = ""
+        for _prop in prop_name:
+            prop_label = self.propMap[prop]['methods'][_prop]
+            prop_data = smiles_data_obj[_prop]
+            curated_dict['data'] += "{}: {}\n".format(prop_label, prop_data)
+        return curated_dict
 
     def makeDataRequest(self, smiles):
         _post = {'smiles': smiles}
@@ -157,7 +182,7 @@ class OperaCalc(Calculator):
             _response_dict['valid'] = True
             return _response_dict
         except Exception as err:
-            logging.warning("Exception occurred getting {} data: {}".format(err, request_dict['calc']))
+            logging.warning("Exception occurred getting {} data: {}".format(request_dict['calc'], err))
             _response_dict.update({
                 'data': "Cannot reach OPERA calculator",
                 'valid': False
