@@ -66,35 +66,42 @@ class OperaCalc(Calculator):
             }
         }
 
-    def parse_results_for_cts(self, opera_results, requested_props):
+    # def parse_results_for_cts(self, opera_results, requested_props):
+    def parse_results_for_cts(self, response_dict, opera_results):
         """
         Parses OPERA results for CTS API and CTS websockets.
         """
+        requested_props = response_dict.get('props')
+        if not requested_props:
+            requested_props = [response_dict.get('prop')]
+
+        # todo: add no 'data' exception handling
+        opera_results = opera_results['data']
+
         curated_list = []
         for smiles_data_obj in opera_results:
             for prop in requested_props:
                 prop_name = self.propMap[prop]['result_key']  # gets opera prop name
-                # if not prop_name in list(smiles_data_obj.keys()):
-                #     continue
                 if isinstance(prop_name, list):
                     # Handles props with multiple results/methods:
-                    _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj)
-                    # curated_list += _curated_results
+                    _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict)
                     curated_list.append(_curated_results)
                 else:
-                    curated_dict = {}
+                    # curated_dict = {}
+                    curated_dict = dict(response_dict)  # sends all key:vals for each prop result
                     curated_dict['prop'] = prop
                     curated_dict['data'] = smiles_data_obj[prop_name]
                     curated_dict['calc'] = "opera"
                     curated_list.append(curated_dict)
         return curated_list
 
-    def parse_prop_with_multi_results(self, prop, prop_name, smiles_data_obj):
+    def parse_prop_with_multi_results(self, prop, prop_name, smiles_data_obj, response_dict):
         """
         Further parses any property with methods into individual
         data objects.
         """
-        curated_dict = {}
+        # curated_dict = {}
+        curated_dict = dict(response_dict)
         curated_dict['prop'] = prop
         curated_dict['calc'] = "opera"
         curated_dict['data'] = ""
@@ -172,10 +179,13 @@ class OperaCalc(Calculator):
         try:
             _result_obj = self.makeDataRequest(_filtered_smiles)
 
-            requested_props = request_dict.get('props')
-            if not requested_props:
-                requested_props = [request_dict.get('prop')]
-            _result_obj = self.parse_results_for_cts(_result_obj['data'], requested_props)
+            # requested_props = request_dict.get('props')
+            # if not requested_props:
+            #     requested_props = [request_dict.get('prop')]
+            # _result_obj = self.parse_results_for_cts(_result_obj['data'], requested_props)
+
+            _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
+
 
             # _response_dict.update(_result_obj)
             _response_dict['data'] = _result_obj
@@ -188,3 +198,5 @@ class OperaCalc(Calculator):
                 'valid': False
             })
             return _response_dict
+
+    # def convert_property(self, )
