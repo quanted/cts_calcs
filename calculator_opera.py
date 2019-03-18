@@ -73,22 +73,17 @@ class OperaCalc(Calculator):
             + prop - property name to convert.
             + data_obj - response/data to be sent back to user.
         """
-        logging.warning("DATA TYPE: {}".format(type(data_obj['data'])))
-        logging.warning("DATA: {}".format(data_obj))
-        data_val = float(data_obj['data'])
-
-        # TODO: Add error checking in case 'data' is an error message.
         if data_obj.get('prop') in ['vapor_press', 'henrys_law_con']:
             # Converts from log:
-            data_val = 10**data_val
+            data_obj['data'] = 10**float(data_obj['data'])
         elif data_obj.get('prop') == 'water_sol':
             # Converts log(mol/L) --> mg/L:
             data_obj['mass'] = data_obj.get('mass')  # uses mass for WS conversion
-            data_val = self.convert_water_solubility(data_obj)
-        elif data_obj.get('prop') == 'ion_con' and math.isnan(data_val):
+            data_obj['data'] = self.convert_water_solubility(data_obj)
+        elif data_obj.get('prop') == 'ion_con':
             # Sets 'data' to "none" if "NaN":
-            data_val = "none"
-        return data_val
+            data_obj = self.check_ion_con_for_nan(data_obj)
+        return data_obj['data']
 
     def convert_water_solubility(self, ws_data_obj):
         """
@@ -124,6 +119,7 @@ class OperaCalc(Calculator):
                 if isinstance(prop_name, list):
                     # Handles props with multiple results/methods:
                     _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict)
+                    self.convert_units_for_cts(prop, _curated_results)
                     curated_list.append(_curated_results)
                 else:
                     curated_dict = dict(response_dict)  # sends all key:vals for each prop result
@@ -145,10 +141,35 @@ class OperaCalc(Calculator):
         curated_dict['data'] = ""
         for _prop in prop_name:
             prop_label = self.propMap[prop]['methods'][_prop]
-            curated_dict['data'] = smiles_data_obj[_prop]
-            prop_data = self.convert_units_for_cts(prop, curated_dict)
-            curated_dict['data'] += "{}: {}\n".format(prop_label, prop_data)
+            # curated_dict['data'] = smiles_data_obj[_prop]
+            curated_dict['data'] += "{}: {}\n".format(prop_label, smiles_data_obj[_prop])
         return curated_dict
+
+    def check_ion_con_for_nan(self, curated_dict):
+        """
+        Checks pka values and returns "none" if
+        both pka and pkb are NaN.
+        """
+        pkas = curated_dict['data'].split("\n")
+        pka = pkas[0].split(":")[1].replace(" ", "")
+        pkb = pkas[1].split(":")[1].replace(" ", "")
+        pka, pkb = float(pka), float(pkb)
+        if not math.isnan(pka) and not math.isnan(pkb):
+            return curated_dict
+        if math.isnan(pka) and math.isnan(pkb):
+            curated_dict['data'] = "none"
+            return curated_dict
+        new_ion_con_string = ""
+        if math.isnan(pka):
+            new_ion_con_string += "pKa: none\n"
+        else:
+            new_ion_con_string += "pKa: " + str(pka) + "\n"
+        if math.isnan(pkb):
+            new_ion_con_string += "pKb: none\n"
+        else:
+            new_ion_con_string += "pKb: " + str(pkb) + "\n"
+        curated_dict['data'] = new_ion_con_string
+        return curated_dict 
 
     def makeDataRequest(self, smiles):
         _post = {'smiles': smiles}
@@ -215,16 +236,16 @@ class OperaCalc(Calculator):
             })
             return _response_dict
 
-        try:
-            _result_obj = self.makeDataRequest(_filtered_smiles)
-            _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
-            _response_dict['data'] = _result_obj
-            _response_dict['valid'] = True
-            return _response_dict
-        except Exception as err:
-            logging.warning("Exception occurred getting {} data: {}".format(request_dict['calc'], err))
-            _response_dict.update({
-                'data': "Cannot reach OPERA calculator",
-                'valid': False
-            })
-            return _response_dict
+        # try:
+        _result_obj = self.makeDataRequest(_filtered_smiles)
+        _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
+        _response_dict['data'] = _result_obj
+        _response_dict['valid'] = True
+        return _response_dict
+        # except Exception as err:
+        #     logging.warning("Exception occurred getting {} data: {}".format(request_dict['calc'], err))
+        #     _response_dict.update({
+        #         'data': "Cannot reach OPERA calculator",
+        #         'valid': False
+        #     })
+        #     return _response_dict
