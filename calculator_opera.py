@@ -2,6 +2,7 @@ import requests
 import json
 import logging
 import os
+import math
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
 
@@ -66,7 +67,45 @@ class OperaCalc(Calculator):
             }
         }
 
-    # def parse_results_for_cts(self, opera_results, requested_props):
+    def convert_units_for_cts(self, prop, data_obj):
+        """
+        Converts certain OPERA properties to units used by CTS.
+            + prop - property name to convert.
+            + data_obj - response/data to be sent back to user.
+        """
+        logging.warning("DATA TYPE: {}".format(type(data_obj['data'])))
+        logging.warning("DATA: {}".format(data_obj))
+        data_val = float(data_obj['data'])
+
+        # TODO: Add error checking in case 'data' is an error message.
+        if data_obj.get('prop') in ['vapor_press', 'henrys_law_con']:
+            # Converts from log:
+            data_val = 10**data_val
+        elif data_obj.get('prop') == 'water_sol':
+            # Converts log(mol/L) --> mg/L:
+            data_obj['mass'] = data_obj.get('mass')  # uses mass for WS conversion
+            data_val = self.convert_water_solubility(data_obj)
+        elif data_obj.get('prop') == 'ion_con' and math.isnan(data_val):
+            # Sets 'data' to "none" if "NaN":
+            data_val = "none"
+        return data_val
+
+    def convert_water_solubility(self, ws_data_obj):
+        """
+        Converts water solubility from log(mol/L) => mg/L.
+        """
+        _ws_result = None
+        ws_data_val = float(ws_data_obj['data'])
+        if isinstance(ws_data_obj['mass'], float) or isinstance(ws_data_obj['mass'], int):
+            _ws_result = 1000 * float(ws_data_obj['mass']) * 10**-(ws_data_obj['data'])
+        else:
+            # Requests mass from Calculator
+            json_obj = self.getMass({'chemical': ws_data_obj['chemical']})
+            mass = json_obj['data'][0]['mass']
+            # _ws_result = 1000 * mass * 10**-(ws_data_val)  # from TESTWS WS conversion
+            _ws_result = (10**ws_data_val) * mass * 1000.0
+        return _ws_result
+    
     def parse_results_for_cts(self, response_dict, opera_results):
         """
         Parses OPERA results for CTS API and CTS websockets.
@@ -87,11 +126,11 @@ class OperaCalc(Calculator):
                     _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict)
                     curated_list.append(_curated_results)
                 else:
-                    # curated_dict = {}
                     curated_dict = dict(response_dict)  # sends all key:vals for each prop result
                     curated_dict['prop'] = prop
                     curated_dict['data'] = smiles_data_obj[prop_name]
                     curated_dict['calc'] = "opera"
+                    curated_dict['data'] = self.convert_units_for_cts(prop, curated_dict)
                     curated_list.append(curated_dict)
         return curated_list
 
@@ -100,14 +139,14 @@ class OperaCalc(Calculator):
         Further parses any property with methods into individual
         data objects.
         """
-        # curated_dict = {}
         curated_dict = dict(response_dict)
         curated_dict['prop'] = prop
         curated_dict['calc'] = "opera"
         curated_dict['data'] = ""
         for _prop in prop_name:
             prop_label = self.propMap[prop]['methods'][_prop]
-            prop_data = smiles_data_obj[_prop]
+            curated_dict['data'] = smiles_data_obj[_prop]
+            prop_data = self.convert_units_for_cts(prop, curated_dict)
             curated_dict['data'] += "{}: {}\n".format(prop_label, prop_data)
         return curated_dict
 
@@ -178,16 +217,7 @@ class OperaCalc(Calculator):
 
         try:
             _result_obj = self.makeDataRequest(_filtered_smiles)
-
-            # requested_props = request_dict.get('props')
-            # if not requested_props:
-            #     requested_props = [request_dict.get('prop')]
-            # _result_obj = self.parse_results_for_cts(_result_obj['data'], requested_props)
-
             _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
-
-
-            # _response_dict.update(_result_obj)
             _response_dict['data'] = _result_obj
             _response_dict['valid'] = True
             return _response_dict
@@ -198,5 +228,3 @@ class OperaCalc(Calculator):
                 'valid': False
             })
             return _response_dict
-
-    # def convert_property(self, )
