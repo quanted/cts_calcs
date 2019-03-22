@@ -153,7 +153,7 @@ class OperaCalc(Calculator):
         pkas = curated_dict['data'].split("\n")
         pka = pkas[0].split(":")[1].replace(" ", "")
         pkb = pkas[1].split(":")[1].replace(" ", "")
-        pka, pkb = float(pka), float(pkb)
+        pka, pkb = round(float(pka), 2), round(float(pkb), 2)
         if not math.isnan(pka) and not math.isnan(pkb):
             return curated_dict
         if math.isnan(pka) and math.isnan(pkb):
