@@ -166,21 +166,10 @@ class OperaCalc(Calculator):
 
         # Packages ion_con data like sparc and chemaxon:
         ion_con_dict = {'pKa': [], 'pKb': []}
-
-        new_ion_con_string = ""
-        if math.isnan(pka):
-            # new_ion_con_string += "pKa: none\n"
-            ion_con_dict['pKa'] = ["none"]
-        else:
-            # new_ion_con_string += "pKa: " + str(pka) + "\n"
+        if not math.isnan(pka):
             ion_con_dict['pKa'] = [pka]
-        if math.isnan(pkb):
-            # new_ion_con_string += "pKb: none\n"
-            ion_con_dict['pKb'] = ["none"]
-        else:
-            # new_ion_con_string += "pKb: " + str(pkb) + "\n"
+        if not math.isnan(pkb):
             ion_con_dict['pKb'] = [pkb]
-        # curated_dict['data'] = new_ion_con_string
         curated_dict['data'] = ion_con_dict
         return curated_dict 
 
