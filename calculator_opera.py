@@ -122,9 +122,11 @@ class OperaCalc(Calculator):
                     self.convert_units_for_cts(prop, _curated_results)
                     curated_list.append(_curated_results)
                 else:
-                    curated_dict = dict(response_dict)  # sends all key:vals for each prop result
+                    # curated_dict = dict(response_dict)  # sends all key:vals for each prop result
+                    curated_dict = {}
                     curated_dict['prop'] = prop
                     curated_dict['data'] = smiles_data_obj[prop_name]
+                    curated_dict['chemical'] = response_dict['chemical']
                     curated_dict['calc'] = "opera"
                     curated_dict['data'] = self.convert_units_for_cts(prop, curated_dict)
                     curated_list.append(curated_dict)
@@ -135,9 +137,11 @@ class OperaCalc(Calculator):
         Further parses any property with methods into individual
         data objects.
         """
-        curated_dict = dict(response_dict)
+        # curated_dict = dict(response_dict)
+        curated_dict = {}
         curated_dict['prop'] = prop
         curated_dict['calc'] = "opera"
+        curated_dict['chemical'] = response_dict['chemical']
         curated_dict['data'] = ""
         for _prop in prop_name:
             prop_label = self.propMap[prop]['methods'][_prop]
@@ -150,7 +154,7 @@ class OperaCalc(Calculator):
         Checks pka values and returns "none" if
         both pka and pkb are NaN.
         """
-        pkas = curated_dict['data'].split("\n")
+        pkas = curated_dict['data'].split("\n")  # Does OPERA ever return > 1 pka/pkbs?
         pka = pkas[0].split(":")[1].replace(" ", "")
         pkb = pkas[1].split(":")[1].replace(" ", "")
         pka, pkb = round(float(pka), 2), round(float(pkb), 2)
@@ -159,16 +163,25 @@ class OperaCalc(Calculator):
         if math.isnan(pka) and math.isnan(pkb):
             curated_dict['data'] = "none"
             return curated_dict
+
+        # Packages ion_con data like sparc and chemaxon:
+        ion_con_dict = {'pKa': [], 'pKb': []}
+
         new_ion_con_string = ""
         if math.isnan(pka):
-            new_ion_con_string += "pKa: none\n"
+            # new_ion_con_string += "pKa: none\n"
+            ion_con_dict['pKa'] = ["none"]
         else:
-            new_ion_con_string += "pKa: " + str(pka) + "\n"
+            # new_ion_con_string += "pKa: " + str(pka) + "\n"
+            ion_con_dict['pKa'] = [pka]
         if math.isnan(pkb):
-            new_ion_con_string += "pKb: none\n"
+            # new_ion_con_string += "pKb: none\n"
+            ion_con_dict['pKb'] = ["none"]
         else:
-            new_ion_con_string += "pKb: " + str(pkb) + "\n"
-        curated_dict['data'] = new_ion_con_string
+            # new_ion_con_string += "pKb: " + str(pkb) + "\n"
+            ion_con_dict['pKb'] = [pkb]
+        # curated_dict['data'] = new_ion_con_string
+        curated_dict['data'] = ion_con_dict
         return curated_dict 
 
     def makeDataRequest(self, smiles):
