@@ -194,14 +194,14 @@ class ChemInfo(object):
 			return response_obj
 
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
-		logging.info("Chemical type: {}".format(chem_type))
 
 		# Checks chemical to make sure it's not actually an acronym instead of smiles:
 		if chem_type.get('type') == 'smiles':
 			is_name = self.is_actually_name(chemical, calc_obj)
 			# Switches chem type to "name" if smiles was actually an acronym:
 			if is_name:
-				chem_type = "name"
+				# chem_type = "name"
+				chem_type['type'] = "name"
 		
 		# ACTORWS requests handling for getting DSSTOX data
 		if chem_type.get('type') == 'CAS#':
@@ -292,6 +292,7 @@ class ChemInfo(object):
 		(False, original smiles from input) if chemical was actually a smiles.
 		"""
 		converted_name_response = calc_obj.get_smiles_from_name(chemical)
+
 		if converted_name_response.get('smiles') and not 'error' in converted_name_response:
 			# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
 			# jchem_smiles = converted_name_response.get('smiles')  # used converted smiles from name

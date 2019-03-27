@@ -64,7 +64,6 @@ class ACTORWS(object):
 
 		try:
 			_dsstox_results = self.make_request(self.dsstox_url, _payload)
-			logging.info("DSSTOX RESULTS: {}".format(_dsstox_results))
 			_dsstox_results = _dsstox_results['DataList']['list'][0]
 		except Exception as e:
 			logging.warning("Error getting dsstox results key:vals: {}".format(e))
