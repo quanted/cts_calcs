@@ -83,7 +83,6 @@ class JchemCalc(Calculator):
                 'node': request_dict['node'],
                 'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
-                # 'run_type': 'batch'
                 'run_type': "single"
             }
 
@@ -94,33 +93,11 @@ class JchemCalc(Calculator):
                 data_obj.update({'data': 'speciation POST needed'})
                 return data_obj
 
-            # _model_params = self.speciation_request
-            # for key, value in _model_params.items():
-            #     if key in _spec_inputs:
-            #         _model_params.update({key: _spec_inputs[key]})
-
-            # _model_params.update({
-            #     'smiles': _filtered_smiles,
-            #     'run_type': 'single',
-            #     'chemical': request_dict['chemical'],
-            #     'method': 'POST',
-            # })
-
-            # TODO: CTS API URL has env var somewhere...
-            # chemspec_obj = chemspec_output.chemspecOutputPage(request)
-            # speciation_response = requests.post('http://localhost:8000/cts/rest/speciation/run', data=json.dumps(_model_params))
-            # speciation_response = requests.post(
-            #                         os.environ.get('CTS_REST_SERVER') + '/cts/rest/speciation/run', 
-            #                         data=json.dumps(_model_params), 
-            #                         allow_redirects=True,
-            #                         verify=False)
-            # speciation_data = json.loads(speciation_response.content)
-
-            # speciation_data = self.get_speciation_results(_model_params)
             speciation_data = self.get_speciation_results(request_dict)
 
             data_obj['request_post'] = {'service': "speciation"}
-            data_obj.update(speciation_data)
+            # data_obj.update(speciation_data)
+            data_obj['data'] = speciation_data
 
             return data_obj
 
@@ -161,8 +138,11 @@ class JchemCalc(Calculator):
         Gets speciation results from jchem_properties.
         """
         jchemPropObjects = {}
+        if 'speciation_inputs' in request:
+            request.update(request['speciation_inputs'])
+            del request['speciation_inputs']
 
-        if request['get_pka']:
+        if request.get('get_pka'):
             # Makes call for pKa:
             pkaObj = JchemProperty.getPropObject('pKa')
             pkaObj.postData.update({
@@ -170,32 +150,32 @@ class JchemCalc(Calculator):
                 "pHUpper": request['pKa_pH_upper'],
                 "pHStep": request['pKa_pH_increment'],
             })
-            self.jchem_prop_obj.make_data_request(request['smiles'], pkaObj)
+            self.jchem_prop_obj.make_data_request(request['chemical'], pkaObj)
             jchemPropObjects['pKa'] = pkaObj
 
             # Makes call for majorMS:
             majorMsObj = JchemProperty.getPropObject('majorMicrospecies')
             majorMsObj.postData.update({'pH': request['pH_microspecies']})
-            self.jchem_prop_obj.make_data_request(request['smiles'], majorMsObj)
+            self.jchem_prop_obj.make_data_request(request['chemical'], majorMsObj)
             jchemPropObjects['majorMicrospecies'] = majorMsObj
 
             # Makes call for isoPt:
             isoPtObj = JchemProperty.getPropObject('isoelectricPoint')
             isoPtObj.postData.update({'pHStep': request['isoelectricPoint_pH_increment']})
-            self.jchem_prop_obj.make_data_request(request['smiles'], isoPtObj)
+            self.jchem_prop_obj.make_data_request(request['chemical'], isoPtObj)
             jchemPropObjects['isoelectricPoint'] = isoPtObj
 
-        if request['get_taut']:
+        if request.get('get_taut'):
             # Makes tautomer request:
             tautObj = JchemProperty.getPropObject('tautomerization')
             tautObj.postData.update({
                 "maxStructureCount": request['tautomer_maxNoOfStructures'],
                 "pH": request['tautomer_pH']
             })
-            self.jchem_prop_obj.make_data_request(request['smiles'], tautObj)
+            self.jchem_prop_obj.make_data_request(request['chemical'], tautObj)
             jchemPropObjects['tautomerization'] = tautObj
 
-        if request['get_stereo']:
+        if request.get('get_stereo'):
             # Makes stereoisomer request:
             stereoObj = JchemProperty.getPropObject('stereoisomer')
             stereoObj.postData.update({'maxStructureCount': request['stereoisomers_maxNoOfStructures']})
