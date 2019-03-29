@@ -92,7 +92,7 @@ class OperaCalc(Calculator):
         _ws_result = None
         ws_data_val = float(ws_data_obj['data'])
         if isinstance(ws_data_obj['mass'], float) or isinstance(ws_data_obj['mass'], int):
-            _ws_result = 1000 * float(ws_data_obj['mass']) * 10**-(ws_data_obj['data'])
+            _ws_result = 1000 * float(ws_data_obj['mass']) * 10**-(ws_data_val)
         else:
             # Requests mass from Calculator
             json_obj = self.getMass({'chemical': ws_data_obj['chemical']})
@@ -219,7 +219,15 @@ class OperaCalc(Calculator):
 
         OPERA_URL = os.environ.get("CTS_OPERA_SERVER")
 
-        _filtered_smiles = ''
+        logging.warning("request dict: {}".format(request_dict))
+
+        # TODO: Make single request with list of smiles, if batch mode,
+        # which will probably involve using 'batch_chems' key:val.
+        # smiles = request_dict['batch_chems']
+        # logging.warning("smiles: {}".format(smiles))
+
+
+        # _filtered_smiles = ''
         _response_dict = {}
 
         # fill any overlapping keys from request:
@@ -228,26 +236,31 @@ class OperaCalc(Calculator):
                 _response_dict[key] = request_dict.get(key)
         _response_dict.update({'request_post': request_dict, 'method': None})
 
-        try:
-            _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-        except Exception as err:
-            logging.warning("Error filtering SMILES: {}".format(err))
-            _response_dict.update({
-                'data': "Cannot filter SMILES",
-                'valid': False
-            })
-            return _response_dict
-
+        ####################################################################
+        # NOTE: OPERA currently doesn't have any calc-specific SMILES filter!
+        ####################################################################
         # try:
-        _result_obj = self.makeDataRequest(_filtered_smiles)
-        _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
-        _response_dict['data'] = _result_obj
-        _response_dict['valid'] = True
-        return _response_dict
+        #     _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
         # except Exception as err:
-        #     logging.warning("Exception occurred getting {} data: {}".format(request_dict['calc'], err))
+        #     logging.warning("Error filtering SMILES: {}".format(err))
         #     _response_dict.update({
-        #         'data': "Cannot reach OPERA calculator",
+        #         'data': "Cannot filter SMILES",
         #         'valid': False
         #     })
         #     return _response_dict
+        ####################################################################
+
+        try:
+            # _result_obj = self.makeDataRequest(_filtered_smiles)
+            _result_obj = self.makeDataRequest(request_dict['chemical'])
+            _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
+            _response_dict['data'] = _result_obj
+            _response_dict['valid'] = True
+            return _response_dict
+        except Exception as err:
+            logging.warning("Exception occurred getting {} data: {}".format(request_dict['calc'], err))
+            _response_dict.update({
+                'data': "Cannot reach OPERA calculator",
+                'valid': False
+            })
+            return _response_dict
