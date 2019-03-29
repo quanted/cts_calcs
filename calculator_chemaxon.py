@@ -83,20 +83,13 @@ class JchemCalc(Calculator):
                 'node': request_dict['node'],
                 'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
-                'run_type': "single"
+                'run_type': "single",
+                'request_post': request_dict
             }
-
-            try:
-                _spec_inputs = request_dict['speciation_inputs']
-            except KeyError as ke:
-                logging.warning("speciation_inputs object needed for speciation request -- {}".format(ke))
-                data_obj.update({'data': 'speciation POST needed'})
-                return data_obj
 
             speciation_data = self.get_speciation_results(request_dict)
 
             data_obj['request_post'] = {'service': "speciation"}
-            # data_obj.update(speciation_data)
             data_obj['data'] = speciation_data
 
             return data_obj

@@ -122,8 +122,8 @@ class OperaCalc(Calculator):
                     self.convert_units_for_cts(prop, _curated_results)
                     curated_list.append(_curated_results)
                 else:
-                    # curated_dict = dict(response_dict)  # sends all key:vals for each prop result
-                    curated_dict = {}
+                    curated_dict = dict(response_dict)  # sends all key:vals for each prop result
+                    # curated_dict = {}
                     curated_dict['prop'] = prop
                     curated_dict['data'] = smiles_data_obj[prop_name]
                     curated_dict['chemical'] = response_dict['chemical']
@@ -137,8 +137,8 @@ class OperaCalc(Calculator):
         Further parses any property with methods into individual
         data objects.
         """
-        # curated_dict = dict(response_dict)
-        curated_dict = {}
+        curated_dict = dict(response_dict)
+        # curated_dict = {}
         curated_dict['prop'] = prop
         curated_dict['calc'] = "opera"
         curated_dict['chemical'] = response_dict['chemical']
