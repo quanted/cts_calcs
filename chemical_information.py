@@ -196,7 +196,7 @@ class ChemInfo(object):
 		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 
 		# Checks chemical to make sure it's not actually an acronym instead of smiles:
-		if chem_type.get('type') == 'smiles':
+		if chem_type.get('type') == 'smiles' or chem_type.get('type') == 'smarts':
 			is_name = self.is_actually_name(chemical, calc_obj)
 			# Switches chem type to "name" if smiles was actually an acronym:
 			if is_name:
