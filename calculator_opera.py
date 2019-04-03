@@ -112,40 +112,35 @@ class OperaCalc(Calculator):
         # todo: add no 'data' exception handling
         opera_results = opera_results['data']
 
+        result_index = 0
         curated_list = []
         for smiles_data_obj in opera_results:
             for prop in requested_props:
                 prop_name = self.propMap[prop]['result_key']  # gets opera prop name
+                curated_dict = dict(response_dict)  # sends all key:vals for each prop result
+                curated_dict['prop'] = prop
+                curated_dict['data'] = ""
+                curated_dict['chemical'] = response_dict['chemical'][result_index]
+                curated_dict['calc'] = "opera"
                 if isinstance(prop_name, list):
                     # Handles props with multiple results/methods:
-                    _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict)
+                    _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict, curated_dict)
                     self.convert_units_for_cts(prop, _curated_results)
                     curated_list.append(_curated_results)
                 else:
-                    curated_dict = dict(response_dict)  # sends all key:vals for each prop result
-                    # curated_dict = {}
-                    curated_dict['prop'] = prop
                     curated_dict['data'] = smiles_data_obj[prop_name]
-                    curated_dict['chemical'] = response_dict['chemical']
-                    curated_dict['calc'] = "opera"
                     curated_dict['data'] = self.convert_units_for_cts(prop, curated_dict)
                     curated_list.append(curated_dict)
+            result_index += 1
         return curated_list
 
-    def parse_prop_with_multi_results(self, prop, prop_name, smiles_data_obj, response_dict):
+    def parse_prop_with_multi_results(self, prop, prop_name, smiles_data_obj, response_dict, curated_dict):
         """
         Further parses any property with methods into individual
         data objects.
         """
-        curated_dict = dict(response_dict)
-        # curated_dict = {}
-        curated_dict['prop'] = prop
-        curated_dict['calc'] = "opera"
-        curated_dict['chemical'] = response_dict['chemical']
-        curated_dict['data'] = ""
         for _prop in prop_name:
             prop_label = self.propMap[prop]['methods'][_prop]
-            # curated_dict['data'] = smiles_data_obj[_prop]
             curated_dict['data'] += "{}: {}\n".format(prop_label, smiles_data_obj[_prop])
         return curated_dict
 
