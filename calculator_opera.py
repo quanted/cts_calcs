@@ -229,17 +229,13 @@ class OperaCalc(Calculator):
 
         OPERA_URL = os.environ.get("CTS_OPERA_SERVER")
 
-        logging.warning("request dict: {}".format(request_dict))
-
         # TODO: Make single request with list of smiles, if batch mode,
         # which will probably involve using 'batch_chems' key:val.
         # smiles = request_dict['batch_chems']
         # logging.warning("smiles: {}".format(smiles))
 
         if not isinstance(request_dict.get('chemical'), list):
-            logging.warning("INCOMING OPERA CHEM: {}".format(request_dict['chemical']))
             request_dict['chemical'] = [request_dict['chemical']]
-            logging.warning("INCOMING OPERA CHEM AFTER: {}".format(request_dict['chemical']))
 
         # _filtered_smiles = ''
         _response_dict = {}
