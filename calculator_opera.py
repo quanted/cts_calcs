@@ -121,6 +121,7 @@ class OperaCalc(Calculator):
                 curated_dict['prop'] = prop
                 curated_dict['data'] = ""
                 curated_dict['chemical'] = response_dict['chemical'][result_index]
+                curated_dict['node'] = response_dict.get('nodes', [""])[result_index]
                 curated_dict['calc'] = "opera"
                 if isinstance(prop_name, list):
                     # Handles props with multiple results/methods:
@@ -132,6 +133,7 @@ class OperaCalc(Calculator):
                     curated_dict['data'] = self.convert_units_for_cts(prop, curated_dict)
                     curated_list.append(curated_dict)
             result_index += 1
+        curated_list = self.remove_nodes_key(curated_list)
         return curated_list
 
     def parse_prop_with_multi_results(self, prop, prop_name, smiles_data_obj, response_dict, curated_dict):
@@ -166,7 +168,20 @@ class OperaCalc(Calculator):
         if not math.isnan(pkb):
             ion_con_dict['pKb'] = [pkb]
         curated_dict['data'] = ion_con_dict
-        return curated_dict 
+        return curated_dict
+
+    def remove_nodes_key(self, results_list):
+        """
+        Removes nodes key from results.
+        """
+        new_results_list = []
+        for result in results_list:
+            logging.warning("Result: {}".format(result))
+            if 'nodes' in result:
+                logging.warning("'nodes' in result")
+                del result['nodes']
+            new_results_list.append(result)
+        return new_results_list
 
     def makeDataRequest(self, smiles):
         _post = {'smiles': smiles}
@@ -221,14 +236,18 @@ class OperaCalc(Calculator):
         # smiles = request_dict['batch_chems']
         # logging.warning("smiles: {}".format(smiles))
 
+        if not isinstance(request_dict.get('chemical'), list):
+            logging.warning("INCOMING OPERA CHEM: {}".format(request_dict['chemical']))
+            request_dict['chemical'] = [request_dict['chemical']]
+            logging.warning("INCOMING OPERA CHEM AFTER: {}".format(request_dict['chemical']))
 
         # _filtered_smiles = ''
         _response_dict = {}
 
         # fill any overlapping keys from request:
         for key in request_dict.keys():
-            if not key == 'nodes':
-                _response_dict[key] = request_dict.get(key)
+            # if not key == 'nodes':
+            _response_dict[key] = request_dict.get(key)
         _response_dict.update({'request_post': request_dict, 'method': None})
 
         ####################################################################
