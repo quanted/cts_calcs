@@ -66,6 +66,9 @@ class ChemInfo(object):
 	chemical data.
 	"""
 	def __init__(self, chemical=""):
+		self.actorws_obj = ACTORWS()
+		self.smiles_filter_obj = SMILESFilter()
+		self.calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
 		self.chem_obj = [
 			{
 				'name': "chemical",
@@ -145,8 +148,7 @@ class ChemInfo(object):
 		]
 		return data
 
-
-	def get_cheminfo(self, request_post):
+	def get_cheminfo(self, request_post, only_dsstox=False):
 		"""
 		Makes call to Calculator for chemaxon
 		data. Converts incoming structure to smiles,
@@ -174,17 +176,13 @@ class ChemInfo(object):
 		chemical = request_post.get('chemical')
 		get_sd = request_post.get('get_structure_data')  # bool for getting <cml> format image for marvin sketch
 		is_node = request_post.get('is_node')  # bool for tree node or not
-
-		actorws_obj = ACTORWS()
-		smiles_filter_obj = SMILESFilter()
-		calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
 		_actor_results = {}  # dict for actorws results
 		_gsid = None
 		orig_smiles = None  # initial SMILES pre CTS filter
 		is_name = False  # bool for whether smiles was actually acronym
 
 		# Determines chemical type from user (e.g., smiles, cas, name, etc.):
-		chem_type = calc_obj.get_chemical_type(chemical)
+		chem_type = self.calc_obj.get_chemical_type(chemical)
 
 		# Returns error back if problem getting chemical type:
 		if 'error' in chem_type:
@@ -193,11 +191,11 @@ class ChemInfo(object):
 			response_obj['request_post'] = request_post
 			return response_obj
 
-		logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
+		# logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
 
 		# Checks chemical to make sure it's not actually an acronym instead of smiles:
 		if chem_type.get('type') == 'smiles' or chem_type.get('type') == 'smarts':
-			is_name = self.is_actually_name(chemical, calc_obj)
+			is_name = self.is_actually_name(chemical, self.calc_obj)
 			# Switches chem type to "name" if smiles was actually an acronym:
 			if is_name:
 				# chem_type = "name"
@@ -206,13 +204,18 @@ class ChemInfo(object):
 		# ACTORWS requests handling for getting DSSTOX data
 		if chem_type.get('type') == 'CAS#':
 			# Gets dsstox results using user-entered CAS#:
-			dsstox_results = actorws_obj.get_dsstox_results(chemical, "CAS#")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			dsstox_results = self.actorws_obj.get_dsstox_results(chemical, "CAS#")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 		else:
 			# Gets chemid from actorws using SMILES or name, then gets dsstox results:
-			_gsid = self.get_chemid_from_actorws(chemical, chem_type['type'], actorws_obj, calc_obj)
-			dsstox_results = actorws_obj.get_dsstox_results(_gsid, "gsid")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			_gsid = self.get_chemid_from_actorws(chemical, chem_type['type'])
+			dsstox_results = self.actorws_obj.get_dsstox_results(_gsid, "gsid")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
+
+		# Returns dsstox substance ID if that's all that's needed,
+		# which is used as the DB key for the chem-info document:
+		if only_dsstox:
+			return dsstox_results.get('data', {})
 
 		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
 		if chem_type['type'] == 'smiles':
@@ -222,11 +225,11 @@ class ChemInfo(object):
 			logging.info("Using actorws smiles as original smiles..")
 		else:
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
-			orig_smiles = calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
+			orig_smiles = self.calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
 
 		# Gets filtered SMILES:
 		try:
-			filtered_smiles = smiles_filter_obj.filterSMILES(orig_smiles)			
+			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles)			
 			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
 				response_obj = self.wrapped_post
 				response_obj['request_post'] = request_post
@@ -240,7 +243,7 @@ class ChemInfo(object):
 			return response_obj
 
 		# Gets chemical details from jchem ws:
-		jchem_response = calc_obj.getChemDetails({'chemical': filtered_smiles})
+		jchem_response = self.calc_obj.getChemDetails({'chemical': filtered_smiles})
 
 		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
@@ -256,18 +259,18 @@ class ChemInfo(object):
 				molecule_obj[key] = val
 
 		# Fills any empty keys with "N/A" for values:
-		for key in actorws_obj.dsstox_result_keys:
+		for key in self.actorws_obj.dsstox_result_keys:
 			# if key not in molecule_obj and key != 'preferredName':
 			if key not in molecule_obj:
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
 		# Adds popup image with cheminfo table if it's a gentrans product (i.e., node):
 		if is_node:
-			molecule_obj.update({'node_image': calc_obj.nodeWrapper(filtered_smiles, calc_obj.tree_image_height, calc_obj.tree_image_width, calc_obj.image_scale, calc_obj.metID,'svg', True)})
+			molecule_obj.update({'node_image': self.calc_obj.nodeWrapper(filtered_smiles, self.calc_obj.tree_image_height, self.calc_obj.tree_image_width, self.calc_obj.image_scale, self.calc_obj.metID,'svg', True)})
 			molecule_obj.update({
-				'popup_image': calc_obj.popupBuilder(
+				'popup_image': self.calc_obj.popupBuilder(
 					{"smiles": filtered_smiles}, 
-					calc_obj.metabolite_keys, 
+					self.calc_obj.metabolite_keys, 
 					"{}".format(request_post.get('id')),
 					"Metabolite Information")
 			})
@@ -281,7 +284,7 @@ class ChemInfo(object):
 
 
 
-	def is_actually_name(self, chemical, calc_obj):
+	def is_actually_name(self, chemical):
 		"""
 		Known as "the PFOS problem," which is an example chemical of
 		an issue where the chemical name is interpretted by JchemWS
@@ -291,7 +294,7 @@ class ChemInfo(object):
 		Returns: (True, actual SMILES from JchemWS) if chemical was actual a name,
 		(False, original smiles from input) if chemical was actually a smiles.
 		"""
-		converted_name_response = calc_obj.get_smiles_from_name(chemical)
+		converted_name_response = self.calc_obj.get_smiles_from_name(chemical)
 
 		if converted_name_response.get('smiles') and not 'error' in converted_name_response:
 			# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
@@ -302,7 +305,7 @@ class ChemInfo(object):
 			return False
 
 
-	def get_chemid_from_actorws(self, chemical, chem_type_name, actorws_obj, calc_obj):
+	def get_chemid_from_actorws(self, chemical, chem_type_name):
 		_gsid = None
 		_smiles_from_mrv = False
 		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles', 'systematic']  # bool for chemical in name/common or smiles format
@@ -310,14 +313,14 @@ class ChemInfo(object):
 		# If user drew a chemical, get SMILES of chemical from Jchem WS..
 		if chem_type_name == 'mrv':
 			logging.info("Getting SMILES from jchem web services..")
-			response = calc_obj.convertToSMILES({'chemical': chemical})
+			response = self.calc_obj.convertToSMILES({'chemical': chemical})
 			chemical = response['structure']
 			logging.info("SMILES of drawn chemical: {}".format(chemical))
 			_smiles_from_mrv = True
 
 		if _name_or_smiles or _smiles_from_mrv:
 			logging.info("Getting gsid from actorws chemicalIdentifier..")
-			chemid_results = actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
+			chemid_results = self.actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 			_gsid = chemid_results.get('data', {}).get('gsid')
 			logging.info("gsid from actorws chemid: {}".format(_gsid))
 
