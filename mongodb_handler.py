@@ -21,8 +21,9 @@ class MongoDBHandler:
 		self.is_connected = False
 
 		# Keys for chem info collection document entry:
-		self.chem_info_keys = ["chemical", "orig_smiles", "smiles", "preferredName", 
-			"iupac", "formula", "casrn", "cas", "dsstoxSubstanceId", "mass", "exactmass"]
+		self.chem_info_keys = ["chemical", "orig_smiles", "smiles",
+			"preferredName", "iupac", "formula", "casrn", "cas",
+			"dsstoxSubstanceId", "mass", "exactmass", "structureData"]
 
 		# Keys for pchem collection document entry:
 		# self.pchem_keys = ["smiles", "calc", "prop", "data", "method"]
@@ -67,30 +68,39 @@ class MongoDBHandler:
 		"""
 		Creates chem info object for querying and inserting.
 		"""
-		query_obj = dict()
+		new_query_obj = dict()
 		for key, val in query_obj.items():
 			if key in self.chem_info_keys:
-				query_obj[key] = val
-		return query_obj
+				new_query_obj[key] = val
+		return new_query_obj
 
-	def find_chem_info_document(self, query_obj, is_connected=False):
+	# def find_cheminfo_with_dsstox(self, user_chemical):
+	# 	"""
+	# 	Gets DSSTOX to use as key for chem-info DB objects.
+	# 	"""
+	# 	if not self.is_connected:
+	# 		return None
+
+
+	def find_chem_info_document(self, query_obj):
 		"""
 		Searches chem info collection for document matching chemical.
 		Returns chem info data if it exists, or None if it doesn't.
 		"""
-		if not is_connected:
+		if not self.is_connected:
 			return None
 		chem_info_result = self.chem_info_collection.find_one(query_obj)  # searches db
 		return chem_info_result
 
-	def insert_chem_info_data(self, molecule_obj, is_connected=False):
+	def insert_chem_info_data(self, molecule_obj):
 		"""
 		Inserts chem info data into chem info collection.
 		Returns document unique _id.
 		"""
-		if not is_connected:
+		if not self.is_connected and not molecule_obj:
 			return None
-		chem_info_obj = self.chem_info_collection.insert_one(molecule_obj)  # inserts query object
+		db_object = self.create_query_obj(molecule_obj)
+		chem_info_obj = self.chem_info_collection.insert_one(db_object)  # inserts query object
 		return chem_info_obj
 
 	# def insert_pchem_data(self, pchem_data):
