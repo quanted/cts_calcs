@@ -6,6 +6,10 @@ import json
 from .calculator_metabolizer import MetabolizerCalc
 from .actorws import ACTORWS
 from .smilesfilter import SMILESFilter
+from .mongodb_handler import MongoDBHandler
+
+db_handler = MongoDBHandler()  # single mongo instance for cts calcs
+db_handler.connect_to_db()
 
 
 
@@ -195,7 +199,7 @@ class ChemInfo(object):
 
 		# Checks chemical to make sure it's not actually an acronym instead of smiles:
 		if chem_type.get('type') == 'smiles' or chem_type.get('type') == 'smarts':
-			is_name = self.is_actually_name(chemical, self.calc_obj)
+			is_name = self.is_actually_name(chemical)
 			# Switches chem type to "name" if smiles was actually an acronym:
 			if is_name:
 				# chem_type = "name"
@@ -265,7 +269,7 @@ class ChemInfo(object):
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
 		# Adds popup image with cheminfo table if it's a gentrans product (i.e., node):
-		if is_node:
+		if is_node or db_handler.is_connected:
 			molecule_obj.update({'node_image': self.calc_obj.nodeWrapper(filtered_smiles, self.calc_obj.tree_image_height, self.calc_obj.tree_image_width, self.calc_obj.image_scale, self.calc_obj.metID,'svg', True)})
 			molecule_obj.update({
 				'popup_image': self.calc_obj.popupBuilder(

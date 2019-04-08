@@ -24,6 +24,7 @@ class MongoDBHandler:
 		self.chem_info_keys = ["chemical", "orig_smiles", "smiles",
 			"preferredName", "iupac", "formula", "casrn", "cas",
 			"dsstoxSubstanceId", "mass", "exactmass", "structureData"]
+		self.extra_chem_info_Keys = ["node_image", "popup_image"]  # html wrappers w/ images for product nodes and popups
 
 		# Keys for pchem collection document entry:
 		# self.pchem_keys = ["smiles", "calc", "prop", "data", "method"]
@@ -70,7 +71,7 @@ class MongoDBHandler:
 		"""
 		new_query_obj = dict()
 		for key, val in query_obj.items():
-			if key in self.chem_info_keys:
+			if key in self.chem_info_keys + self.extra_chem_info_Keys:
 				new_query_obj[key] = val
 		return new_query_obj
 
@@ -102,7 +103,3 @@ class MongoDBHandler:
 		db_object = self.create_query_obj(molecule_obj)
 		chem_info_obj = self.chem_info_collection.insert_one(db_object)  # inserts query object
 		return chem_info_obj
-
-	# def insert_pchem_data(self, pchem_data):
-	# 	"""
-	# 	"""
