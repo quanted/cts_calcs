@@ -94,7 +94,7 @@ class MongoDBHandler:
 		Inserts chem info data into chem info collection.
 		Returns document unique _id.
 		"""
-		if not self.is_connected and not molecule_obj:
+		if not self.is_connected or not molecule_obj:
 			return None
 		db_object = self.create_chem_info_document(molecule_obj)
 		chem_info_obj = self.chem_info_collection.insert_one(db_object)  # inserts query object
