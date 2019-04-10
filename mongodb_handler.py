@@ -6,6 +6,7 @@ import pymongo
 import datetime
 import pytz
 import logging
+import os
 
 
 
@@ -19,22 +20,25 @@ class MongoDBHandler:
 		# self.products_collection = self.db.products  # transformation products collection
 		self.db_conn_timeout = 1
 		self.is_connected = False
+		self.mongodb_host = os.environ.get('CTS_DB_HOST')
 
 		# Keys for chem info collection document entry:
-		self.chem_info_keys = ["chemical", "orig_smiles", "smiles",
-			"preferredName", "iupac", "formula", "casrn", "cas",
-			"dsstoxSubstanceId", "mass", "exactmass", "structureData"]
+		self.chem_info_keys = ["dsstoxSubstanceId", "chemical", "orig_smiles",
+			"smiles", "preferredName", "iupac", "formula", "casrn",
+			"cas", "mass", "exactmass", "structureData"]
 		self.extra_chem_info_Keys = ["node_image", "popup_image"]  # html wrappers w/ images for product nodes and popups
 
 		# Keys for pchem collection document entry:
-		# self.pchem_keys = ["smiles", "calc", "prop", "data", "method"]
+		self.pchem_keys = ["dsstoxSubstanceId", "calc", "prop", "data", "method", "ph"]
 
 	def connect_to_db(self):
 		"""
 		Tries to connect to mongodb.
 		"""
 		try:
-			self.mongodb_conn = pymongo.MongoClient(port=27017, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
+			logging.info("Connecting to MongoDB at: {}".format(self.mongodb_host	))
+			# self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, port=27017, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
+			self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
 			self.is_connected = True
 			self.db = self.mongodb_conn.cts  # opens cts database
 			self.chem_info_collection = self.db.chem_info  # chem info data collection
@@ -65,7 +69,7 @@ class MongoDBHandler:
 		jid = localDatetime.strftime('%Y%m%d%H%M%S%f')
 		return jid
 
-	def create_query_obj(self, query_obj):
+	def create_chem_info_document(self, query_obj):
 		"""
 		Creates chem info object for querying and inserting.
 		"""
@@ -74,14 +78,6 @@ class MongoDBHandler:
 			if key in self.chem_info_keys + self.extra_chem_info_Keys:
 				new_query_obj[key] = val
 		return new_query_obj
-
-	# def find_cheminfo_with_dsstox(self, user_chemical):
-	# 	"""
-	# 	Gets DSSTOX to use as key for chem-info DB objects.
-	# 	"""
-	# 	if not self.is_connected:
-	# 		return None
-
 
 	def find_chem_info_document(self, query_obj):
 		"""
@@ -100,6 +96,8 @@ class MongoDBHandler:
 		"""
 		if not self.is_connected and not molecule_obj:
 			return None
-		db_object = self.create_query_obj(molecule_obj)
+		db_object = self.create_chem_info_document(molecule_obj)
 		chem_info_obj = self.chem_info_collection.insert_one(db_object)  # inserts query object
 		return chem_info_obj
+
+	# def create_pchem_document(self, query_obj)
