@@ -16,8 +16,7 @@ class MongoDBHandler:
 		# MongoDB Settings:
 		self.db = None  # opens cts database (set in connection function)
 		self.chem_info_collection = None  # chem info data collection (set in connection function)
-		# self.pchem_collection = self.db.pchem  # pchem data collection
-		# self.products_collection = self.db.products  # transformation products collection
+		self.pchem_collection = None  # pchem data collection
 		self.db_conn_timeout = 1
 		self.is_connected = False
 		self.mongodb_host = os.environ.get('CTS_DB_HOST')
@@ -25,11 +24,14 @@ class MongoDBHandler:
 		# Keys for chem info collection document entry:
 		self.chem_info_keys = ["dsstoxSubstanceId", "chemical", "orig_smiles",
 			"smiles", "preferredName", "iupac", "formula", "casrn",
-			"cas", "mass", "exactmass", "structureData"]
+			"cas", "mass", "exactMass", "structureData"]
 		self.extra_chem_info_Keys = ["node_image", "popup_image"]  # html wrappers w/ images for product nodes and popups
 
 		# Keys for pchem collection document entry:
 		self.pchem_keys = ["dsstoxSubstanceId", "calc", "prop", "data", "method", "ph"]
+
+		# Keys for dtxcid -> dtxsid document entries (see DSST_IDs.csv):
+		self.dtxcid_keys = ["DTXCID", "DTXSID", "CASRN", "PreferredName"]
 
 	def connect_to_db(self):
 		"""
@@ -42,6 +44,8 @@ class MongoDBHandler:
 			self.is_connected = True
 			self.db = self.mongodb_conn.cts  # opens cts database
 			self.chem_info_collection = self.db.chem_info  # chem info data collection
+			self.pchem_collection = self.db.pchem  # pchem data collection
+			self.dtxcid_collection = self.db.dtxcid  # dtxcid data collection
 			self.test_db_connection()
 		except pymongo.errors.ConnectionFailure as e:
 			logging.warning("Unable to connect to db: {}".format(e))
@@ -100,4 +104,66 @@ class MongoDBHandler:
 		chem_info_obj = self.chem_info_collection.insert_one(db_object)  # inserts query object
 		return chem_info_obj
 
-	# def create_pchem_document(self, query_obj)
+	def create_pchem_document(self, query_obj):
+		"""
+		Creates p-chem object for querying and inserting.
+		"""
+		new_query_obj = dict()
+		for key, val in query_obj.items():
+			if key in self.pchem_keys:
+				new_query_obj[key] = val
+		return new_query_obj
+
+	def find_pchem_document(self, query_obj):
+		"""
+		Searches pchem collection for document matching chemical.
+		Returns pchem data if it exists, or None if it doesn't.
+		"""
+		if not self.is_connected:
+			return None
+		pchem_result = self.pchem_collection.find_one(query_obj)  # searches db
+		return pchem_result
+
+	def insert_pchem_data(self, pchem_obj):
+		"""
+		Inserts pchem data into chem info collection.
+		Returns document unique _id.
+		"""
+		if not self.is_connected or not pchem_obj:
+			return None
+		print("Inserting {} into db.".format(pchem_obj))
+		db_object = self.create_pchem_document(pchem_obj)
+		pchem_obj = self.pchem_collection.insert_one(db_object)  # inserts query object
+		return pchem_obj
+
+	def create_dtxcid_document(self, query_obj):
+		"""
+		Creates dtxcid object for querying and inserting.
+		"""
+		new_query_obj = dict()
+		for key, val in query_obj.items():
+			if key in self.dtxcid_keys:
+				new_query_obj[key] = val
+		return new_query_obj
+
+	def find_dtxcid_document(self, query_obj):
+		"""
+		Searches dtxcid collection for document matching chemical.
+		Returns dtxcid data if it exists, or None if it doesn't.
+		"""
+		if not self.is_connected:
+			return None
+		dtxcid_result = self.dtxcid_collection.find_one(query_obj)  # searches db
+		return dtxcid_result
+
+	def insert_dtxcid_data(self, dtxcid_obj):
+		"""
+		Inserts dtxcid data into dtxcid collection.
+		Returns document unique _id.
+		"""
+		if not self.is_connected or not dtxcid_obj:
+			return None
+		print("Inserting {} into db.".format(dtxcid_obj))
+		db_object = self.create_dtxcid_document(dtxcid_obj)
+		dtxcid_obj = self.dtxcid_collection.insert_one(db_object)  # inserts query object
+		return dtxcid_obj
