@@ -20,7 +20,7 @@ class OperaCalc(Calculator):
         self.baseUrl = os.environ['CTS_OPERA_SERVER']
         self.urlStruct = "/opera/rest/run"
         self.request_timeout = 180
-        self.props = ['kow_no_ph', 'melting_point', 'boiling_point', 'vapor_press', 'water_sol', 'ion_con', 'kow_wph', 'log_bcf', 'koc']
+        self.props = ['kow_no_ph', 'melting_point', 'boiling_point', 'henrys_law_con', 'vapor_press', 'water_sol', 'ion_con', 'kow_wph', 'log_bcf', 'koc']
         self.opera_props = ['LogP_pred', 'MP_pred', 'BP_pred', 'LogVP_pred', 'LogWS_pred', 'pKa_a_pred',
             'pKa_b_pred', 'LogD55_pred', 'LogD74_pred', 'LogBCF_pred', 'LogKoc_pred']
         self.propMap = {
@@ -73,14 +73,14 @@ class OperaCalc(Calculator):
             + prop - property name to convert.
             + data_obj - response/data to be sent back to user.
         """
-        if data_obj.get('prop') in ['vapor_press', 'henrys_law_con']:
+        if prop in ['vapor_press', 'henrys_law_con']:
             # Converts from log:
             data_obj['data'] = 10**float(data_obj['data'])
-        elif data_obj.get('prop') == 'water_sol':
+        elif prop == 'water_sol':
             # Converts log(mol/L) --> mg/L:
             data_obj['mass'] = data_obj.get('mass')  # uses mass for WS conversion
             data_obj['data'] = self.convert_water_solubility(data_obj)
-        elif data_obj.get('prop') == 'ion_con':
+        elif prop == 'ion_con':
             # Sets 'data' to "none" if "NaN":
             data_obj = self.check_ion_con_for_nan(data_obj)
         return data_obj['data']
@@ -183,6 +183,26 @@ class OperaCalc(Calculator):
             new_results_list.append(result)
         return new_results_list
 
+    def remove_opera_db_duplicates(self, db_results):
+        """
+        Makes sure there aren't data duplicates for a chemical's
+        opera p-chem db results. This is inspired by vapor_pressure having
+        duplicate documents in the pchem collection.
+        TODO: Re-run DB script to remove vapor_press duplicates (warning: slow).
+        """
+        num_vp_docs = 0
+        vp_indices = []
+        prop_index = 0
+        for result in db_results:
+            if result.get('prop') == 'vapor_press':
+                num_vp_docs += 1
+                vp_indices.append(prop_index)
+            prop_index += 1
+        if num_vp_docs == 2:
+            logging.warning("Removing duplicate.")
+            del db_results[vp_indices[0]]  # removes a vp duplicate entry
+        return db_results
+
     def makeDataRequest(self, smiles):
         _post = {'smiles': smiles}
         _url = self.baseUrl + self.urlStruct
@@ -198,6 +218,8 @@ class OperaCalc(Calculator):
             # retry data request to chemaxon server until max retries or a valid result is returned
             try:
                 response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
+                logging.warning("OPERA Response: {}".format(response))
+                logging.warning("OPERA Response content: {}".format(response.content))
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     self.results = json.loads(response.content)
@@ -229,39 +251,17 @@ class OperaCalc(Calculator):
 
         OPERA_URL = os.environ.get("CTS_OPERA_SERVER")
 
-        # TODO: Make single request with list of smiles, if batch mode,
-        # which will probably involve using 'batch_chems' key:val.
-        # smiles = request_dict['batch_chems']
-        # logging.warning("smiles: {}".format(smiles))
-
         if not isinstance(request_dict.get('chemical'), list):
             request_dict['chemical'] = [request_dict['chemical']]
 
-        # _filtered_smiles = ''
         _response_dict = {}
 
         # fill any overlapping keys from request:
         for key in request_dict.keys():
-            # if not key == 'nodes':
             _response_dict[key] = request_dict.get(key)
         _response_dict.update({'request_post': request_dict, 'method': None})
 
-        ####################################################################
-        # NOTE: OPERA currently doesn't have any calc-specific SMILES filter!
-        ####################################################################
-        # try:
-        #     _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-        # except Exception as err:
-        #     logging.warning("Error filtering SMILES: {}".format(err))
-        #     _response_dict.update({
-        #         'data': "Cannot filter SMILES",
-        #         'valid': False
-        #     })
-        #     return _response_dict
-        ####################################################################
-
         try:
-            # _result_obj = self.makeDataRequest(_filtered_smiles)
             _result_obj = self.makeDataRequest(request_dict['chemical'])
             _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
             _response_dict['data'] = _result_obj
