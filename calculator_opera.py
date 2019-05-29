@@ -71,6 +71,8 @@ class OperaCalc(Calculator):
         """
         Gets 'node' data from 'nodes' key for a given chemical.
         """
+        if not nodes_list or len(nodes_list) < 1:
+            return False
         chem_list = []
         chem_to_match = chem_to_match.replace("\n", "").replace("\r", "")
         for node in nodes_list:
