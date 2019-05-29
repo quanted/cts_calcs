@@ -240,7 +240,7 @@ class OperaCalc(Calculator):
                     return self.results
                 _retries += 1
             except Exception as e:
-                logging.warning("Exception in calculator_epi.py: {}".format(e))
+                logging.warning("Exception in calculator_opera.py: {}".format(e))
                 _retries += 1
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
         self.results = "calc server not found"
