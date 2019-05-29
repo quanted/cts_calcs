@@ -67,6 +67,18 @@ class OperaCalc(Calculator):
             }
         }
 
+    def match_chemical_with_node(self, chem_to_match, nodes_list):
+        """
+        Gets 'node' data from 'nodes' key for a given chemical.
+        """
+        chem_list = []
+        chem_to_match = chem_to_match.replace("\n", "").replace("\r", "")
+        for node in nodes_list:
+            node['chemical'] = node['chemical'].replace("\n", "").replace("\r", "")
+            if node['chemical'] == chem_to_match:
+                return node
+        return False
+
     def convert_units_for_cts(self, prop, data_obj):
         """
         Converts certain OPERA properties to units used by CTS.
@@ -92,7 +104,8 @@ class OperaCalc(Calculator):
         _ws_result = None
         ws_data_val = float(ws_data_obj['data'])
         if isinstance(ws_data_obj['mass'], float) or isinstance(ws_data_obj['mass'], int):
-            _ws_result = 1000 * float(ws_data_obj['mass']) * 10**-(ws_data_val)
+            # _ws_result = 1000 * float(ws_data_obj['mass']) * 10**-(ws_data_val)
+            _ws_result = (10**ws_data_val) * ws_data_obj['mass'] * 1000.0
         else:
             # Requests mass from Calculator
             json_obj = self.getMass({'chemical': ws_data_obj['chemical']})
@@ -111,6 +124,7 @@ class OperaCalc(Calculator):
 
         # todo: add no 'data' exception handling
         opera_results = opera_results['data']
+        chem_nodes = response_dict.get('nodes')
 
         result_index = 0
         curated_list = []
@@ -121,7 +135,10 @@ class OperaCalc(Calculator):
                 curated_dict['prop'] = prop
                 curated_dict['data'] = ""
                 curated_dict['chemical'] = response_dict['chemical'][result_index]
-                curated_dict['node'] = response_dict.get('nodes', [""])[result_index]
+
+                # curated_dict['node'] = response_dict.get('nodes', [""])[result_index]
+                curated_dict['node'] = self.match_chemical_with_node(curated_dict['chemical'], chem_nodes)
+                
                 curated_dict['calc'] = "opera"
                 if isinstance(prop_name, list):
                     # Handles props with multiple results/methods:
@@ -176,9 +193,7 @@ class OperaCalc(Calculator):
         """
         new_results_list = []
         for result in results_list:
-            logging.warning("Result: {}".format(result))
             if 'nodes' in result:
-                logging.warning("'nodes' in result")
                 del result['nodes']
             new_results_list.append(result)
         return new_results_list
@@ -199,7 +214,6 @@ class OperaCalc(Calculator):
                 vp_indices.append(prop_index)
             prop_index += 1
         if num_vp_docs == 2:
-            logging.warning("Removing duplicate.")
             del db_results[vp_indices[0]]  # removes a vp duplicate entry
         return db_results
 
@@ -218,8 +232,6 @@ class OperaCalc(Calculator):
             # retry data request to chemaxon server until max retries or a valid result is returned
             try:
                 response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
-                logging.warning("OPERA Response: {}".format(response))
-                logging.warning("OPERA Response content: {}".format(response.content))
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     self.results = json.loads(response.content)
