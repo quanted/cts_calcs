@@ -38,11 +38,8 @@ class MongoDBHandler:
 		Tries to connect to mongodb.
 		"""
 		try:
-			logging.info("Connecting to MongoDB at: {}".format(self.mongodb_host	))
-			# self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, port=27017, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
-			# self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
-			# self.is_connected = True
-			self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, connect=False, serverSelectionTimeoutMS=1000, connectTimeoutMS=1000)
+			logging.info("(mongodb_handler.py) Connecting to MongoDB at: {}".format(self.mongodb_host	))
+			self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, serverSelectionTimeoutMS=200, connectTimeoutMS=200)
 			self.is_connected = True
 			self.db = self.mongodb_conn.cts  # opens cts database
 			# self.chem_info_collection = self.db.chem_info  # chem info data collection
@@ -50,16 +47,16 @@ class MongoDBHandler:
 			self.dtxcid_collection = self.db.dtxcid  # dtxcid data collection
 			self.test_db_connection()
 		except pymongo.errors.ConnectionFailure as e:
-			logging.warning("Unable to connect to db: {}".format(e))
+			logging.warning("(mongodb_handler.py) Unable to connect to db: {}".format(e))
 			self.is_connected = False
 			self.mongodb_conn.close()
 		except pymongo.errors.ConfigurationError as e:
 			logging.warning("Config error setting up mongodb client: {}".format(e))
-			logging.warning("Unable to connect to db.")
+			logging.warning("(mongodb_handler.py) Unable to connect to db.")
 			self.is_connected = False
 			self.mongodb_conn.close()
 		except Exception as e:
-			logging.warning("Error connecting to db: {}".format(e))
+			logging.warning("(mongodb_handler.py) Error connecting to db: {}".format(e))
 			self.is_connected = False
 			self.mongodb_conn.close()
 
@@ -72,7 +69,7 @@ class MongoDBHandler:
 			self.mongodb_conn.server_info()
 			self.is_connected = True
 		except pymongo.errors.ServerSelectionTimeoutError as e:
-			logging.warning("Unable to connect to db.")
+			logging.warning("(mongodb_handler.py) Unable to connect to db.")
 			self.is_connected = False
 
 	def gen_jid(self):
