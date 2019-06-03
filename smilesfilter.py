@@ -231,12 +231,10 @@ class SMILESFilter(object):
 		"""
 		Calculator-dependent SMILES filtering!
 		"""
-		logging.info("Parsing SMILES by calculator..")
 		filtered_smiles = structure
 
 		#1. check structure mass..
 		if calculator != 'chemaxon':
-			logging.info("checking mass for: {}...".format(structure))
 			if not self.checkMass(structure):
 				# raise "Structure too large, must be < 1500 g/mol.."
 				raise Exception({'data': "structure too large"})
