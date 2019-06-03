@@ -190,7 +190,8 @@ class ChemInfo(object):
 
 		# Returns error back if problem getting chemical type:
 		if 'error' in chem_type:
-			response_obj = self.wrapped_post
+			response_obj = {}
+			response_obj['status'] = False
 			response_obj['error'] = chem_type['error']
 			response_obj['request_post'] = request_post
 			return response_obj
@@ -235,13 +236,14 @@ class ChemInfo(object):
 		try:
 			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles)			
 			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
-				response_obj = self.wrapped_post
+				response_obj = {}
+				response_obj['status'] = False
 				response_obj['request_post'] = request_post
 				response_obj['error'] = filtered_smiles['error']
 				return response_obj
 		except Exception as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
-			response_obj = self.wrapped_post
+			response_obj = {}
 			response_obj['error'] = "Cannot process chemical"
 			response_obj['request_post'] = request_post
 			return response_obj
@@ -280,7 +282,7 @@ class ChemInfo(object):
 					"Metabolite Information")
 			})
 
-		wrapped_post = self.wrapped_post
+		wrapped_post = {}
 		wrapped_post['status'] = True  # 'metadata': '',
 		wrapped_post['data'] = molecule_obj
 		wrapped_post['request_post'] = request_post
