@@ -73,6 +73,11 @@ class ChemInfo(object):
 		self.actorws_obj = ACTORWS()
 		self.smiles_filter_obj = SMILESFilter()
 		self.calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
+		self.carbon_anomolies = {
+			"C": "methane",
+			"CC": "ethane",
+			"CCC": "propane"
+		}  # carbon-chain chems that comptox reads as a name instead of smiles (methane, ethane, and propane, respectively)
 		self.chem_obj = [
 			{
 				'name': "chemical",
@@ -205,6 +210,11 @@ class ChemInfo(object):
 			if is_name:
 				# chem_type = "name"
 				chem_type['type'] = "name"
+
+		# Uses name form of C, CC, and CCC SMILES:
+		if chemical in list(self.carbon_anomolies.keys()):
+			chem_type['type'] = "name"
+			chemical = self.carbon_anomolies[chemical]
 		
 		# ACTORWS requests handling for getting DSSTOX data
 		if chem_type.get('type') == 'CAS#':
