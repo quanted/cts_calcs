@@ -193,22 +193,25 @@ class ChemInfo(object):
 		# Determines chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = self.calc_obj.get_chemical_type(chemical)
 
-		# Returns error back if problem getting chemical type:
-		if 'error' in chem_type:
-			response_obj = {}
-			response_obj['status'] = False
-			response_obj['error'] = chem_type['error']
-			response_obj['request_post'] = request_post
-			return response_obj
-
-		# logging.info("Incoming chemical to CTS standardizer: {}".format(chemical))
+		if not chem_type.get('type') or 'error' in chem_type:
+			 # If ChemAxon can't get chemical type, then try to get chem info
+			 # data from ACTORWS instead.
+			logging.info("Couldn't get chemical type from ChemAxon. Trying to get data from ACTORWS.")
+			chemid_results = self.handle_no_chemaxon(chemical, request_post)
+			if 'error' in chemid_results:
+				return chemid_results  # already wrapped for frontend
+			if chemid_results.get('smiles'):
+				chemical = chemid_results['smiles']
+				logging.info("Setting chemical to ACTORWS SMILES to continue chem info routine.")
+			elif chemid_results.get('casrn'):
+				chemical = chemid_results['casrn']
+				logging.info("Setting chemical to ACTORWS casrn to continue chem info routine.")
 
 		# Checks chemical to make sure it's not actually an acronym instead of smiles:
 		if chem_type.get('type') == 'smiles' or chem_type.get('type') == 'smarts':
 			is_name = self.is_actually_name(chemical)
 			# Switches chem type to "name" if smiles was actually an acronym:
 			if is_name:
-				# chem_type = "name"
 				chem_type['type'] = "name"
 
 		# Uses name form of C, CC, and CCC SMILES:
@@ -223,7 +226,8 @@ class ChemInfo(object):
 			_actor_results.update(dsstox_results)
 		else:
 			# Gets chemid from actorws using SMILES or name, then gets dsstox results:
-			_gsid = self.get_chemid_from_actorws(chemical, chem_type['type'])
+			chemid_results = self.get_chemid_from_actorws(chemical, chem_type['type'])
+			_gsid = chemid_results.get('synGsid')  # gets gsid from chem identifier
 			dsstox_results = self.actorws_obj.get_dsstox_results(_gsid, "gsid")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
 			_actor_results.update(dsstox_results)
 
@@ -270,13 +274,10 @@ class ChemInfo(object):
 		# Replaces certain keys in molecule_obj with actorws values:
 		for key, val in _actor_results.get('data', {}).items():
 			if key != 'iupac' and key != 'smiles':
-				# Note: using actorws's 'smiles' for molecule_obj's 'orig_smiles' value, and filtered_smiles for molecule_obj's 'smiles' value.
-				# Note: using jchem's 'iupac' instead of actorws's.
 				molecule_obj[key] = val
 
 		# Fills any empty keys with "N/A" for values:
 		for key in self.actorws_obj.dsstox_result_keys:
-			# if key not in molecule_obj and key != 'preferredName':
 			if key not in molecule_obj:
 				molecule_obj.update({key: "N/A"})  # fill in any missed data from actorws with "N/A"
 
@@ -299,7 +300,26 @@ class ChemInfo(object):
 
 		return wrapped_post
 
-
+	def handle_no_chemaxon(self, chemical, request_post):
+		"""
+		Returns data for ACTORWS only if chemaxon
+		isn't available or can't recognize the chemical.
+		"""
+		molecule_obj = {}
+		chemid_results = self.get_chemid_from_actorws(chemical)
+		if not chemid_results:
+			response_obj = {}
+			response_obj['status'] = False
+			response_obj['request_post'] = request_post
+			response_obj['error'] = "Cannot find data for chemical"
+			return response_obj
+		# remaps keys to cts key names:
+		for key, val in chemid_results.items():
+			cts_key = self.actorws_obj.chemid_keys_map.get(key)
+			if not cts_key:
+				continue
+			molecule_obj[cts_key] = val
+		return molecule_obj
 
 	def is_actually_name(self, chemical):
 		"""
@@ -312,21 +332,17 @@ class ChemInfo(object):
 		(False, original smiles from input) if chemical was actually a smiles.
 		"""
 		converted_name_response = self.calc_obj.get_smiles_from_name(chemical)
-
 		if converted_name_response.get('smiles') and not 'error' in converted_name_response:
 			# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
-			# jchem_smiles = converted_name_response.get('smiles')  # used converted smiles from name
 			return True
 		else:
 			# if an error was thrown, it was actually smiles so returns original version:
 			return False
 
-
-	def get_chemid_from_actorws(self, chemical, chem_type_name):
+	def get_chemid_from_actorws(self, chemical, chem_type_name=None):
 		_gsid = None
 		_smiles_from_mrv = False
 		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles', 'systematic']  # bool for chemical in name/common or smiles format
-
 		# If user drew a chemical, get SMILES of chemical from Jchem WS..
 		if chem_type_name == 'mrv':
 			logging.info("Getting SMILES from jchem web services..")
@@ -334,11 +350,7 @@ class ChemInfo(object):
 			chemical = response['structure']
 			logging.info("SMILES of drawn chemical: {}".format(chemical))
 			_smiles_from_mrv = True
-
-		if _name_or_smiles or _smiles_from_mrv:
-			logging.info("Getting gsid from actorws chemicalIdentifier..")
-			chemid_results = self.actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
-			_gsid = chemid_results.get('data', {}).get('gsid')
-			logging.info("gsid from actorws chemid: {}".format(_gsid))
-
-		return _gsid
+		# NOTE: Should be name or smiles, but tries to anyway in case chem type was unknown:
+		logging.info("Getting gsid from actorws chemicalIdentifier..")
+		chemid_results = self.actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
+		return chemid_results

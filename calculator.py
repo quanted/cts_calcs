@@ -364,29 +364,26 @@ class Calculator(object):
 		"""
 		url = self.jchem_server_url + self.type_endpoint
 		request_header = {'Content-Type': "*/*"}
-
-		response = requests.post(url, data=chemical.encode('utf-8'), headers=request_header, timeout=self.request_timeout)
-		results = json.loads(response.content)
-
+		response, results = None, None
+		try:
+			response = requests.post(url, data=chemical.encode('utf-8'), headers=request_header, timeout=self.request_timeout)
+			results = json.loads(response.content)
+		except Exception as e:
+			logging.warning("Exception at get_chemical_type: {}".format(e))
+			return {'type': None}
 		_type_response = {
 			'type': None
 		}
-
 		check_result = self.check_response_for_errors(results)
-
 		if not check_result.get('valid'):
 			# errors found in response..
 			_type_response['error'] = check_result['error']
 			return _type_response
-
 		if 'properties' in results:
 			_type_response['type'] = results['properties'].get('type')
-
 		if not _type_response['type'] and results.get('type'):
 			_type_response['type'] = results['type']
-
 		return _type_response
-
 
 	def get_smiles_from_name(self, chemical):
 		"""

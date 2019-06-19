@@ -17,6 +17,19 @@ class ACTORWS(object):
 		self.calc = "actorws"
 		self.props = ['dsstox', 'chemid']
 		self.chemid_result_keys = ['synGsid']  # chemidentifier result key of interest
+		self.chemid_all_keys = ['origIdentifier', 'casrn', 'preferredName', 'synGsid', 'synType', 'synIdentifier', 'dtxsid', 'dtxcid', 'jChemInChIKey', 'indigoInChIKey', 'smiles', 'molFormula', 'molWeight', 'collidingGsid', 'collidingCasrn', 'collidingPreferredName', 'trimmedWhitespace', 'trimmedLeadingZeros', 'reformattedIdentifier', 'checksum', 'processedAs', 'infoMsg', 'warningMsg', 'msReadyForms', 'qsarForms', 'imageURL']
+		
+		self.chemid_keys_map = {
+			'casrn': 'casrn',
+			'preferredName': 'preferredName',
+			'synGsid': 'gsid',
+			'dtxsid': 'dsstoxSubstanceId',
+			'dtxcid': 'dtxcid',
+			'smiles': 'smiles',
+			'molFormula': 'formula',
+			'molWeight': 'mass',
+		}
+
 		self.dsstox_result_keys = ['casrn', 'dsstoxSubstanceId', 'preferredName', 'smiles', 'iupac']
 		self.result_obj = {
 			'calc': "actorws",
@@ -96,20 +109,19 @@ class ACTORWS(object):
 			_chemid_results = _chemid_results['DataRow']
 		except Exception as e:
 			logging.warning("Exception getting chemid results from actorws: {}".format(e))
-			_results = self.result_obj
-			_results['prop'] = "chemid"
-			_results['data'] = {'gsid': None}
-			return _results
+			# _results = self.result_obj
+			# _results['prop'] = "chemid"
+			# _results['data'] = {'gsid': None}
+			# return _results
+			return None
 
-		_results = self.result_obj
-		_results['prop'] = "chemid"
-		_result_key = self.chemid_result_keys[0]  # only one key needed for now
-		
-		if _result_key in _chemid_results:
-			_results['data'].update({'gsid': _chemid_results.get(_result_key)})  # getting synGsid key:val
+		# _results = self.result_obj
+		# _results['prop'] = "chemid"
+		# _result_key = self.chemid_result_keys[0]  # only one key needed for now
+		# if _result_key in _chemid_results:
+		# 	_results['data'].update({'gsid': _chemid_results.get(_result_key)})  # getting synGsid key:val
+		# return _results
 
-		# todo: add more error handling, waiting to start new cheminfo workflow w/ actorws first..
-
-		return _results
+		return _chemid_results
 
 	##########################################################################
