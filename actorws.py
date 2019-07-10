@@ -103,24 +103,12 @@ class ACTORWS(object):
 		Inputs: chemical - either a chemical name or smiles
 		Output: Dictionary with results_obj keys and synGsid
 		"""
-		
 		try:
 			_chemid_results = self.make_request(self.chemid_url, {'identifier': chemical})
 			_chemid_results = _chemid_results['DataRow']
 		except Exception as e:
 			logging.warning("Exception getting chemid results from actorws: {}".format(e))
-			# _results = self.result_obj
-			# _results['prop'] = "chemid"
-			# _results['data'] = {'gsid': None}
-			# return _results
 			return None
-
-		# _results = self.result_obj
-		# _results['prop'] = "chemid"
-		# _result_key = self.chemid_result_keys[0]  # only one key needed for now
-		# if _result_key in _chemid_results:
-		# 	_results['data'].update({'gsid': _chemid_results.get(_result_key)})  # getting synGsid key:val
-		# return _results
 
 		return _chemid_results
 

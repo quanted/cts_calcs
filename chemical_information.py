@@ -6,11 +6,6 @@ import json
 from .calculator_metabolizer import MetabolizerCalc
 from .actorws import ACTORWS
 from .smilesfilter import SMILESFilter
-# from .mongodb_handler import MongoDBHandler
-
-# db_handler = MongoDBHandler()  # single mongo instance for cts calcs
-# db_handler.connect_to_db()
-
 
 
 
