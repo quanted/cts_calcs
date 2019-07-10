@@ -75,10 +75,15 @@ class OperaCalc(Calculator):
             return False
         chem_list = []
         chem_to_match = chem_to_match.replace("\n", "").replace("\r", "")
+
         for node in nodes_list:
             node['chemical'] = node['chemical'].replace("\n", "").replace("\r", "")
+
             if node['chemical'] == chem_to_match:
                 return node
+            elif node['smiles'] == chem_to_match:
+                return node
+
         return False
 
     def convert_units_for_cts(self, prop, data_obj):
