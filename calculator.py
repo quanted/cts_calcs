@@ -254,7 +254,7 @@ class Calculator(object):
 		given SMILES
 		"""
 		smiles = request_obj.get('smiles')
-		imgScale = request_obj.get('scale')
+		imgScale = request_obj.get('scale', 100)
 		imgWidth = request_obj.get('width')
 		imgHeight = request_obj.get('height')
 		imgType = request_obj.get('type')
@@ -282,11 +282,14 @@ class Calculator(object):
 		else:
 			request['display']['parameters']['image'].update({'type': 'png'})
 
-		if imgHeight:
+		if imgWidth and imgHeight:
 			# these are metabolites in the space tree:
 			request['display']['parameters']['image'].update({"width": imgWidth, "height": imgHeight})
-		else:
+		elif imgWidth and not imgHeight:
 			request['display']['parameters']['image'].update({'width': imgWidth, 'scale': imgScale})
+			# request['display']['parameters']['image'].update({'scale': imgScale})
+		else:
+			request['display']['parameters']['image'].update({'scale': imgScale})
 
 		url = self.jchem_server_url + self.detail_endpoint
 		imgData = self.web_call(url, request)  # get response from jchem ws
@@ -559,7 +562,7 @@ class Calculator(object):
 			"""        
 		else:
 			imgTmpl = """
-			<img class="metabolite" id="{{key|default:""}}"
+			<img class="metabolite hidden-chem" id="{{key|default:""}}"
 				alt="{{smiles}}" src="data:image/png;base64,{{img}}"
 				width={{width}} height={{height}} hidden /> 
 			"""
@@ -595,9 +598,10 @@ class Calculator(object):
 		if isProduct:
 			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'png')  # hidden png for pdf    
 		else:
-			# html += nodeWrapper(root['smiles'], None, 250, image_scale)  # Molecular Info image, metabolites output
-			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'svg')  # svg popups for chemspec and gentrans outputs
-			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, None)  # hidden png for pdf
+			# html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'svg')  # svg popups for chemspec and gentrans outputs
+			# html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, None)  # hidden png for pdf
+			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, 'png', True)  # NOTE: testing just png for popups to fix missing lines in svgs
+			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, None)  # hidden png for pdf
 
 		html += '</div>'
 
