@@ -285,7 +285,7 @@ class ChemInfo(object):
 					{"smiles": filtered_smiles}, 
 					self.calc_obj.metabolite_keys, 
 					"{}".format(request_post.get('id')),
-					"Metabolite Information")
+					"Metabolite Information", True)
 			})
 
 		wrapped_post = {}

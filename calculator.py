@@ -586,20 +586,14 @@ class Calculator(object):
 		the wrapped html and the other keys are
 		same as the input keys
 		"""
-
-		# propKeys = ['smiles', 'accumulation', 'production', 'transmissivity', 'generation']
 		dataProps = {key: None for key in paramKeys}  # metabolite properties
-
 		html = '<div id="{}_div" class="nodeWrapDiv"><div class="metabolite_img" style="float:left;">'.format(molKey)
-		# html += nodeWrapper(root['smiles'], None, 250, 150)
 
 		# smiles, height, width, scale, key=None, img_type=None
-
 		if isProduct:
-			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'png')  # hidden png for pdf    
+			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'svg')  # svg popups for chemspec and gentrans outputs
+			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, None)  # hidden png for pdf
 		else:
-			# html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'svg')  # svg popups for chemspec and gentrans outputs
-			# html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, None)  # hidden png for pdf
 			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, 'png', True)  # NOTE: testing just png for popups to fix missing lines in svgs
 			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, None)  # hidden png for pdf
 
@@ -615,18 +609,13 @@ class Calculator(object):
 
 		for key, value in root.items():
 			if key in paramKeys:
-
 				# Convert other types (e.g., float, int) to string
 				if isinstance(value, float):
-					
 					if key == 'exactMass':
 						value = str(value)
 					else:
 						value = str(round(float(value), 3))
-				# value = str(value)
-
 				dataProps[key] = value
-
 				html += '<tr><td>' + key + '</td>'
 				html += '<td>' + value + '</td></tr>'
 		html += '</table></div>'
