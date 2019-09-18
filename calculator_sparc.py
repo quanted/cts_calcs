@@ -3,8 +3,6 @@ import logging
 import requests
 import os
 from .calculator import Calculator
-from .calculator_measured import MeasuredCalc
-from .calculator_test import TestCalc
 from .chemical_information import SMILESFilter
 
 
