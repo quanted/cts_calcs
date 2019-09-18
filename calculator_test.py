@@ -31,13 +31,9 @@ class TestWSCalc(Calculator):
 		if not self.baseUrl:
 			self.baseUrl = "https://comptox.epa.gov/dashboard/web-test"
 
-		# TESTWS with bulk prediction endpoint (09/2019):
-		self.bulk_predict_endpoint = "http://webtest2.sciencedataexperts.com/bulk/predict"
-
-		# self.methods = ['hc', 'nn', 'gc']  # general property methods
-		self.methods = ['hc', 'nn', 'gc', 'sm']  # general property methods
+		self.methods = ['hc', 'nn', 'gc']  # general property methods
 		self.method = None
-		# self.bcf_method = "sm"
+		self.bcf_method = "sm"
 
 		# map workflow parameters to test
 		self.propMap = {
@@ -86,23 +82,6 @@ class TestWSCalc(Calculator):
 			}
 		}
 
-		# POST for testwsV2 requesting all props and methods in one request:
-		self.bulk_predict_post = {
-			"format": "smiles",
-			"endpoints": ["mp", "bp", "ws", "vp", "bcf"],
-			"methods": ["hc","gc", "nn", "sm"],
-			"reportTypes": [],
-			"query": ""  # smiles goes here
-		}
-
-		self.pchem_response = {
-			'chemical': "",
-			'calc': "testws",
-			'prop': "",
-			'method': None,
-			'data': None
-		}
-
 
 
 	def convertWaterSolubility(self, _response_dict):
@@ -118,28 +97,6 @@ class TestWSCalc(Calculator):
 		_ws_result = 1000 * float(_response_dict['mass']) * 10**-(float(_response_dict['data']))
 		_response_dict.update({'data': _ws_result})
 		return _response_dict
-
-
-
-	def make_bulk_request(self, structure):
-		"""
-		Makes request to TESTWS to get all props and methods using
-		the bulk predict endpoint from v2.
-		"""
-		url = self.bulk_predict_endpoint
-		post = dict(self.bulk_predict_post)
-		post['query'] = structure
-		try:
-			response = requests.post(url, data=json.dumps(post), headers=headers, timeout=10)
-		except requests.exceptions.ConnectionError as ce:
-			logging.info("connection exception: {}".format(ce))
-			raise Exception("Cannot connect")
-		except requests.exceptions.Timeout as te:
-			logging.info("timeout exception: {}".format(te))
-			raise Exception("Timeout")
-		except Exception as e:
-			raise Exception("Request error")
-		return response
 
 
 
@@ -164,10 +121,8 @@ class TestWSCalc(Calculator):
 
 
 
-	def data_request_handler(self, request_dict):
-		"""
-		Request handler for TESTWS bulk predict endpoint.
-		"""
+	def data_request_handler(self, request_dict):		
+
 		_filtered_smiles = ''
 		_response_dict = {}
 
@@ -176,107 +131,59 @@ class TestWSCalc(Calculator):
 			if not key == 'nodes':
 				_response_dict[key] = request_dict.get(key)
 		_response_dict.update({'request_post': request_dict})
+		# _response_dict.update({'request_post': {'service': "pchemprops"}})  # TODO: get rid of 'request_post' and double data
 
 
-		# filter smiles before sending to TESTWS:
+		# filter smiles before sending to TEST:
 		# ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
 		try:
 			_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict.get('chemical'), self.name) # call smilesfilter
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
-			_response_dict.update({'data': "Cannot filter SMILES for TESTWS"})
+			_response_dict.update({'data': "Cannot filter SMILES for TEST WS data"})
 			return _response_dict
 		# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		try:
-			response = self.make_bulk_request(_filtered_smiles)
-		except Exception as e:
-			logging.warning("Exception in calculator_test: {}".format(e))
-			return self.build_error_response(_response_dict, "Cannot reach TESTWS")
 
-		if response.status_code != 200:
-			return self.build_error_response(_response_dict, "TESTWS server error")
+		# logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
+		# logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
 
-		testws_response_obj = json.loads(response.content)
+		if request_dict.get('method') and request_dict['method'] in self.methods + [self.bcf_method]:
+			# Uses method provided in request to get data from TESTWS, otherwise uses default
+			self.method = request_dict.get('method')
+			# Make sure method name is all caps (it's an acronym):
+			_response_dict['method'] = _response_dict.get('method').upper()
 
-		try:
-			_response_dict['data'] = self.build_response_object(_filtered_smiles, testws_response_obj)
-			_response_dict['status'] = True
+		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
+
+		if _response.status_code != 200:
+			_response_dict.update({'data': "Cannot reach TESTWS"})
 			return _response_dict
-		except Exception as e:
-			logging.warning("Exception in calculator_test: {}".format(e))
-			return self.build_error_response(_response_dict, "TESTWS parse error")
 
+		_response_obj = json.loads(_response.content)
+		_test_data = _response_obj['predictions'][0]  # list of predictions (getting first because only one chemical comes back for GET requests)
 
+		if 'error' in _test_data:
+			_response_dict.update({'data': "Cannot parse SMILES"})
+			return _response_dict
 
-	def build_error_response(self, response_obj, message):
-		"""
-		Builds error response object for each testws prop.
-		"""
-		error_response = {'status': False, 'data': []}
-		for prop_obj in self.propMap:
-			error_obj = dict(self.pchem_response)
-			error_obj['chemical'] = response_obj['chemical']
-			error_obj['prop'] = prop_obj['urlKey']
-			error_obj['data'] = message
-			error_response['data'].append(error_obj)
-		return error_response
-
-
-
-	def build_response_object(self, chemical, response_obj):
-		"""
-		Loops TESTWS bulk predict response and builds response object
-		for CTS.
-		"""
-		if not 'predictions' in response_obj:
-			raise Exception("Error parsing results")
-		if not isinstance(response_obj.get('predictions'), list):
-			raise Exception("Error parsing results")
-		if 'error' in response_obj['predictions'][0]:
-			raise Exception("Error requesting data")
-
-		test_results = response_obj['predictions']  # single-chemical list of results
-		cts_results = []  # list of curated test results
-
-		for data_obj in test_results:
-			response_dict = dict(self.pchem_response)
-			response_dict['chemical'] = chemical
-			response_dict['method'] = data_obj['method'].upper()
-			response_dict['prop'] = self.get_cts_prop_name(data_obj['endpoint'])
-			response_dict['data'] = self.get_testws_data(response_dict, data_obj)
-			cts_results.append(response_dict)
-
-		return cts_results
-
-
-
-	def get_testws_data(self, response_obj, test_results_obj):
-		"""
-		Picks out data key and performs any neccessary unit conversions.
-		"""
 		# Gets response key for property:
-		data_type = self.response_map[response_obj['prop']]['data_type']
+		data_type = self.response_map[request_dict['prop']]['data_type']
+
 		# Sets response data to property's data key (based on desired units)
-		if test_results_obj.get(data_type):
-			return test_results_obj[data_type]
+		if _test_data.get(data_type):
+			_response_dict['data'] = _test_data[data_type]
+	
 		# Returns "N/A" for data if there isn't any TESTWS data found:
-		if not 'data' in response_obj or not response_obj.get('data'):
-			return "N/A"
+		if not 'data' in _response_dict or not _response_dict.get('data'):
+			_response_dict['data'] = "N/A"
+			return _response_dict
+
 		# Reformats TESTWS VP result, e.g., "3.14*10^-15" -> "3.14e-15":
-		if response_obj['prop'] == 'vapor_press':
-			return self.convert_testws_scinot(response_obj['data'])
+		if request_dict['prop'] == 'vapor_press':
+			_response_dict['data'] = self.convert_testws_scinot(_response_dict['data'])
 
+		return _response_dict
 
-
-	def get_cts_prop_name(self, testws_prop_name):
-		"""
-		Returns cts prop name from testws prop name.
-		"""
-		for cts_name, val in self.propMap.items():
-			testws_name = val['urlKey']
-			if testws_name == testws_prop_name:
-				return cts_name
-		
 
 
 	def convert_testws_scinot(self, pchem_data):
