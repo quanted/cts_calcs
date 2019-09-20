@@ -19,6 +19,7 @@ class MongoDBHandler:
 		self.pchem_collection = None  # pchem data collection
 		self.db_conn_timeout = 1
 		self.is_connected = False
+		self.mongodb_conn = None
 		self.mongodb_host = os.environ.get('CTS_DB_HOST')
 
 		# Keys for chem info collection document entry:
