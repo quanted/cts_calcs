@@ -234,7 +234,7 @@ class ChemInfo(object):
 		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
 		if chem_type['type'] == 'smiles':
 			orig_smiles = chemical  # use user-entered smiles as orig_siles
-		elif 'smiles' in _actor_results.get('data', {}):
+		elif 'smiles' in _actor_results.get('data', {}) and _actor_results['data']['smiles']:
 			orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
 			logging.info("Using actorws smiles as original smiles..")
 		else:
