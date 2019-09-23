@@ -108,7 +108,8 @@ class ACTORWS(object):
 			_chemid_results = _chemid_results['DataRow']
 		except Exception as e:
 			logging.warning("Exception getting chemid results from actorws: {}".format(e))
-			return None
+			# return None
+			return {}
 
 		return _chemid_results
 
