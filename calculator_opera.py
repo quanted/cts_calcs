@@ -19,7 +19,7 @@ class OperaCalc(Calculator):
         self.name = "opera"
         self.baseUrl = os.environ['CTS_OPERA_SERVER']
         self.urlStruct = "/opera/rest/run"
-        self.request_timeout = 180
+        self.request_timeout = 180  # 3 min timeout for OPERAWS
         self.props = ['kow_no_ph', 'melting_point', 'boiling_point', 'henrys_law_con', 'vapor_press', 'water_sol', 'ion_con', 'kow_wph', 'log_bcf', 'koc']
         self.opera_props = ['LogP_pred', 'MP_pred', 'BP_pred', 'LogVP_pred', 'LogWS_pred', 'pKa_a_pred',
             'pKa_b_pred', 'LogD55_pred', 'LogD74_pred', 'LogBCF_pred', 'LogKoc_pred']
@@ -64,6 +64,18 @@ class OperaCalc(Calculator):
             'koc': {
                 'result_key': "LogKoc_pred",
                 'methods': None
+            }
+        }
+        self.meta_info = {
+            'metaInfo': {
+                'model': "opera",
+                'collection': "qed",
+                'modelVersion': "2.3",
+                'description': "OPERA is a free and open-source/open-data suite of QSAR models providing predictions on physicochemical properties, environmental fate and toxcicity endpoints as well as additional information including applicability domain and accuracy assessment.",
+                'status': '',
+                'timestamp': self.gen_jid(),
+                'url': "https://github.com/kmansouri/OPERA",
+                'props': ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'ion_con', 'henrys_law_con', 'kow_no_ph', 'koc', 'log_bcf', 'kow_wph']
             }
         }
 
