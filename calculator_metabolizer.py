@@ -215,7 +215,7 @@ class MetabolizerCalc(Calculator):
         Makes request to metabolizer
         """
         url = self.efs_server_url + self.efs_metabolizer_endpoint
-        self.request_timeout = 60
+        self.request_timeout = 120
         return self.web_call(url, request_obj)
 
 
