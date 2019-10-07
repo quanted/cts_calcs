@@ -94,6 +94,7 @@ class BiotransCalc(Calculator):
 				all_items[parent] = {}
 				all_items[parent]['id'] = met_id
 				all_items[parent]['name'] = ""
+				all_items[parent]['html'] = parent_obj
 				all_items[parent]['data'] = parent_obj
 				all_items[parent]['children'] = []
 				met_id += 1
@@ -101,6 +102,7 @@ class BiotransCalc(Calculator):
 				all_items[child] = {}
 				all_items[child]['id'] = met_id
 				all_items[child]['name'] = ""
+				all_items[child]['html'] = child_obj
 				all_items[child]['data'] = child_obj
 				all_items[child]['children'] = []
 				met_id += 1
@@ -164,7 +166,7 @@ class BiotransCalc(Calculator):
 
 		chemical = request_dict['chemical']
 		prop = request_dict['prop']
-		gen_limit = request_dict.get('gen_limit', 1)
+		gen_limit = int(request_dict.get('gen_limit', 1))
 
 		if not prop in self.props:
 			return {'status': False, 'error': "Select an available prop: {}".format(self.props)}
