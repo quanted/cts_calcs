@@ -29,7 +29,8 @@ class BiotransCalc(Calculator):
 		self.props = ["CYP450", "EC-BASED", "PHASEII", "HGUT", "ENVMICRO", "ALLHUMAN", "SUPERBIO"]
 		self.biotrans_tasks = ["PREDICTION", "IDENTIFICATION"]
 		self.request_timeout = 5
-		self.max_response_wait = 60  # seconds (use request_timeout)
+		# self.max_response_wait = 60  # seconds (use request_timeout)
+		self.max_response_wait = 10  # seconds (use request_timeout)
 		self.gen_to_delay_map = {
 			1: 1,
 			2: 2,
@@ -93,16 +94,16 @@ class BiotransCalc(Calculator):
 			if parent not in all_items:
 				all_items[parent] = {}
 				all_items[parent]['id'] = met_id
-				all_items[parent]['name'] = ""
-				all_items[parent]['html'] = parent_obj
+				all_items[parent]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
+				# all_items[parent]['html'] = parent_obj
 				all_items[parent]['data'] = parent_obj
 				all_items[parent]['children'] = []
 				met_id += 1
 			if child not in all_items:
 				all_items[child] = {}
 				all_items[child]['id'] = met_id
-				all_items[child]['name'] = ""
-				all_items[child]['html'] = child_obj
+				all_items[child]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
+				# all_items[child]['html'] = child_obj
 				all_items[child]['data'] = child_obj
 				all_items[child]['children'] = []
 				met_id += 1
@@ -163,10 +164,14 @@ class BiotransCalc(Calculator):
 		"""
 		Entrypoint for handling biotransformer data request.
 		"""
-
 		chemical = request_dict['chemical']
-		prop = request_dict['prop']
+		# prop = request_dict['prop']
+		prop = request_dict.get('prop', self.props[0])
 		gen_limit = int(request_dict.get('gen_limit', 1))
+
+		if 'metabolizer_post' in request_dict:
+			prop = request_dict['metabolizer_post'].get('prop', self.props[0])
+			gen_limit = int(request_dict['metabolizer_post'].get('gen_limit', 1))
 
 		if not prop in self.props:
 			return {'status': False, 'error': "Select an available prop: {}".format(self.props)}
@@ -194,7 +199,22 @@ class BiotransCalc(Calculator):
 
 		tree_obj['total_products'] = response['predictions'][0]['nr_of_biotransformations']
 
+		if tree_obj['total_products'] < 1:
+			raise Exception("No products.")
+
 		execution_time = self.current_milli_time() - start_time
 		logging.info("Execution time (ms): {}".format(execution_time))
 
-		return tree_obj
+		_response_obj = {
+            'calc': "chemaxon",  # todo: change to metabolizer, change in template too
+            'prop': "products",
+            'node': request_dict.get('node'),
+            'data': tree_obj['tree'],
+            'total_products': tree_obj['total_products'],
+            'chemical': request_dict.get('chemical'),
+            'workflow': 'gentrans',
+            'run_type': 'batch',
+            'request_post': request_dict       
+        }
+
+		return _response_obj
