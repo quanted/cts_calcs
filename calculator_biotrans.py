@@ -29,8 +29,7 @@ class BiotransCalc(Calculator):
 		self.props = ["CYP450", "EC-BASED", "PHASEII", "HGUT", "ENVMICRO", "ALLHUMAN", "SUPERBIO"]
 		self.biotrans_tasks = ["PREDICTION", "IDENTIFICATION"]
 		self.request_timeout = 5
-		# self.max_response_wait = 60  # seconds (use request_timeout)
-		self.max_response_wait = 10  # seconds (use request_timeout)
+		self.max_response_wait = 30  # seconds (use request_timeout)
 		self.gen_to_delay_map = {
 			1: 1,
 			2: 2,
