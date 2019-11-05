@@ -29,8 +29,7 @@ class BiotransCalc(Calculator):
 		self.props = ["CYP450", "EC-BASED", "PHASEII", "HGUT", "ENVMICRO", "ALLHUMAN", "SUPERBIO"]
 		self.biotrans_tasks = ["PREDICTION", "IDENTIFICATION"]
 		self.request_timeout = 5
-		# self.max_response_wait = 60  # seconds (use request_timeout)
-		self.max_response_wait = 10  # seconds (use request_timeout)
+		self.max_response_wait = 30  # seconds (use request_timeout)
 		self.gen_to_delay_map = {
 			1: 1,
 			2: 2,
@@ -88,31 +87,28 @@ class BiotransCalc(Calculator):
 		met_id = 1
 		for metabolite_obj in metabolites_list:
 			parent_obj = metabolite_obj['substrates'][0]
-			child_obj = metabolite_obj['products'][0]
 			parent = parent_obj['smiles']
-			child = child_obj['smiles']
 			if parent not in all_items:
 				all_items[parent] = {}
 				all_items[parent]['id'] = met_id
 				all_items[parent]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
-				# all_items[parent]['html'] = parent_obj
 				all_items[parent]['data'] = parent_obj
 				all_items[parent]['children'] = []
 				met_id += 1
-			if child not in all_items:
-				all_items[child] = {}
-				all_items[child]['id'] = met_id
-				all_items[child]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
-				# all_items[child]['html'] = child_obj
-				all_items[child]['data'] = child_obj
-				all_items[child]['children'] = []
-				met_id += 1
-			all_items[parent]['children'].append(all_items[child])
-			has_parent.add(child)
+			for child_obj in metabolite_obj['products']:
+				child = child_obj['smiles']
+				if child not in all_items:
+					all_items[child] = {}
+					all_items[child]['id'] = met_id
+					all_items[child]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
+					all_items[child]['data'] = child_obj
+					all_items[child]['children'] = []
+					met_id += 1
+				all_items[parent]['children'].append(all_items[child])
+				has_parent.add(child)
 		result = {}
 		for key, value in all_items.items():
 			if key not in has_parent:
-				# result[key] = value
 				result['tree'] = value
 		return result
 
