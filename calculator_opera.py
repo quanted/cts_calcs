@@ -53,9 +53,8 @@ class OperaCalc(Calculator):
                 'methods': {'pKa_a_pred': "pKa", 'pKa_b_pred': "pKb"}
             },
             'kow_wph': {
-                # 'result_key': ["LogD55_pred", "LogD74_pred"],  # is this correct?
-                'result_key': "LogD74_pred",  # is data for 5.5 and 7.4 pH values?
-                'methods': None
+                'result_key': ["LogD55_pred", "LogD74_pred"],
+                'methods': {'LogD55_pred': "LogD55", 'LogD74_pred': "LogD74"}
             },
             'log_bcf': {
                 'result_key': "LogBCF_pred",
@@ -150,16 +149,24 @@ class OperaCalc(Calculator):
         for smiles_data_obj in opera_results:
             for prop in requested_props:
                 prop_name = self.propMap[prop]['result_key']  # gets opera prop name
-                curated_dict = dict(response_dict)  # sends all key:vals for each prop result
+                # curated_dict = dict(response_dict)  # sends all key:vals for each prop result
+                curated_dict = {}
                 curated_dict['prop'] = prop
                 curated_dict['data'] = ""
                 curated_dict['chemical'] = response_dict['chemical'][result_index]
-
-                # curated_dict['node'] = response_dict.get('nodes', [""])[result_index]
                 curated_dict['node'] = self.match_chemical_with_node(curated_dict['chemical'], chem_nodes)
-                
                 curated_dict['calc'] = "opera"
-                if isinstance(prop_name, list):
+
+                if prop == 'kow_wph':
+                    ph = response_dict.get('ph')
+                    if ph == 5.5:
+                        curated_dict['data'] = smiles_data_obj[prop_name[0]]  # expecting prop_name=[5.5, 7.4]
+                    elif ph == 7.4:
+                        curated_dict['data'] = smiles_data_obj[prop_name[1]]
+                    else:
+                        curated_dict['data'] = "N/A"
+                    curated_list.append(curated_dict)
+                elif prop == 'ion_con':
                     # Handles props with multiple results/methods:
                     _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict, curated_dict)
                     self.convert_units_for_cts(prop, _curated_results)
@@ -168,6 +175,7 @@ class OperaCalc(Calculator):
                     curated_dict['data'] = smiles_data_obj[prop_name]
                     curated_dict['data'] = self.convert_units_for_cts(prop, curated_dict)
                     curated_list.append(curated_dict)
+
             result_index += 1
         curated_list = self.remove_nodes_key(curated_list)
         return curated_list
