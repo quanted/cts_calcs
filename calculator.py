@@ -28,6 +28,8 @@ class Calculator(object):
 
 		self.image_scale = 50
 
+		self.default_ph = 7.0
+
 		self.redis_hostname = os.environ.get('REDIS_HOSTNAME')
 		self.redis_port = os.environ.get('REDIS_PORT')
 		self.redis_conn = redis.StrictRedis(host=self.redis_hostname, port=self.redis_port, db=0)

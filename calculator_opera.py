@@ -157,16 +157,16 @@ class OperaCalc(Calculator):
                 curated_dict['node'] = self.match_chemical_with_node(curated_dict['chemical'], chem_nodes)
                 curated_dict['calc'] = "opera"
 
-                if prop == 'kow_wph':
-                    ph = response_dict.get('ph')
-                    if ph == 5.5:
+                if prop == 'kow_wph' and isinstance(prop_name, list):
+                    ph = response_dict.get('ph', self.default_ph)
+                    if float(ph) == 5.5:
                         curated_dict['data'] = smiles_data_obj[prop_name[0]]  # expecting prop_name=[5.5, 7.4]
-                    elif ph == 7.4:
+                    elif float(ph) == 7.4:
                         curated_dict['data'] = smiles_data_obj[prop_name[1]]
                     else:
                         curated_dict['data'] = "N/A"
                     curated_list.append(curated_dict)
-                elif prop == 'ion_con':
+                elif prop == 'ion_con' and isinstance(prop_name, list):
                     # Handles props with multiple results/methods:
                     _curated_results = self.parse_prop_with_multi_results(prop, prop_name, smiles_data_obj, response_dict, curated_dict)
                     self.convert_units_for_cts(prop, _curated_results)
