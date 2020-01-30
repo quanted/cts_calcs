@@ -244,6 +244,15 @@ class OperaCalc(Calculator):
             del db_results[vp_indices[0]]  # removes a vp duplicate entry
         return db_results
 
+    def get_logd_at_ph(self, db_results, ph):
+        new_results = []
+        for result in db_results:
+            if result.get('prop') != 'kow_wph':
+                new_results.append(result)
+            elif result.get('prop') == 'kow_wph' and result.get('ph') == float(ph):
+                new_results.append(result)
+        return new_results
+
     def makeDataRequest(self, smiles):
         _post = {'smiles': smiles}
         _url = self.baseUrl + self.urlStruct
