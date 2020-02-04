@@ -244,12 +244,17 @@ class OperaCalc(Calculator):
             del db_results[vp_indices[0]]  # removes a vp duplicate entry
         return db_results
 
-    def get_logd_at_ph(self, db_results, ph):
+    def curate_logd(self, db_results, requested_dict, ph):
+        if not 'kow_wph' in requested_dict.get('props'):
+            return db_results
         new_results = []
         for result in db_results:
-            if result.get('prop') != 'kow_wph':
+            if result.get('prop') == 'kow_wph' and result.get('ph') == float(ph):
                 new_results.append(result)
-            elif result.get('prop') == 'kow_wph' and result.get('ph') == float(ph):
+            elif result.get('prop') == 'kow_wph' and float(ph) != 5.5 and float(ph) != 7.4:
+                result['data'] = "N/A"
+                new_results.append(result)
+            elif result.get('prop') != 'kow_wph':
                 new_results.append(result)
         return new_results
 
