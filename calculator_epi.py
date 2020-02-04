@@ -17,7 +17,7 @@ class EpiCalc(Calculator):
         self.postData = {"smiles" : ""}
         self.name = "epi"
         self.baseUrl = os.environ['CTS_EPI_SERVER']
-        self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
+        # self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
         # self.urlStruct = "/rest/episuite/estimated"  # newest way - local
         self.methods = None
         self.melting_point = None
@@ -67,7 +67,8 @@ class EpiCalc(Calculator):
         if self.melting_point != None:
             _post['melting_point'] = self.melting_point
 
-        _url = self.baseUrl + self.urlStruct
+        # _url = self.baseUrl + self.urlStruct
+        _url = self.baseUrl
 
         return self.request_logic(_url, _post)
 
