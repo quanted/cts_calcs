@@ -302,7 +302,7 @@ class ChemInfo(object):
 		"""
 		molecule_obj = {}
 		chemid_results = self.get_chemid_from_actorws(chemical)
-		if not chemid_results:
+		if not chemid_results or not chemid_results.get('smiles'):
 			response_obj = {}
 			response_obj['status'] = False
 			response_obj['request_post'] = request_post
