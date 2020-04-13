@@ -28,6 +28,8 @@ class Calculator(object):
 
 		self.image_scale = 50
 
+		self.default_ph = 7.0
+
 		self.redis_hostname = os.environ.get('REDIS_HOSTNAME')
 		self.redis_port = os.environ.get('REDIS_PORT')
 		self.redis_conn = redis.StrictRedis(host=self.redis_hostname, port=self.redis_port, db=0)
@@ -113,7 +115,7 @@ class Calculator(object):
 			'node': None,
 			'request_post': None,
 			'data': None,
-			'error': False,  # ehh?
+			'error': False,
 		}
 
 
@@ -143,7 +145,8 @@ class Calculator(object):
 		return jid
 
 
-	def get_melting_point(self, structure, sessionid, calc=None):
+	# def get_melting_point(self, structure, sessionid, calc=None):
+	def get_melting_point(self, structure, sessionid, calc_obj):
 		"""
 		Gets mass of structure from Measured, tries
 		TEST if not available in Measured, and finally EPI.
@@ -156,9 +159,8 @@ class Calculator(object):
 			'sessionid': sessionid
 		}
 
-		# melting_point = 0.0
 		melting_point = None
-
+		calc = calc_obj.name
 
 		# Attempt at MP workflow as loop..
 		mp_request_calcs = ['measured', 'test']  # ordered list of calcs for mp request
@@ -166,32 +168,40 @@ class Calculator(object):
 			# Note: EPI also requests MP, but gets it from itself if it can't from Measured or TEST.
 			mp_request_calcs.append('epi')
 
+		if calc == 'test':
+			melting_point_request['method'] = "hc"  # method used for MP value
+
 		for calc in mp_request_calcs:
 
 			melting_point_request['calc'] = calc
 
 			logging.info("Requesting melting point from {}..".format(calc))
 
-			mp_response = requests.post(
-							os.environ.get('CTS_REST_SERVER') + '/cts/rest/{}/run'.format(calc), 
-							data=json.dumps(melting_point_request), 
-							allow_redirects=True,
-							verify=False,
-							timeout=30)
+			# Calls calculator's data_request_handler which makes request to calc server:
+			response_obj = calc_obj.data_request_handler(melting_point_request)
 
-			logging.info("Melting point response: {}".format(mp_response.content))
+			if calc == 'test':
+				melting_point = response_obj['data']
+			elif not response_obj.get('valid'):
+				# epi or measured mp request not valid, sets mp to None
+				melting_point = None
+			else:
+				# Finds mp data from list of data objects for epi or measured:
+				for data_obj in response_obj['data']:
+					if data_obj['prop'] == "melting_point":
+						melting_point = data_obj['data']
 
 			try:
-				results_object = json.loads(mp_response.content)
-				melting_point = float(results_object['data']['data'])
+				# results_object = json.loads(mp_response.content)
+				melting_point = float(melting_point)
 			except Exception as e:
 				logging.warning("Unable to get melting point from {}\n Exception: {}".format(calc, e))
-				logging.warning("Data returned from Measured that triggered exception: {}".format(results_object.get('data')))
+				logging.warning("Data returned from Measured that triggered exception: {}".format(response_obj.get('data')))
 			if isinstance(melting_point, float):
 				logging.info("Melting point value found from {} calc, MP = {}".format(calc, melting_point))
 				return melting_point
 
-		# if no MP found from all 3 calcs, return None for MP
+		# if no MP found from all 3 calcs, returns None for MP
 		return None
 
 
@@ -246,7 +256,7 @@ class Calculator(object):
 		given SMILES
 		"""
 		smiles = request_obj.get('smiles')
-		imgScale = request_obj.get('scale')
+		imgScale = request_obj.get('scale', 100)
 		imgWidth = request_obj.get('width')
 		imgHeight = request_obj.get('height')
 		imgType = request_obj.get('type')
@@ -274,11 +284,14 @@ class Calculator(object):
 		else:
 			request['display']['parameters']['image'].update({'type': 'png'})
 
-		if imgHeight:
+		if imgWidth and imgHeight:
 			# these are metabolites in the space tree:
 			request['display']['parameters']['image'].update({"width": imgWidth, "height": imgHeight})
-		else:
+		elif imgWidth and not imgHeight:
 			request['display']['parameters']['image'].update({'width': imgWidth, 'scale': imgScale})
+			# request['display']['parameters']['image'].update({'scale': imgScale})
+		else:
+			request['display']['parameters']['image'].update({'scale': imgScale})
 
 		url = self.jchem_server_url + self.detail_endpoint
 		imgData = self.web_call(url, request)  # get response from jchem ws
@@ -295,7 +308,6 @@ class Calculator(object):
 		chemStruct = request_obj.get('chemical')  # chemical in <cml> format (marvin sketch)
 		data = {
 			"structure": chemStruct,
-			# "inputFormat": "mrv",
 			"parameters": "smiles"
 		}
 		url = self.jchem_server_url + self.export_endpoint
@@ -357,31 +369,26 @@ class Calculator(object):
 		"""
 		url = self.jchem_server_url + self.type_endpoint
 		request_header = {'Content-Type': "*/*"}
-
-		response = requests.post(url, data=chemical, headers=request_header, timeout=self.request_timeout)
-		results = json.loads(response.content)
-
+		response, results = None, None
+		try:
+			response = requests.post(url, data=chemical.encode('utf-8'), headers=request_header, timeout=self.request_timeout)
+			results = json.loads(response.content)
+		except Exception as e:
+			logging.warning("Exception at get_chemical_type: {}".format(e))
+			return {'type': None}
 		_type_response = {
 			'type': None
 		}
-
-		logging.info("CHEM TYPE RESULTS: {}".format(results))
-
 		check_result = self.check_response_for_errors(results)
-
 		if not check_result.get('valid'):
 			# errors found in response..
 			_type_response['error'] = check_result['error']
 			return _type_response
-
 		if 'properties' in results:
 			_type_response['type'] = results['properties'].get('type')
-
 		if not _type_response['type'] and results.get('type'):
 			_type_response['type'] = results['type']
-
 		return _type_response
-
 
 	def get_smiles_from_name(self, chemical):
 		"""
@@ -405,7 +412,7 @@ class Calculator(object):
 		_check_results = self.check_response_for_errors(_results)
 
 		if not _check_results.get('valid'):
-			_response['error'] = "Not a valid name.."
+			_response['error'] = "Not a valid name"
 			return _response
 
 		_response['smiles'] = _results.get('structure')
@@ -431,7 +438,7 @@ class Calculator(object):
 		_result_keys = []
 
 		if not isinstance(results, dict):
-			_check_response['error'] = "Error processing calc results.."
+			_check_response['error'] = "Error processing calc results"
 			logging.warning("Excepted response object not a dict object.")
 			return _check_response
 
@@ -454,9 +461,9 @@ class Calculator(object):
 		"""
 		if results['errorCode'] == 3:
 			# jchem ws can't read molecule file..
-			return "Chemical cannot be standardized.."
+			return "Chemical cannot be standardized"
 		else:
-			return "Chemical not recognized.."
+			return "Chemical not recognized"
 
 
 	def web_call(self, url, data, headers=None):
@@ -537,9 +544,9 @@ class Calculator(object):
 		if img_type and img_type == 'svg':
 
 			if key:
-				html = '<div style="background-color:white;"' + 'id="' + str(key) + '">' + img + '</div>'            
+				html = '<div class="cts-chem-wrap" style="background-color:white;"' + 'id="' + str(key) + '">' + img + '</div>'            
 			else:
-				html = '<div style="background-color:white;">' + img + '</div>'
+				html = '<div class="cts-chem-wrap" style="background-color:white;">' + img + '</div>'
 			
 		else:
 			context = {'smiles': smiles, 'img': img, 'height': height, 'width': width, 'scale': scale, 'key': key}
@@ -557,7 +564,7 @@ class Calculator(object):
 			"""        
 		else:
 			imgTmpl = """
-			<img class="metabolite" id="{{key|default:""}}"
+			<img class="metabolite hidden-chem" id="{{key|default:""}}"
 				alt="{{smiles}}" src="data:image/png;base64,{{img}}"
 				width={{width}} height={{height}} hidden /> 
 			"""
@@ -581,21 +588,16 @@ class Calculator(object):
 		the wrapped html and the other keys are
 		same as the input keys
 		"""
-
-		# propKeys = ['smiles', 'accumulation', 'production', 'transmissivity', 'generation']
 		dataProps = {key: None for key in paramKeys}  # metabolite properties
-
 		html = '<div id="{}_div" class="nodeWrapDiv"><div class="metabolite_img" style="float:left;">'.format(molKey)
-		# html += nodeWrapper(root['smiles'], None, 250, 150)
 
 		# smiles, height, width, scale, key=None, img_type=None
-
 		if isProduct:
-			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'png')  # hidden png for pdf    
-		else:
-			# html += nodeWrapper(root['smiles'], None, 250, image_scale)  # Molecular Info image, metabolites output
 			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, 'svg')  # svg popups for chemspec and gentrans outputs
-			html += self.nodeWrapper(root['smiles'], None, 250, self.image_scale, molKey, None)  # hidden png for pdf
+			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, None)  # hidden png for pdf
+		else:
+			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, 'png', True)  # NOTE: testing just png for popups to fix missing lines in svgs
+			html += self.nodeWrapper(root['smiles'], None, None, self.image_scale, molKey, None)  # hidden png for pdf
 
 		html += '</div>'
 
@@ -609,18 +611,13 @@ class Calculator(object):
 
 		for key, value in root.items():
 			if key in paramKeys:
-
 				# Convert other types (e.g., float, int) to string
 				if isinstance(value, float):
-					
 					if key == 'exactMass':
 						value = str(value)
 					else:
 						value = str(round(float(value), 3))
-				# value = str(value)
-
 				dataProps[key] = value
-
 				html += '<tr><td>' + key + '</td>'
 				html += '<td>' + value + '</td></tr>'
 		html += '</table></div>'

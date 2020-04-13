@@ -49,7 +49,7 @@ class MetabolizerCalc(Calculator):
             'structure': None,
             'generationLimit': 1,  # make sure to get this from front end
             'populationLimit': 0,
-            'likelyLimit': 0.001,
+            'likelyLimit': 0.1,
             'transformationLibraries': ["hydrolysis", "abiotic_reduction"],  # NOTE: no transformationLibraries key:val for mammalian metabolism
             'excludeCondition': "hasValenceError()"
         }
@@ -116,18 +116,36 @@ class MetabolizerCalc(Calculator):
             _products_dict.update({
                 "id": self.metID,
                 "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
-                "data": {'smiles': _parent, 'routes': root['route'], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 4), 'production': round(root.get('production'), 4)},
+                "data": {
+                    'smiles': _parent,
+                    'routes': root['route'],
+                    'generation': root['generation'],
+                    'accumulation': round(root.get('accumulation'), 4),
+                    'production': round(root.get('production'), 4),
+                    'globalAccumulation': round(root.get('globalAccumulation'), 4),
+                    'likelihood': root.get('likelihood')
+                },
                 "children": []
             })
-
             
         else:
             if root['generation'] > 0 and root['generation'] <= gen_limit:
+
+                likelihood = self.setLikelyhoodValue(root)
+
                 # continue walking tree until generation limit is met..
                 _products_dict.update({
                     "id": self.metID,
                     "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
-                    "data": {'smiles': root['smiles'], 'routes': root['route'].split(',')[-1], 'generation': root['generation'], 'accumulation': round(root.get('accumulation'), 4), 'production': round(root.get('production'), 4)},
+                    "data": {
+                        'smiles': root['smiles'],
+                        'routes': root['route'].split(',')[-1],
+                        'generation': root['generation'],
+                        'accumulation': round(root.get('accumulation'), 4),
+                        'production': round(root.get('production'), 4),
+                        'globalAccumulation': round(root.get('globalAccumulation'), 4),
+                        'likelihood': likelihood
+                    },
                     "children": []
                 })
                 # self.products_list.append(root['smiles'])
@@ -147,68 +165,12 @@ class MetabolizerCalc(Calculator):
 
 
 
-    def make_data_request(self, structure, prop_obj, method=None):
-        # url = self.baseUrl + prop_obj.url
-        url = self.efs_server_url + self.efs_metabolizer_endpoint
-
-        _valid_result = False  # for retry logic
-        _retries = 0
-        while not _valid_result and _retries < self.max_retries:
-            # retry data request to chemaxon server until max retries or a valid result is returned
-            try:
-                response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
-                _valid_result = self.validate_response(response)
-                if _valid_result:
-                    prop_obj.results = json.loads(response.content)
-                    return prop_obj.results
-                _retries += 1
-            except Exception as e:
-                logging.warning("Exception in metabolizer_calculator.py: {}".format(e))
-                _retries += 1
-
-            logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
-
-
     def data_request_handler(self, request_dict):
-
-        logging.warning("$$$ METABOLIZER REQUEST: {} $$$".format(request_dict))
-
-        # reactionLibs = {
-        #     "hydrolysis": request_dict.get('abiotic_hydrolysis'),
-        #     "abiotic_reduction": request_dict.get('abiotic_reduction'),
-        #     # "human_biotransformation": self.mamm_metabolism
-        # }
-
-        # _trans_libs = []
-        # for key, value in reactionLibs.items():
-        #     if value:
-        #         _trans_libs.append(key)
-
-        # if not request_dict.get('gen_limit', False):
-        #     request_dict['gen_limit'] = 1
-
-        # # NOTE: populationLimit is hard-coded to 0 as it currently does nothing
-
-        # _data_dict = {
-        #     'structure': request_dict['chemical'],
-        #     'generationLimit': request_dict['gen_limit'],
-        #     'populationLimit': 0,
-        #     # 'likelyLimit': self.likely_limit,
-        #     'likelyLimit': 0.001,
-        #     'excludeCondition': ""  # 'generateImages': False
-        # }
-
-        # if len(_trans_libs) > 0:
-        #     _data_dict.update({'transformationLibraries': _trans_libs})
 
         _data_dict = request_dict.get('metabolizer_post')
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
-
-        logging.info("METABOLIZER POST: {}".format(_data_dict))
-
         response = self.getTransProducts(_data_dict)
-        # response = self.make_data_request(request_dict['chemical'], self, None)
         _results = MetabolizerCalc().recursive(response, int(request_dict['gen_limit']))
 
         _products_data = json.loads(_results)
@@ -217,7 +179,6 @@ class MetabolizerCalc(Calculator):
             'calc': "chemaxon",  # todo: change to metabolizer, change in template too
             'prop': "products",
             'node': request_dict.get('node'),
-            # 'data': json.loads(_results),
             'data': _products_data['tree'],
             'total_products': _products_data['total_products'],
             'chemical': request_dict.get('chemical'),
@@ -254,5 +215,20 @@ class MetabolizerCalc(Calculator):
         Makes request to metabolizer
         """
         url = self.efs_server_url + self.efs_metabolizer_endpoint
-        self.request_timeout = 60
+        self.request_timeout = 120
         return self.web_call(url, request_obj)
+
+
+
+    def setLikelyhoodValue(self, product_data):
+        """
+        Checks likelihood value from CTSWS, keeps value as
+        "LIKELY" if likelihood > 10%, "UNLIKELY" if < 0.1%, and
+        sets likelihood as "PROBABLE" if it's between 0.1% and 10%.
+        """
+        global_accumulation = product_data.get('globalAccumulation')
+
+        if global_accumulation > 0.001 and global_accumulation < 0.1:
+            return "PROBABLE"
+        else:
+            return product_data.get('likelihood')

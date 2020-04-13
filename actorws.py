@@ -17,6 +17,19 @@ class ACTORWS(object):
 		self.calc = "actorws"
 		self.props = ['dsstox', 'chemid']
 		self.chemid_result_keys = ['synGsid']  # chemidentifier result key of interest
+		self.chemid_all_keys = ['origIdentifier', 'casrn', 'preferredName', 'synGsid', 'synType', 'synIdentifier', 'dtxsid', 'dtxcid', 'jChemInChIKey', 'indigoInChIKey', 'smiles', 'molFormula', 'molWeight', 'collidingGsid', 'collidingCasrn', 'collidingPreferredName', 'trimmedWhitespace', 'trimmedLeadingZeros', 'reformattedIdentifier', 'checksum', 'processedAs', 'infoMsg', 'warningMsg', 'msReadyForms', 'qsarForms', 'imageURL']
+		
+		self.chemid_keys_map = {
+			'casrn': 'casrn',
+			'preferredName': 'preferredName',
+			'synGsid': 'gsid',
+			'dtxsid': 'dsstoxSubstanceId',
+			'dtxcid': 'dtxcid',
+			'smiles': 'smiles',
+			'molFormula': 'formula',
+			'molWeight': 'mass',
+		}
+
 		self.dsstox_result_keys = ['casrn', 'dsstoxSubstanceId', 'preferredName', 'smiles', 'iupac']
 		self.result_obj = {
 			'calc': "actorws",
@@ -27,7 +40,7 @@ class ACTORWS(object):
 
 	def make_request(self, url, payload):
 		try:
-			_response = requests.get(url, params=payload, timeout=10)
+			_response = requests.get(url, params=payload, timeout=5)
 		except requests.exceptions.Timeout as e:
 			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
 			return None
@@ -64,7 +77,6 @@ class ACTORWS(object):
 
 		try:
 			_dsstox_results = self.make_request(self.dsstox_url, _payload)
-			logging.warning("DSSTOX RESULTS: {}".format(_dsstox_results))
 			_dsstox_results = _dsstox_results['DataList']['list'][0]
 		except Exception as e:
 			logging.warning("Error getting dsstox results key:vals: {}".format(e))
@@ -91,26 +103,14 @@ class ACTORWS(object):
 		Inputs: chemical - either a chemical name or smiles
 		Output: Dictionary with results_obj keys and synGsid
 		"""
-		
 		try:
 			_chemid_results = self.make_request(self.chemid_url, {'identifier': chemical})
 			_chemid_results = _chemid_results['DataRow']
 		except Exception as e:
 			logging.warning("Exception getting chemid results from actorws: {}".format(e))
-			_results = self.result_obj
-			_results['prop'] = "chemid"
-			_results['data'] = {'gsid': None}
-			return _results
+			# return None
+			return {}
 
-		_results = self.result_obj
-		_results['prop'] = "chemid"
-		_result_key = self.chemid_result_keys[0]  # only one key needed for now
-		
-		if _result_key in _chemid_results:
-			_results['data'].update({'gsid': _chemid_results.get(_result_key)})  # getting synGsid key:val
-
-		# todo: add more error handling, waiting to start new cheminfo workflow w/ actorws first..
-
-		return _results
+		return _chemid_results
 
 	##########################################################################

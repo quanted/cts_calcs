@@ -24,8 +24,8 @@ class MeasuredCalc(Calculator):
 
 		self.postData = {"smiles" : ""}
 		self.name = "measured"
-		self.baseUrl = os.environ['CTS_EPI_SERVER']
-		self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
+		self.baseUrl = os.environ['CTS_MEASURED_SERVER']
+		# self.urlStruct = "/episuiteapi/rest/episuite/measured"  # new way
 		# self.urlStruct = "/rest/episuite/measured"  # old way
 		self.request_timeout = 20
 		self.melting_point = 0.0
@@ -68,9 +68,8 @@ class MeasuredCalc(Calculator):
 		
 		_post = self.getPostData()
 		_post['structure'] = structure
-		_url = self.baseUrl + self.urlStruct
-
-		logging.info("Measured URL: {}".format(_url))
+		# _url = self.baseUrl + self.urlStruct
+		_url = self.baseUrl
 
 		# return self.request_logic(_url, _post)
 
@@ -85,32 +84,6 @@ class MeasuredCalc(Calculator):
 		else:
 			self.results = response
 			return response
-
-
-	def request_logic(self, url, post_data):
-		"""
-		Handles retries and validation of responses
-		"""
-
-		_valid_result = False  # for retry logic
-		_retries = 0
-		while not _valid_result and _retries < self.max_retries:
-			# retry data request to chemaxon server until max retries or a valid result is returned
-			try:
-				response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
-				_valid_result = self.validate_response(response)
-				if _valid_result:
-					self.results = json.loads(response.content)
-					# break
-					return self.results
-				_retries += 1
-			except Exception as e:
-				logging.warning("Exception in calculator_measured.py: {}".format(e))
-				_retries += 1
-
-			logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
-		self.results = "calc server not found"
-		return self.results
 
 
 	def validate_response(self, response):
@@ -144,7 +117,6 @@ class MeasuredCalc(Calculator):
 
 		try:
 			_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-			logging.info("Measured Filtered SMILES: {}".format(_filtered_smiles))
 		except Exception as err:
 			logging.warning("Error filtering SMILES: {}".format(err))
 			_response_dict.update({
@@ -158,7 +130,6 @@ class MeasuredCalc(Calculator):
 
 			try:
 				_response = self.makeDataRequest(_filtered_smiles) # make call for data!
-				logging.info("Response from Measured: {}".format(_response))
 				_measured_data = json.loads(_response.content)
 				_measured_data['valid'] = True
 				logging.info("Measured Data: {}".format(_measured_data))

@@ -3,8 +3,6 @@ import logging
 import requests
 import os
 from .calculator import Calculator
-from .calculator_measured import MeasuredCalc
-from .calculator_test import TestCalc
 from .chemical_information import SMILESFilter
 
 
@@ -93,7 +91,6 @@ class SparcCalc(Calculator):
         calculations.append(calcAct)
 
         calculations.append(self.get_calculation("ELECTRON_AFFINITY", "dummy"))
-
         calcDist = self.get_calculation("DISTRIBUTION", "NO_UNITS")
         calcDist["solvents"].append(self.get_solvent("O", "water"))
         calcDist["solvents"].append(self.get_solvent("OCCCCCCCC", "octanol"))
@@ -103,32 +100,29 @@ class SparcCalc(Calculator):
         return calculations
 
 
-    def data_request_handler(self, request_dict, message=None):
+    def data_request_handler(self, request_dict):
 
         for key, val in self.pchem_request.items():
             if not key in request_dict.keys():
                 logging.info("request key {} not in request, using default value: {}".format(key, val))
                 request_dict.update({key: val})
 
-        # logging.info("Incoming request to SPARC's data_request_handler: {}".format(request_dict))
 
         _filtered_smiles = ''
         try:
             _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
-            # _filtered_smiles = smilesfilter.parseSmilesByCalculator(request_dict['smiles'], request_dict['calc']) # call smilesfilter
         except Exception as err:
             logging.warning("Error filtering SMILES: {}".format(err))
             request_dict.update({'data': 'Cannot filter SMILES'})
-            # self.redis_conn.publish(request_dict['sessionid'], json.loads(request_dict))
             return request_dict
 
 
         self.smiles = _filtered_smiles  # set smiles attribute to filtered smiles
 
-        # Get melting point for sparc calculations.
-        # Try Measured, then TEST..although it'll be slow
+        # Gets melting point for sparc calculations.
         if request_dict.get('prop') == 'water_sol' or request_dict.get('prop') == 'vapor_press':                
-            self.melting_point = self.get_melting_point(_filtered_smiles, request_dict.get('sessionid'))
+            self.melting_point = self.get_melting_point(_filtered_smiles, 
+                                    request_dict.get('sessionid'), self)
         else:
             self.melting_point = None
 
@@ -140,8 +134,6 @@ class SparcCalc(Calculator):
                 _response_dict[key] = request_dict.get(key)  # fill any overlapping keys from request1
 
         _response_dict.update({'request_post': request_dict, 'method': None})
-        # logging.info("response dict: {}".format(_response_dict))
-
 
         try:
             # Runs ion_con endpoint if it's user's requested property
@@ -167,34 +159,18 @@ class SparcCalc(Calculator):
                     _multi_response = self.parseMultiPropResponse(_multi_response['calculationResults'], request_dict)
                     return _multi_response
 
-                    # # Loops result props in response:
-                    # for prop_obj in _multi_response:
-                    #     if prop_obj['prop'] == request_dict['prop'] and prop_obj['prop'] != 'ion_con' and prop_obj['prop'] != 'kow_wph':
-                    #         # Returns user-requsted result prop:
-                    #         _prop = prop_obj['prop']
-                    #         _data = prop_obj['data']
-                    #         prop_obj.update(_response_dict)
-                    #         prop_obj.update({'prop': _prop, 'data': _data})
-                    #         return prop_obj
-
         except Exception as err:
-            logging.warning("!!! Exception occurred getting SPARC data: {} !!!".format(err))
-
+            logging.warning("Exception occurred getting SPARC data: {}".format(err))
             _response_dict.update({
                 'data': "request timed out",
                 'prop': request_dict.get('prop')
             })
-
             return _response_dict
 
 
     def makeDataRequest(self):
         _post = self.get_sparc_query()
         _url = self.base_url + self.multiproperty_url
-
-        logging.info("SPARC URL: {}".format(_url))
-        logging.info("SPARC POST: {}".format(_post))
-
         return self.request_logic(_url, _post)
 
 
@@ -202,7 +178,6 @@ class SparcCalc(Calculator):
         """
         Handles retries and validation of responses
         """
-
         _valid_result = False  # for retry logic
         _retries = 0
         while not _valid_result and _retries < self.max_retries:
@@ -212,13 +187,11 @@ class SparcCalc(Calculator):
                 _valid_result = self.validate_response(response)
                 if _valid_result:
                     self.results = json.loads(response.content)
-                    # break
                     return self.results
                 _retries += 1
             except Exception as e:
                 logging.warning("Exception in calculator_sparc.py: {}".format(e))
                 _retries += 1
-
             logging.info("Max retries: {}, Retries left: {}".format(self.max_retries, _retries))
         self.results = "calc server not found"
         return self.results
@@ -242,8 +215,6 @@ class SparcCalc(Calculator):
 
         response_type = response_obj.get('type')  # get SPARC property name
 
-        logging.info("Validating {} property".format(response_type))
-
         # prop specific validation:
         if response_type == 'LOGD':
             # check 'plotCoordinates' key, should be list and not None
@@ -252,10 +223,6 @@ class SparcCalc(Calculator):
                 logging.warning("SPARC LOGD 'plotCoordinates' not list as expected...Retrying request...")
                 return False
 
-        # successful response, any further validating should go here (e.g., expected keys, error json from jchem server, etc.)
-        # json_obj = json.loads(response.content)
-
-        # TODO: verify if blank data, finding the source of the empty water sol values...
         return True
 
 
@@ -272,9 +239,7 @@ class SparcCalc(Calculator):
 
         sparc_response = []
         sparc_response_props = []  # list of multi response props to make sure all props made it
-        # logging.info("parsing results: {}".format(results))
         for prop_data in results:
-            # logging.info("PROP DATA: {}".format(prop_data))
             sparc_prop = prop_data['type']
             logging.info("sparc prop: {}".format(sparc_prop))
             cts_prop_name = self.sparc_props.get(sparc_prop)
@@ -285,10 +250,6 @@ class SparcCalc(Calculator):
                 logging.info("data obj: {}".format(data_obj))
                 sparc_response.append(data_obj)
                 sparc_response_props.append(cts_prop_name)
-                # logging.info("sparc response: {}".format(sparc_response))
-
-        # logging.info("sparc multi response props list: {}".format(sparc_response_props))
-        # logging.info("user request props list: {}".format(request_dict['props']))
 
         for prop in request_dict['props']:
             if not prop in sparc_response_props and prop != 'ion_con' and prop != 'kow_wph':
@@ -299,7 +260,6 @@ class SparcCalc(Calculator):
                 data_obj = {'calc': 'sparc', 'prop': prop, 'data': "prop not found"}
                 sparc_response.append(data_obj)
 
-        # logging.info("SPARC RESPONSE: {}".format(sparc_response))
         return sparc_response
 
 
@@ -386,7 +346,6 @@ class SparcCalc(Calculator):
         }
 
         logd_results = self.request_logic(_url, _post)
-        # logging.info("LOGD RESULTs: {}".format(logd_results))
         return logd_results
 
 
@@ -399,11 +358,9 @@ class SparcCalc(Calculator):
         # logging.info("getting sparc logd at ph: {}".format(ph))
         try:
             plot_data = results['plotCoordinates'] # list of [x,y]..
-            # logging.info("plot data: {}".format(plot_data))
             for xypair in plot_data:
                 if xypair[0] == float(ph):
                     return xypair[1]
         except Exception as e:
-            logging.warning("LOGD ERROR RESULTS: {}".format(results))
             logging.warning("Error getting logD at PH from SPARC: {}".format(e))
             raise

@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "structureData": {
+        "structure": "CC(=O)OC1=C(C=CC=C1)C(O)=O",
+        "format": "smiles",
+        "contentUrl": "http://localhost:8080/webservices/rest-v0/util/export/struc_c99adeed7d6e96cf2746940aa792c4dc?format=smiles&contentName=structure",
+        "contentBaseUrl": "http://localhost:8080/webservices/rest-v0/util/export/struc_c99adeed7d6e96cf2746940aa792c4dc"
+      },
+      "mass": 180.159
+    }
+  ],
+  "headers": {
+    "structureData": {
+      "name": "structureData",
+      "type": "STRUCTUREDATA",
+      "source": "GENERATED"
+    },
+    "mass": {
+      "name": "mass",
+      "type": "COMPLEX",
+      "source": "CALCULATOR"
+    }
+  }
+}

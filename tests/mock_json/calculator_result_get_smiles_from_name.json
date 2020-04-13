@@ -1,0 +1,6 @@
+{
+  "structure": "CC(=O)OC1=C(C=CC=C1)C(O)=O",
+  "format": "smiles",
+  "contentUrl": "http://localhost:8080/webservices/rest-v0/util/export/struc_6edb2f09aee408d67cfd3fb69f03e449?format=smiles&contentName=structure",
+  "contentBaseUrl": "http://localhost:8080/webservices/rest-v0/util/export/struc_6edb2f09aee408d67cfd3fb69f03e449"
+}
