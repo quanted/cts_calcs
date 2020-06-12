@@ -44,6 +44,8 @@ class MetabolizerCalc(Calculator):
 
         self.gen_limit = 2
 
+        self.unranked_libs = ['photolysis']  # TODO: break into unranked_photolysis and ranked_photolysis
+
         # CTSWS Transformation Products Request
         self.transformation_request = {
             'structure': None,
@@ -55,7 +57,7 @@ class MetabolizerCalc(Calculator):
         }
 
 
-    def recursive(self, jsonDict, gen_limit):
+    def recursive(self, jsonDict, gen_limit, unranked=False):
         """
         Starting point for walking through
         metabolites dictionary and building json
@@ -64,9 +66,10 @@ class MetabolizerCalc(Calculator):
         """
         root = jsonDict['results']
 
+
         reDict = {}
         reDict.update({
-            'tree': self.traverse(root, gen_limit),
+            'tree': self.traverse(root, gen_limit, unranked),
             'total_products': self.metID - 1  # subtract out the parent for "total products" value
         })
 
@@ -84,7 +87,7 @@ class MetabolizerCalc(Calculator):
         return json.dumps(reDict)
 
 
-    def traverse(self, root, gen_limit):
+    def traverse(self, root, gen_limit, unranked=False):
         """
         For gentrans model output - products tree
         Uses JIT spacetree library on output page; this
@@ -120,10 +123,11 @@ class MetabolizerCalc(Calculator):
                     'smiles': _parent,
                     'routes': root['route'],
                     'generation': root['generation'],
-                    'accumulation': round(root.get('accumulation'), 4),
-                    'production': round(root.get('production'), 4),
-                    'globalAccumulation': round(root.get('globalAccumulation'), 4),
-                    'likelihood': root.get('likelihood')
+                    # 'accumulation': round(root.get('accumulation'), 4),
+                    'accumulation': "N/A" if unranked else round(root.get('accumulation'), 4),
+                    'production': "N/A" if unranked else round(root.get('production'), 4),
+                    'globalAccumulation': "N/A" if unranked else round(root.get('globalAccumulation'), 4),
+                    'likelihood': "N/A" if unranked else root.get('likelihood')
                 },
                 "children": []
             })
@@ -141,10 +145,10 @@ class MetabolizerCalc(Calculator):
                         'smiles': root['smiles'],
                         'routes': root['route'].split(',')[-1],
                         'generation': root['generation'],
-                        'accumulation': round(root.get('accumulation'), 4),
-                        'production': round(root.get('production'), 4),
-                        'globalAccumulation': round(root.get('globalAccumulation'), 4),
-                        'likelihood': likelihood
+                        'accumulation': "N/A" if unranked else round(root.get('accumulation'), 4),
+                        'production': "N/A" if unranked else round(root.get('production'), 4),
+                        'globalAccumulation': "N/A" if unranked else round(root.get('globalAccumulation'), 4),
+                        'likelihood': "N/A" if unranked else likelihood
                     },
                     "children": []
                 })
@@ -159,7 +163,7 @@ class MetabolizerCalc(Calculator):
                     if len(root2) > 0 and 'children' in _products_dict and root['generation'] < gen_limit:
                         # continue walking branch if root2 has contents, one of those contents is 'children', and
                         # the generation limit isn't exceeded..
-                        _products_dict['children'].append(self.traverse(root2, gen_limit))
+                        _products_dict['children'].append(self.traverse(root2, gen_limit, unranked))
 
         return _products_dict
 
@@ -170,8 +174,12 @@ class MetabolizerCalc(Calculator):
         _data_dict = request_dict.get('metabolizer_post')
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
+        unranked = False
+        if 'photolysis' in _data_dict.get('transformationLibraries'):
+            unranked = True
+
         response = self.getTransProducts(_data_dict)
-        _results = MetabolizerCalc().recursive(response, int(request_dict['gen_limit']))
+        _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
 
         _products_data = json.loads(_results)
 
