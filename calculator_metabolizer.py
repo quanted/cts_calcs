@@ -175,7 +175,7 @@ class MetabolizerCalc(Calculator):
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
         unranked = False
-        if 'photolysis' in _data_dict.get('transformationLibraries'):
+        if 'photolysis' in _data_dict.get('transformationLibraries', []):
             unranked = True
 
         response = self.getTransProducts(_data_dict)
