@@ -236,7 +236,11 @@ class MetabolizerCalc(Calculator):
         """
         global_accumulation = product_data.get('globalAccumulation')
 
-        if global_accumulation > 0.001 and global_accumulation < 0.1:
+        if global_accumulation < 0.001:
+            return "UNLIKELY"
+        elif global_accumulation > 0.001 and global_accumulation < 0.1:
             return "PROBABLE"
+        elif global_accumulation > 0.1:
+            return "LIKELY"
         else:
             return product_data.get('likelihood')
