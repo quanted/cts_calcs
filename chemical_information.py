@@ -243,7 +243,7 @@ class ChemInfo(object):
 
 		# Gets filtered SMILES:
 		try:
-			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles)			
+			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
 			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
 				response_obj = {}
 				response_obj['status'] = False
@@ -262,6 +262,12 @@ class ChemInfo(object):
 
 		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
+
+
+		has_carbon = self.smiles_filter_obj.check_for_carbon(filtered_smiles)
+		if not has_carbon and is_node:
+			molecule_obj['has_carbon'] = False
+
 
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
 		molecule_obj['smiles'] = filtered_smiles

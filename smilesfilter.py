@@ -99,7 +99,7 @@ class SMILESFilter(object):
 
 
 
-	def filterSMILES(self, smiles):
+	def filterSMILES(self, smiles, is_node=False):
 		"""
 		cts ws call to jchem to perform various
 		smiles processing before being sent to
@@ -107,8 +107,8 @@ class SMILESFilter(object):
 		"""
 		calc_object = Calculator()
 
-		# Performs carbon check:
-		if not self.check_for_carbon(smiles):
+		# Performs carbon check (but not for transformation products):
+		if not is_node and not self.check_for_carbon(smiles):
 			return {'error': "CTS only accepts organic chemicals"}
 
 		# Checks SMILES for invalid characters:
