@@ -66,13 +66,13 @@ class MetabolizerCalc(Calculator):
         """
         root = jsonDict['results']
 
-
         reDict = {}
         reDict.update({
             'tree': self.traverse(root, gen_limit, unranked),
             'total_products': self.metID - 1  # subtract out the parent for "total products" value
         })
 
+        self.metID = 0  # resets the metID attribute
 
         # Need to hit SMILES filter, then retrieve molecular info,
         # node image, and popup image for products...
@@ -133,6 +133,7 @@ class MetabolizerCalc(Calculator):
             })
             
         else:
+
             if root['generation'] > 0 and root['generation'] <= gen_limit:
 
                 likelihood = self.setLikelyhoodValue(root)
@@ -179,6 +180,7 @@ class MetabolizerCalc(Calculator):
             unranked = True
 
         response = self.getTransProducts(_data_dict)
+
         _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
 
         _products_data = json.loads(_results)
