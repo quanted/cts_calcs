@@ -51,14 +51,16 @@ class BiotransCalc(Calculator):
 			return requests.post(url, json=post_data, headers=headers, timeout=self.request_timeout)
 		except Exception as e:
 			logging.warning("Exception in calculator_biotrans: {}".format(e))
-			return None
+			return {"error": "Error making request to biotransformer."}
 
 	def data_request_handler(self, request_dict):
 		"""
 		Entrypoint for handling biotransformer data request.
 		"""
+
+		metabolizer_data = request_dict.get("metabolizer_post")
 		chemical = request_dict["chemical"]
-		prop = request_dict.get("prop", self.props[0])
+		prop = metabolizer_data.get("prop")
 		gen_limit = int(request_dict.get("gen_limit", 1))
 
 		if not prop in self.props:
@@ -70,16 +72,17 @@ class BiotransCalc(Calculator):
 			"gen_limit": gen_limit
 		}
 
+
 		response = self.make_request(self.biotrans_api_url, post_data)  # return tree and total_products
+
+		if "error" in response:
+			return {"status": False, "error": response["error"]}
 
 		response_obj = json.loads(response.content.decode("utf-8"))
 
-		if "error" in response:
-			return {"status": False, "error": "Error making request to biotransformer."}
-
 		_response_obj = {
             "calc": "biotrans",  # todo: change to metabolizer, change in template too
-            "prop": request_dict.get("prop"),
+            "prop": "products",
             "node": request_dict.get("node"),
             "data": response_obj["data"]["tree"],
             "total_products": response_obj["data"]["total_products"],
