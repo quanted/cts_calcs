@@ -40,7 +40,7 @@ class ACTORWS(object):
 
 	def make_request(self, url, payload):
 		try:
-			_response = requests.get(url, params=payload, timeout=5)
+			_response = requests.get(url, params=payload, timeout=15)
 		except requests.exceptions.Timeout as e:
 			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
 			return None
