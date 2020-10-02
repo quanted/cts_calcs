@@ -72,7 +72,6 @@ class BiotransCalc(Calculator):
 			"gen_limit": gen_limit
 		}
 
-
 		response = self.make_request(self.biotrans_api_url, post_data)  # return tree and total_products
 
 		if "error" in response:
@@ -80,7 +79,7 @@ class BiotransCalc(Calculator):
 
 		response_obj = json.loads(response.content.decode("utf-8"))
 
-		_response_obj = {
+		return {
             "calc": "biotrans",  # todo: change to metabolizer, change in template too
             "prop": "products",
             "node": request_dict.get("node"),
@@ -91,5 +90,3 @@ class BiotransCalc(Calculator):
 			"run_type": request_dict.get("run_type"),
             "request_post": request_dict       
         }
-
-		return _response_obj
