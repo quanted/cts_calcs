@@ -503,10 +503,8 @@ class Solubility(JchemProperty):
         if request_dict.get('prop') == 'water_sol_ph':
             # pH dependent water solubility
             _result = self.getPHDependentSolubility(request_dict.get('ph'))
-            _result = self.convertLogToMGPERL(_result, request_dict.get('mass'))
-
-            # _result = 1000.0 * _result  # converts g/L -> mg/L
-
+            # _result = self.convertLogToMGPERL(_result, request_dict.get('mass'))  # (jchem v15.3.16)  
+            _result = 1000.0 * _result  # converts g/L -> mg/L  # ( jchem v16.10.17)
             return _result
         elif request_dict.get('prop') == 'water_sol':
             _result = self.getIntrinsicSolubility()
