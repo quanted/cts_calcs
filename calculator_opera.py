@@ -103,6 +103,8 @@ class OperaCalc(Calculator):
             + prop - property name to convert.
             + data_obj - response/data to be sent back to user.
         """
+        if prop != 'ion_con' and math.isnan(float(data_obj['data'])):
+            return "NaN"
         if prop in ['vapor_press', 'henrys_law_con']:
             # Converts from log:
             data_obj['data'] = 10**float(data_obj['data'])
@@ -143,7 +145,6 @@ class OperaCalc(Calculator):
         # todo: add no 'data' exception handling
         opera_results = opera_results['data']
         chem_nodes = response_dict.get('nodes')
-
         result_index = 0
         curated_list = []
         for smiles_data_obj in opera_results:
