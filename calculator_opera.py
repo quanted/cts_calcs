@@ -103,6 +103,9 @@ class OperaCalc(Calculator):
             + prop - property name to convert.
             + data_obj - response/data to be sent back to user.
         """
+
+        print("PROP: {}, DATA: {}".format(prop, data_obj))
+
         if prop != 'ion_con' and math.isnan(float(data_obj['data'])):
             return "NaN"
         if prop in ['vapor_press', 'henrys_law_con']:
@@ -115,6 +118,9 @@ class OperaCalc(Calculator):
         elif prop == 'ion_con':
             # Sets 'data' to "none" if "NaN":
             data_obj = self.check_ion_con_for_nan(data_obj)
+
+            print("RETURN DATA OBJ: {}".format(data_obj))
+
         return data_obj['data']
 
     def convert_water_solubility(self, ws_data_obj):
@@ -199,15 +205,14 @@ class OperaCalc(Calculator):
         pkas = curated_dict['data'].split("\n")  # Does OPERA ever return > 1 pka/pkbs?
         pka = pkas[0].split(":")[1].replace(" ", "")
         pkb = pkas[1].split(":")[1].replace(" ", "")
+
         pka, pkb = round(float(pka), 2), round(float(pkb), 2)
-        if not math.isnan(pka) and not math.isnan(pkb):
-            return curated_dict
-        if math.isnan(pka) and math.isnan(pkb):
-            curated_dict['data'] = "none"
-            return curated_dict
 
         # Packages ion_con data like sparc and chemaxon:
         ion_con_dict = {'pKa': [], 'pKb': []}
+        if math.isnan(pka) and math.isnan(pkb):
+            curated_dict['data'] = "none"
+            return curated_dict
         if not math.isnan(pka):
             ion_con_dict['pKa'] = [pka]
         if not math.isnan(pkb):
