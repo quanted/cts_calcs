@@ -135,7 +135,7 @@ class MeasuredCalc(Calculator):
 				logging.info("Measured Data: {}".format(_measured_data))
 			except Exception as e:
 				logging.warning("Exception making request to Measured: {}".format(e))
-				_response_dict.update({'error': "Cannot reach Measured calculator"})
+				_response_dict.update({'data': "Cannot reach Measured calculator"})
 				# return _response_dict
 
 			# logging.info("Measured Data: {}".format(_measured_data))
@@ -145,7 +145,7 @@ class MeasuredCalc(Calculator):
 				return _response_dict
 			except Exception as err:
 				logging.warning("Exception occurred getting Measured data: {}".format(err))
-				_response_dict.update({'error': "Cannot reach Measured calculator"})
+				_response_dict.update({'data': "Cannot reach Measured calculator"})
 
 			logging.info("Retrying Measured request..")
 			_retries = _retries - 1
