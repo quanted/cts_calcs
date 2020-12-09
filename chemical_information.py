@@ -23,7 +23,7 @@ class Molecule(object):
 		self.smiles = ''  # post filtered smiles 
 		self.formula = ''
 		self.iupac = ''
-		self.cas = ''
+		# self.cas = ''
 		self.mass = ''
 		self.structureData = ''
 		self.exactMass = ''
@@ -68,6 +68,7 @@ class ChemInfo(object):
 		self.actorws_obj = ACTORWS()
 		self.smiles_filter_obj = SMILESFilter()
 		self.calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
+		self.cas_url = "https://cactus.nci.nih.gov/chemical/structure/{}/cas"  # associated CAS
 		self.carbon_anomolies = {
 			"C": "methane",
 			"CC": "ethane",
@@ -259,9 +260,13 @@ class ChemInfo(object):
 
 		# Gets chemical details from jchem ws:
 		jchem_response = self.calc_obj.getChemDetails({'chemical': filtered_smiles})
-
+		
 		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
+
+		cas_list = self.make_cas_request(filtered_smiles)  # gets CAS from cactus.nci.nih.gov (deprecated in jchemws)
+
+		molecule_obj['cas'] = cas_list
 
 
 		has_carbon = self.smiles_filter_obj.check_for_carbon(filtered_smiles)
@@ -355,3 +360,16 @@ class ChemInfo(object):
 		logging.info("Getting gsid from actorws chemicalIdentifier..")
 		chemid_results = self.actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 		return chemid_results
+
+	def make_cas_request(self, smiles):
+		"""
+		Manually gets CAS list, which used to work with
+		Jchem Web Services.
+		"""
+		try:
+			cas_list = requests.get(self.cas_url.format(smiles), verify=False).content
+			logging.warning("CAS LIST: {}".format(cas_list))
+			return cas_list.decode('utf-8').replace('\n', ', ')
+		except Exception as e:
+			logging.warning("Exception making CAS request: {}".format(e))
+			return "N/A"
