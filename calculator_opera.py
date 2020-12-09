@@ -103,9 +103,6 @@ class OperaCalc(Calculator):
             + prop - property name to convert.
             + data_obj - response/data to be sent back to user.
         """
-
-        print("PROP: {}, DATA: {}".format(prop, data_obj))
-
         if prop != 'ion_con' and math.isnan(float(data_obj['data'])):
             return "NaN"
         if prop in ['vapor_press', 'henrys_law_con']:
