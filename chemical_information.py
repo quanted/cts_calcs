@@ -367,9 +367,10 @@ class ChemInfo(object):
 		Jchem Web Services.
 		"""
 		try:
-			cas_list = requests.get(self.cas_url.format(smiles), verify=False).content
-			logging.warning("CAS LIST: {}".format(cas_list))
-			return cas_list.decode('utf-8').replace('\n', ', ')
+			response = requests.get(self.cas_url.format(smiles), verify=False)
+			if response.status_code != 200:
+				return "N/A"
+			return response.content.decode('utf-8').replace('\n', ', ')  # returns curated CAS list
 		except Exception as e:
 			logging.warning("Exception making CAS request: {}".format(e))
 			return "N/A"
