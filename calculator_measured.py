@@ -132,13 +132,10 @@ class MeasuredCalc(Calculator):
 				_response = self.makeDataRequest(_filtered_smiles) # make call for data!
 				_measured_data = json.loads(_response.content)
 				_measured_data['valid'] = True
-				logging.info("Measured Data: {}".format(_measured_data))
 			except Exception as e:
 				logging.warning("Exception making request to Measured: {}".format(e))
 				_response_dict.update({'data': "Cannot reach Measured calculator"})
 				# return _response_dict
-
-			# logging.info("Measured Data: {}".format(_measured_data))
 
 			try:
 				_response_dict.update(_measured_data)

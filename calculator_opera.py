@@ -116,8 +116,6 @@ class OperaCalc(Calculator):
             # Sets 'data' to "none" if "NaN":
             data_obj = self.check_ion_con_for_nan(data_obj)
 
-            print("RETURN DATA OBJ: {}".format(data_obj))
-
         return data_obj['data']
 
     def convert_water_solubility(self, ws_data_obj):
