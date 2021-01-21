@@ -6,12 +6,9 @@ import logging
 from bs4 import BeautifulSoup
 
 from .calculator import Calculator
-from .chemical_information import SMILESFilter
-
 
 
 headers = {"Content-type": "application/json", "Accept": "text/html"}
-
 
 
 class BiotransCalc(Calculator):
