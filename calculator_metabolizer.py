@@ -56,6 +56,8 @@ class MetabolizerCalc(Calculator):
             'excludeCondition': "hasValenceError()"
         }
 
+        self.unique_products = []
+
 
     def recursive(self, jsonDict, gen_limit, unranked=False):
         """
@@ -69,10 +71,12 @@ class MetabolizerCalc(Calculator):
         reDict = {}
         reDict.update({
             'tree': self.traverse(root, gen_limit, unranked),
-            'total_products': self.metID - 1  # subtract out the parent for "total products" value
+            'total_products': self.metID - 1,  # subtract out the parent for "total products" value
+            'unique_products': len(self.unique_products)
         })
 
         self.metID = 0  # resets the metID attribute
+        self.unique_products = []
 
         # Need to hit SMILES filter, then retrieve molecular info,
         # node image, and popup image for products...
@@ -115,7 +119,7 @@ class MetabolizerCalc(Calculator):
             root = root[_parent]['metabolites'][second_parent]
             # not-skipping version without 2nd parent problem:
             # root = root[_parent]
-
+            
             _products_dict.update({
                 "id": self.metID,
                 "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
@@ -154,6 +158,8 @@ class MetabolizerCalc(Calculator):
                     "children": []
                 })
                 # self.products_list.append(root['smiles'])
+                if not root['smiles'] in self.unique_products:
+                    self.unique_products.append(root['smiles'])
 
 
         for key, value in root.items():
@@ -191,6 +197,7 @@ class MetabolizerCalc(Calculator):
             'node': request_dict.get('node'),
             'data': _products_data['tree'],
             'total_products': _products_data['total_products'],
+            'unique_products': _products_data['unique_products'],
             'chemical': request_dict.get('chemical'),
             'workflow': 'gentrans',
             'run_type': 'batch',
