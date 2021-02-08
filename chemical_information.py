@@ -367,7 +367,8 @@ class ChemInfo(object):
 		Jchem Web Services.
 		"""
 		try:
-			response = requests.get(self.cas_url.format(smiles), verify=False)
+			url = self.cas_url.format(requests.utils.quote(smiles))  # encoding smiles for url
+			response = requests.get(url, verify=False)
 			if response.status_code != 200:
 				return "N/A"
 			return response.content.decode('utf-8').replace('\n', ', ')  # returns curated CAS list
