@@ -371,6 +371,8 @@ class ChemInfo(object):
 			response = requests.get(url, verify=False)
 			if response.status_code != 200:
 				return "N/A"
+			if '<html>' in response.content:
+				return "N/A"
 			return response.content.decode('utf-8').replace('\n', ', ')  # returns curated CAS list
 		except Exception as e:
 			logging.warning("Exception making CAS request: {}".format(e))
