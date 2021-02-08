@@ -16,7 +16,7 @@ class JchemProperty(Calculator):
 
         Calculator.__init__(self)  # inherit calculator base class
         
-        self.request_timeout = 10
+        self.request_timeout = 20
         self.headers = {'Content-Type': 'application/json'}
         self.max_retries = 3
         self.baseUrl = os.environ['CTS_JCHEM_SERVER']

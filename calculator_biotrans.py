@@ -24,7 +24,7 @@ class BiotransCalc(Calculator):
 		self.biotrans_api_url = self.baseUrl + self.urlStruct
 		self.props = ["ecbased", "cyp450", "phaseII", "hgut", "superbio", "envimicro"]
 		self.biotrans_tasks = ["pred", "cid"]
-		self.request_timeout = 30
+		self.request_timeout = 300
 		self.propMap = {}
 
 		self.meta_info = {
@@ -82,6 +82,7 @@ class BiotransCalc(Calculator):
             "node": request_dict.get("node"),
             "data": response_obj["data"]["tree"],
             "total_products": response_obj["data"]["total_products"],
+            "unique_products": response_obj["data"]["unique_products"],
             "chemical": request_dict.get("chemical"),
             "workflow": request_dict.get("workflow"),
 			"run_type": request_dict.get("run_type"),
