@@ -128,9 +128,9 @@ class MetabolizerCalc(Calculator):
                     'routes': root['route'],
                     'generation': root['generation'],
                     # 'accumulation': round(root.get('accumulation'), 4),
-                    'accumulation': "N/A" if unranked else round(root.get('accumulation'), 4),
-                    'production': "N/A" if unranked else round(root.get('production'), 4),
-                    'globalAccumulation': "N/A" if unranked else round(root.get('globalAccumulation'), 4),
+                    'accumulation': "N/A" if unranked else 100 * round(root.get('accumulation'), 4),
+                    'production': "N/A" if unranked else 100 * round(root.get('production'), 4),
+                    'globalAccumulation': "N/A" if unranked else 100 * round(root.get('globalAccumulation'), 4),
                     'likelihood': "N/A" if unranked else root.get('likelihood')
                 },
                 "children": []
@@ -150,9 +150,9 @@ class MetabolizerCalc(Calculator):
                         'smiles': root['smiles'],
                         'routes': root['route'].split(',')[-1],
                         'generation': root['generation'],
-                        'accumulation': "N/A" if unranked else round(root.get('accumulation'), 4),
-                        'production': "N/A" if unranked else round(root.get('production'), 4),
-                        'globalAccumulation': "N/A" if unranked else round(root.get('globalAccumulation'), 4),
+                        'accumulation': "N/A" if unranked else 100 * round(root.get('accumulation'), 4),
+                        'production': "N/A" if unranked else 100 * round(root.get('production'), 4),
+                        'globalAccumulation': "N/A" if unranked else 100 * round(root.get('globalAccumulation'), 4),
                         'likelihood': "N/A" if unranked else likelihood
                     },
                     "children": []
