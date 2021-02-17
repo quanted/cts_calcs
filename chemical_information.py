@@ -272,6 +272,8 @@ class ChemInfo(object):
 		has_carbon = self.smiles_filter_obj.check_for_carbon(filtered_smiles)
 		if not has_carbon and is_node:
 			molecule_obj['has_carbon'] = False
+		else:
+			molecule_obj['has_carbon'] = True
 
 
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:

@@ -429,7 +429,7 @@ class Calculator(object):
 			_checked_response - results object with wrapper for
 			handling any possible errors.
 		"""
-		_errors_list = ['errorMessage', 'errorCode']
+		_errors_list = ['errorMessage', 'errorCode', 'error']
 		_check_response = {
 			'valid': False,
 			'error': None
@@ -458,7 +458,7 @@ class Calculator(object):
 		"""
 		Handles known error that occurred requesting data from jchem
 		"""
-		if results['errorCode'] == 3:
+		if results.get('errorCode') == 3:
 			# jchem ws can't read molecule file..
 			return "Chemical cannot be standardized"
 		else:
@@ -470,7 +470,6 @@ class Calculator(object):
 		Makes the request to a specified URL
 		and POST data. Returns resonse data as dict
 		"""
-
 		# TODO: Deal with errors more granularly... 403, 500, etc.
 
 		if not headers:
@@ -482,6 +481,7 @@ class Calculator(object):
 				response = requests.post(url, data=json.dumps(data), headers=headers, timeout=self.request_timeout)
 
 			results = json.loads(response.content)
+
 			valid_object = self.check_response_for_errors(results)
 
 			if valid_object.get('valid'):

@@ -19,7 +19,7 @@ class OperaCalc(Calculator):
         self.name = "opera"
         self.baseUrl = os.environ['CTS_OPERA_SERVER']
         self.urlStruct = "/opera/rest/run"
-        self.request_timeout = 180  # 3 min timeout for OPERAWS
+        self.request_timeout = 300  # 3 min timeout for OPERAWS
         self.props = ['kow_no_ph', 'melting_point', 'boiling_point', 'henrys_law_con', 'vapor_press', 'water_sol', 'ion_con', 'kow_wph', 'log_bcf', 'koc']
         self.opera_props = ['LogP_pred', 'MP_pred', 'BP_pred', 'LogVP_pred', 'LogWS_pred', 'pKa_a_pred',
             'pKa_b_pred', 'LogD55_pred', 'LogD74_pred', 'LogBCF_pred', 'LogKoc_pred']
