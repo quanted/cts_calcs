@@ -34,6 +34,7 @@ class TestWSCalc(Calculator):
 		self.methods = ['hc', 'nn', 'gc']  # general property methods
 		self.method = None
 		self.bcf_method = "sm"
+		self.timeout = 10
 
 		# map workflow parameters to test
 		self.propMap = {
@@ -102,19 +103,18 @@ class TestWSCalc(Calculator):
 
 	def makeDataRequest(self, structure, calc, prop, method):
 		test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
-		_url = self.baseUrl + "/{}".format(test_prop) 
+		_url = self.baseUrl + "/{}".format(test_prop)
 		_payload = {'smiles': structure, 'method': method}
 		try:
-			# response = requests.post(url, data=json.dumps(post), headers=headers, timeout=10)
-			response = requests.get(_url, params=_payload, timeout=10)
+			response = requests.get(_url, params=_payload, timeout=self.timeout)
 		except requests.exceptions.ConnectionError as ce:
-			logging.info("connection exception: {}".format(ce))
-			# return None
-			raise
+			logging.warning("connection exception: {}".format(ce))
+			return {'error': 'connection error'}
 		except requests.exceptions.Timeout as te:
-			logging.info("timeout exception: {}".format(te))
-			# return None
-			raise
+			logging.warning("timeout exception: {}".format(te))
+			return {'error': 'timeout error'}
+		except Exception as e:
+			logging.warning("exception: {}".format(e))
 
 		self.results = response
 		return response
@@ -154,6 +154,10 @@ class TestWSCalc(Calculator):
 			_response_dict['method'] = _response_dict.get('method').upper()
 
 		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
+
+		if 'error' in _response:
+			_response_dict.update({'data': _response['error']})
+			return _response_dict
 
 		if _response.status_code != 200:
 			_response_dict.update({'data': "Cannot reach TESTWS"})
