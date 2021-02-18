@@ -13,7 +13,7 @@ class EnvipathCalc(Calculator):
 
     def __init__(self):
         Calculator.__init__(self)
-        self.baseUrl = os.environ.get('CTS_ENVIPATH_SERVER', None)
+        self.baseUrl = os.environ.get('CTS_ENVIPATH_SERVER', "http://localhost:5003")
         self.urlStruct = "/envipath/rest/run"
         self.envipath_api_url = self.baseUrl + self.urlStruct
         self.name = 'envipath'
