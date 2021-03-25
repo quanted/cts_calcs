@@ -44,6 +44,8 @@ class MetabolizerCalc(Calculator):
 
         self.gen_limit = 2
 
+        self.unranked_libs = ['photolysis']  # TODO: break into unranked_photolysis and ranked_photolysis
+
         # CTSWS Transformation Products Request
         self.transformation_request = {
             'structure': None,
@@ -54,8 +56,10 @@ class MetabolizerCalc(Calculator):
             'excludeCondition': "hasValenceError()"
         }
 
+        self.unique_products = []
 
-    def recursive(self, jsonDict, gen_limit):
+
+    def recursive(self, jsonDict, gen_limit, unranked=False):
         """
         Starting point for walking through
         metabolites dictionary and building json
@@ -66,10 +70,13 @@ class MetabolizerCalc(Calculator):
 
         reDict = {}
         reDict.update({
-            'tree': self.traverse(root, gen_limit),
-            'total_products': self.metID - 1  # subtract out the parent for "total products" value
+            'tree': self.traverse(root, gen_limit, unranked),
+            'total_products': self.metID - 1,  # subtract out the parent for "total products" value
+            'unique_products': len(self.unique_products)
         })
 
+        self.metID = 0  # resets the metID attribute
+        self.unique_products = []
 
         # Need to hit SMILES filter, then retrieve molecular info,
         # node image, and popup image for products...
@@ -84,7 +91,7 @@ class MetabolizerCalc(Calculator):
         return json.dumps(reDict)
 
 
-    def traverse(self, root, gen_limit):
+    def traverse(self, root, gen_limit, unranked=False):
         """
         For gentrans model output - products tree
         Uses JIT spacetree library on output page; this
@@ -112,7 +119,7 @@ class MetabolizerCalc(Calculator):
             root = root[_parent]['metabolites'][second_parent]
             # not-skipping version without 2nd parent problem:
             # root = root[_parent]
-
+            
             _products_dict.update({
                 "id": self.metID,
                 "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
@@ -120,15 +127,17 @@ class MetabolizerCalc(Calculator):
                     'smiles': _parent,
                     'routes': root['route'],
                     'generation': root['generation'],
-                    'accumulation': round(root.get('accumulation'), 4),
-                    'production': round(root.get('production'), 4),
-                    'globalAccumulation': round(root.get('globalAccumulation'), 4),
-                    'likelihood': root.get('likelihood')
+                    # 'accumulation': round(root.get('accumulation'), 4),
+                    'accumulation': "N/A" if unranked else round(100 * root.get('accumulation'), 2),
+                    'production': "N/A" if unranked else round(100 * root.get('production'), 2),
+                    'globalAccumulation': "N/A" if unranked else round(100 * root.get('globalAccumulation'), 2),
+                    'likelihood': "N/A" if unranked else root.get('likelihood')
                 },
                 "children": []
             })
             
         else:
+
             if root['generation'] > 0 and root['generation'] <= gen_limit:
 
                 likelihood = self.setLikelyhoodValue(root)
@@ -141,14 +150,16 @@ class MetabolizerCalc(Calculator):
                         'smiles': root['smiles'],
                         'routes': root['route'].split(',')[-1],
                         'generation': root['generation'],
-                        'accumulation': round(root.get('accumulation'), 4),
-                        'production': round(root.get('production'), 4),
-                        'globalAccumulation': round(root.get('globalAccumulation'), 4),
-                        'likelihood': likelihood
+                        'accumulation': "N/A" if unranked else round(100 * root.get('accumulation'), 2),
+                        'production': "N/A" if unranked else round(100 * root.get('production'), 2),
+                        'globalAccumulation': "N/A" if unranked else round(100 * root.get('globalAccumulation'), 2),
+                        'likelihood': "N/A" if unranked else likelihood
                     },
                     "children": []
                 })
                 # self.products_list.append(root['smiles'])
+                if not root['smiles'] in self.unique_products:
+                    self.unique_products.append(root['smiles'])
 
 
         for key, value in root.items():
@@ -159,7 +170,7 @@ class MetabolizerCalc(Calculator):
                     if len(root2) > 0 and 'children' in _products_dict and root['generation'] < gen_limit:
                         # continue walking branch if root2 has contents, one of those contents is 'children', and
                         # the generation limit isn't exceeded..
-                        _products_dict['children'].append(self.traverse(root2, gen_limit))
+                        _products_dict['children'].append(self.traverse(root2, gen_limit, unranked))
 
         return _products_dict
 
@@ -170,8 +181,13 @@ class MetabolizerCalc(Calculator):
         _data_dict = request_dict.get('metabolizer_post')
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
+        unranked = False
+        if 'photolysis' in _data_dict.get('transformationLibraries', []):
+            unranked = True
+
         response = self.getTransProducts(_data_dict)
-        _results = MetabolizerCalc().recursive(response, int(request_dict['gen_limit']))
+
+        _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
 
         _products_data = json.loads(_results)
 
@@ -181,6 +197,7 @@ class MetabolizerCalc(Calculator):
             'node': request_dict.get('node'),
             'data': _products_data['tree'],
             'total_products': _products_data['total_products'],
+            'unique_products': _products_data['unique_products'],
             'chemical': request_dict.get('chemical'),
             'workflow': 'gentrans',
             'run_type': 'batch',
@@ -228,7 +245,11 @@ class MetabolizerCalc(Calculator):
         """
         global_accumulation = product_data.get('globalAccumulation')
 
-        if global_accumulation > 0.001 and global_accumulation < 0.1:
+        if global_accumulation < 0.001:
+            return "UNLIKELY"
+        elif global_accumulation > 0.001 and global_accumulation < 0.1:
             return "PROBABLE"
+        elif global_accumulation > 0.1:
+            return "LIKELY"
         else:
             return product_data.get('likelihood')

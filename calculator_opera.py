@@ -19,7 +19,7 @@ class OperaCalc(Calculator):
         self.name = "opera"
         self.baseUrl = os.environ['CTS_OPERA_SERVER']
         self.urlStruct = "/opera/rest/run"
-        self.request_timeout = 180  # 3 min timeout for OPERAWS
+        self.request_timeout = 300  # 3 min timeout for OPERAWS
         self.props = ['kow_no_ph', 'melting_point', 'boiling_point', 'henrys_law_con', 'vapor_press', 'water_sol', 'ion_con', 'kow_wph', 'log_bcf', 'koc']
         self.opera_props = ['LogP_pred', 'MP_pred', 'BP_pred', 'LogVP_pred', 'LogWS_pred', 'pKa_a_pred',
             'pKa_b_pred', 'LogD55_pred', 'LogD74_pred', 'LogBCF_pred', 'LogKoc_pred']
@@ -103,6 +103,8 @@ class OperaCalc(Calculator):
             + prop - property name to convert.
             + data_obj - response/data to be sent back to user.
         """
+        if prop != 'ion_con' and math.isnan(float(data_obj['data'])):
+            return "NaN"
         if prop in ['vapor_press', 'henrys_law_con']:
             # Converts from log:
             data_obj['data'] = 10**float(data_obj['data'])
@@ -113,6 +115,7 @@ class OperaCalc(Calculator):
         elif prop == 'ion_con':
             # Sets 'data' to "none" if "NaN":
             data_obj = self.check_ion_con_for_nan(data_obj)
+
         return data_obj['data']
 
     def convert_water_solubility(self, ws_data_obj):
@@ -143,7 +146,6 @@ class OperaCalc(Calculator):
         # todo: add no 'data' exception handling
         opera_results = opera_results['data']
         chem_nodes = response_dict.get('nodes')
-
         result_index = 0
         curated_list = []
         for smiles_data_obj in opera_results:
@@ -198,15 +200,14 @@ class OperaCalc(Calculator):
         pkas = curated_dict['data'].split("\n")  # Does OPERA ever return > 1 pka/pkbs?
         pka = pkas[0].split(":")[1].replace(" ", "")
         pkb = pkas[1].split(":")[1].replace(" ", "")
+
         pka, pkb = round(float(pka), 2), round(float(pkb), 2)
-        if not math.isnan(pka) and not math.isnan(pkb):
-            return curated_dict
-        if math.isnan(pka) and math.isnan(pkb):
-            curated_dict['data'] = "none"
-            return curated_dict
 
         # Packages ion_con data like sparc and chemaxon:
         ion_con_dict = {'pKa': [], 'pKb': []}
+        if math.isnan(pka) and math.isnan(pkb):
+            curated_dict['data'] = "none"
+            return curated_dict
         if not math.isnan(pka):
             ion_con_dict['pKa'] = [pka]
         if not math.isnan(pkb):

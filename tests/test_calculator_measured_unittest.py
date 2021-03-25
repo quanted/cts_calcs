@@ -6,13 +6,15 @@ import datetime
 import logging
 import sys
 import requests
-from numpy import testing as npt
 from tabulate import tabulate
 from unittest.mock import Mock, patch
-from nose.tools import assert_is_not_none
+
+_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(
+    1, os.path.join(_path, "..", "..", "..", "..")
+)  # adds qed project to sys.path
 
 # local requirements (running pytest at qed level):
-_path = os.path.dirname(os.path.abspath(__file__))
 if 'cts_celery' in _path:
 	from qed.cts_celery.cts_calcs.calculator_measured import MeasuredCalc
 elif 'cts_app' in _path:

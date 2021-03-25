@@ -1,8 +1,7 @@
 __author__ = 'np'
 
-# from jinja2 import Template
-from django.template import Template
-from django.template import Context
+# from django.template import Template
+# from django.template import Context
 import requests
 import json
 import logging
@@ -235,7 +234,7 @@ class Calculator(object):
 					"mass": "chemicalTerms(mass)",
 					"exactMass": "chemicalTerms(exactMass)",
 					"smiles": "chemicalTerms(molString('smiles'))",
-					"cas": "chemicalTerms(molString('name:cas#'))",
+					# "cas": "chemicalTerms(molString('name:cas#'))",
 					"preferredName": "chemicalTerms(molString('name:t'))"
 				},
 				"parameters": {
@@ -430,7 +429,7 @@ class Calculator(object):
 			_checked_response - results object with wrapper for
 			handling any possible errors.
 		"""
-		_errors_list = ['errorMessage', 'errorCode']
+		_errors_list = ['errorMessage', 'errorCode', 'error']
 		_check_response = {
 			'valid': False,
 			'error': None
@@ -459,7 +458,7 @@ class Calculator(object):
 		"""
 		Handles known error that occurred requesting data from jchem
 		"""
-		if results['errorCode'] == 3:
+		if results.get('errorCode') == 3:
 			# jchem ws can't read molecule file..
 			return "Chemical cannot be standardized"
 		else:
@@ -471,7 +470,6 @@ class Calculator(object):
 		Makes the request to a specified URL
 		and POST data. Returns resonse data as dict
 		"""
-
 		# TODO: Deal with errors more granularly... 403, 500, etc.
 
 		if not headers:
@@ -483,6 +481,7 @@ class Calculator(object):
 				response = requests.post(url, data=json.dumps(data), headers=headers, timeout=self.request_timeout)
 
 			results = json.loads(response.content)
+
 			valid_object = self.check_response_for_errors(results)
 
 			if valid_object.get('valid'):
@@ -549,27 +548,52 @@ class Calculator(object):
 				html = '<div class="cts-chem-wrap" style="background-color:white;">' + img + '</div>'
 			
 		else:
+
 			context = {'smiles': smiles, 'img': img, 'height': height, 'width': width, 'scale': scale, 'key': key}
-			html = self.imgTmpl(isProduct).render(Context(context))
+			# html = self.imgTmpl(isProduct).render(Context(context))
+			html = self.imgTmpl2(context, isProduct)
 
 		return html
 
 
-	def imgTmpl(self, isProduct):
+	def imgTmpl2(self, data, isProduct):
+		"""
+		Creates <img> without Django templates.
+		"""
 		if isProduct:
 			imgTmpl = """
-			<img class="metabolite" id="{{key|default:""}}"
-				alt="{{smiles}}" src="data:image/png;base64,{{img}}"
-				width={{width}} height={{height}} /> 
-			"""        
+			<img class="metabolite" id="{}"
+				alt="{}" src="data:image/png;base64,{}"
+				width={} height={} /> 
+			""".format(data['key'], data['smiles'], data['img'], data['width'], data['height'])
 		else:
 			imgTmpl = """
-			<img class="metabolite hidden-chem" id="{{key|default:""}}"
-				alt="{{smiles}}" src="data:image/png;base64,{{img}}"
-				width={{width}} height={{height}} hidden /> 
-			"""
+			<img class="metabolite hidden-chem" id="{}"
+				alt="{}" src="data:image/png;base64,{}"
+				width={} height={} hidden /> 
+			""".format(data['key'], data['smiles'], data['img'], data['width'], data['height'])
 		imgTmpl = imgTmpl.replace('\t', '').replace('\n', '')
-		return Template(imgTmpl)
+		return imgTmpl
+
+
+	# def imgTmpl(self, isProduct):
+	# 	"""
+	# 	Uses Django templates to create <img> for molecule.
+	# 	"""
+	# 	if isProduct:
+	# 		imgTmpl = """
+	# 		<img class="metabolite" id="{{key|default:""}}"
+	# 			alt="{{smiles}}" src="data:image/png;base64,{{img}}"
+	# 			width={{width}} height={{height}} /> 
+	# 		"""        
+	# 	else:
+	# 		imgTmpl = """
+	# 		<img class="metabolite hidden-chem" id="{{key|default:""}}"
+	# 			alt="{{smiles}}" src="data:image/png;base64,{{img}}"
+	# 			width={{width}} height={{height}} hidden /> 
+	# 		"""
+	# 	imgTmpl = imgTmpl.replace('\t', '').replace('\n', '')
+	# 	return Template(imgTmpl)
 
 
 	def popupBuilder(self, root, paramKeys, molKey=None, header=None, isProduct=False):

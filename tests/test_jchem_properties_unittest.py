@@ -10,11 +10,14 @@ import inspect
 import datetime
 import logging
 import sys
-from numpy import testing as npt
 from tabulate import tabulate
 
-# local requirements (running pytest at qed level):
 _path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(
+    1, os.path.join(_path, "..", "..", "..", "..")
+)  # adds qed project to sys.path
+
+# local requirements (running pytest at qed level):
 if 'cts_celery' in _path:
 	from qed.cts_celery.cts_calcs.jchem_properties import JchemProperty
 elif 'cts_app' in _path:
@@ -101,8 +104,8 @@ class TestJchemProperties(unittest.TestCase):
 		expected_results = [acidic_expected_results, basic_expected_results]
 
 		try:
-			npt.assert_allclose(acidic_vals, acidic_expected_results, rtol=1e-6, atol=0, err_msg='', verbose=True)
-			npt.assert_allclose(basic_vals, basic_expected_results, rtol=1e-6, atol=0, err_msg='', verbose=True)
+			assert math.isclose(acidic_vals, acidic_expected_results, rel_tol=1e-6, abs_tol=0)
+			assert math.isclose(basic_vals, basic_expected_results, rel_tol=1e-6, abs_tol=0)
 		finally:
 			tab = [result, expected_results]
 			print("\n")
@@ -184,7 +187,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = [ms_total, ms1_num, ms2_num, ms3_num]
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-2, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-2, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")
@@ -213,7 +216,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = [isopt]
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-12, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-12, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")
@@ -242,7 +245,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = [len(chart_data)]  # number of x,y pairs for isoelectric point
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-2, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-2, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")
@@ -273,7 +276,6 @@ class TestJchemProperties(unittest.TestCase):
 		results = [major_ms_smiles]
 
 		try:
-			# npt.assert_allclose(results, expected_results, rtol=1e-2, atol=0, err_msg='', verbose=True)
 			for i in range(0, len(expected_results)):
 				self.assertEqual(expected_results[i], results[i])
 		finally:
@@ -307,7 +309,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = [len(tauts), taut_dist_1, taut_dist_2]
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-2, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-2, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")
@@ -339,7 +341,6 @@ class TestJchemProperties(unittest.TestCase):
 		results = [len(stereos), stereo_1, stereo_2]
 
 		try:
-			# npt.assert_allclose(results, expected_results, rtol=1e-2, atol=0, err_msg='', verbose=True)
 			for i in range(0, len(expected_results)):
 				self.assertEqual(expected_results[i], results[i])
 		finally:
@@ -370,7 +371,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = [intrinsic_sol, ph_sol]
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-6, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-6, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")
@@ -398,7 +399,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = [logp]
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-12, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-12, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")
@@ -427,7 +428,7 @@ class TestJchemProperties(unittest.TestCase):
 		results = []
 
 		try:
-			npt.assert_allclose(results, expected_results, rtol=1e-12, atol=0, err_msg='', verbose=True)
+			assert math.isclose(results, expected_results, rel_tol=1e-12, abs_tol=0)
 		finally:
 			tab = [results, expected_results]
 			print("\n")

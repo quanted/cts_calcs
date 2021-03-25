@@ -23,7 +23,7 @@ class Molecule(object):
 		self.smiles = ''  # post filtered smiles 
 		self.formula = ''
 		self.iupac = ''
-		self.cas = ''
+		# self.cas = ''
 		self.mass = ''
 		self.structureData = ''
 		self.exactMass = ''
@@ -68,6 +68,7 @@ class ChemInfo(object):
 		self.actorws_obj = ACTORWS()
 		self.smiles_filter_obj = SMILESFilter()
 		self.calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
+		self.cas_url = "https://cactus.nci.nih.gov/chemical/structure/{}/cas"  # associated CAS
 		self.carbon_anomolies = {
 			"C": "methane",
 			"CC": "ethane",
@@ -243,7 +244,7 @@ class ChemInfo(object):
 
 		# Gets filtered SMILES:
 		try:
-			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles)			
+			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
 			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
 				response_obj = {}
 				response_obj['status'] = False
@@ -259,9 +260,21 @@ class ChemInfo(object):
 
 		# Gets chemical details from jchem ws:
 		jchem_response = self.calc_obj.getChemDetails({'chemical': filtered_smiles})
-
+		
 		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
+
+		cas_list = self.make_cas_request(filtered_smiles)  # gets CAS from cactus.nci.nih.gov (deprecated in jchemws)
+
+		molecule_obj['cas'] = cas_list
+
+
+		has_carbon = self.smiles_filter_obj.check_for_carbon(filtered_smiles)
+		if not has_carbon and is_node:
+			molecule_obj['has_carbon'] = False
+		else:
+			molecule_obj['has_carbon'] = True
+
 
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
 		molecule_obj['smiles'] = filtered_smiles
@@ -349,3 +362,20 @@ class ChemInfo(object):
 		logging.info("Getting gsid from actorws chemicalIdentifier..")
 		chemid_results = self.actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
 		return chemid_results
+
+	def make_cas_request(self, smiles):
+		"""
+		Manually gets CAS list, which used to work with
+		Jchem Web Services.
+		"""
+		try:
+			url = self.cas_url.format(requests.utils.quote(smiles))  # encoding smiles for url
+			response = requests.get(url, verify=False)
+			if response.status_code != 200:
+				return "N/A"
+			if '<html>' in response.content.decode('utf-8'):
+				return "N/A"
+			return response.content.decode('utf-8').replace('\n', ', ')  # returns curated CAS list
+		except Exception as e:
+			logging.warning("Exception making CAS request: {}".format(e))
+			return "N/A"

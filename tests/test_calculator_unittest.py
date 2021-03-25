@@ -5,13 +5,15 @@ import inspect
 import datetime
 import logging
 import sys
-from numpy import testing as npt
 from tabulate import tabulate
 from unittest.mock import Mock, patch
-from nose.tools import assert_is_not_none
+
+_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(
+    1, os.path.join(_path, "..", "..", "..", "..")
+)  # adds qed project to sys.path
 
 # local requirements (running pytest at qed level):
-_path = os.path.dirname(os.path.abspath(__file__))
 if 'cts_celery' in _path:
 	from qed.cts_celery.cts_calcs.calculator import Calculator
 elif 'cts_app' in _path:
@@ -145,7 +147,7 @@ class TestCalculators(unittest.TestCase):
 
 		try:
 			# Comparing expected and results for jid:
-			npt.assert_allclose(results, expected_results, rtol=1, atol=0, err_msg='', verbose=True)
+			math.isclose(results, expected_results, rel_tol=1, abs_tol=0)
 
 			# Checking that jid is valid datetime:
 			self.assertIsInstance(jid_datetime, datetime.datetime)

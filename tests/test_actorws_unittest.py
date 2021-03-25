@@ -5,13 +5,14 @@ import inspect
 import datetime
 import logging
 import sys
-from numpy import testing as npt
 from tabulate import tabulate
 from unittest.mock import Mock, patch
-from nose.tools import assert_is_not_none
 
-# local requirements (running pytest at qed level):
 _path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(
+    1, os.path.join(_path, "..", "..", "..", "..")
+)  # adds qed project to sys.path
+
 if 'cts_celery' in _path:
 	from qed.cts_celery.cts_calcs.actorws import ACTORWS
 elif 'cts_app' in _path:
