@@ -74,6 +74,9 @@ class ChemInfo(object):
 			"CC": "ethane",
 			"CCC": "propane"
 		}  # carbon-chain chems that comptox reads as a name instead of smiles (methane, ethane, and propane, respectively)
+		self.chem_names_smiles_map = {
+			"pfas": "Perfluorooctanoic acid"
+		}
 		self.chem_obj = [
 			{
 				'name': "chemical",
@@ -186,6 +189,9 @@ class ChemInfo(object):
 		orig_smiles = None  # initial SMILES pre CTS filter
 		is_name = False  # bool for whether smiles was actually acronym
 
+		# Checks chemical against chem_name_smiles_map:
+		chemical = self.check_name_smiles_map(chemical)
+
 		# Determines chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = self.calc_obj.get_chemical_type(chemical)
 
@@ -203,12 +209,14 @@ class ChemInfo(object):
 				chemical = chemid_results['casrn']
 				logging.info("Setting chemical to ACTORWS casrn to continue chem info routine.")
 
-		# Checks chemical to make sure it's not actually an acronym instead of smiles:
+		# Checks chemical to make sure it's not actually an acronym instead of smiles (e.g., PFAS):
 		if chem_type.get('type') == 'smiles' or chem_type.get('type') == 'smarts':
-			is_name = self.is_actually_name(chemical)
+			converted_smiles = self.smiles_name_check(chemical)
 			# Switches chem type to "name" if smiles was actually an acronym:
-			if is_name:
-				chem_type['type'] = "name"
+			if converted_smiles:
+				# Was actually a name and successfully converted to smiles
+				logging.info("Setting chemical to converted_smiles: {}".format(converted_smiles))
+				chemical = converted_smiles
 
 		# Uses name form of C, CC, and CCC SMILES:
 		if chemical in list(self.carbon_anomolies.keys()):
@@ -254,6 +262,7 @@ class ChemInfo(object):
 		except Exception as e:
 			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = {}
+			response_obj['status'] = False
 			response_obj['error'] = "Cannot process chemical"
 			response_obj['request_post'] = request_post
 			return response_obj
@@ -329,7 +338,7 @@ class ChemInfo(object):
 			molecule_obj[cts_key] = val
 		return molecule_obj
 
-	def is_actually_name(self, chemical):
+	def smiles_name_check(self, chemical):
 		"""
 		Known as "the PFOS problem," which is an example chemical of
 		an issue where the chemical name is interpretted by JchemWS
@@ -342,10 +351,11 @@ class ChemInfo(object):
 		converted_name_response = self.calc_obj.get_smiles_from_name(chemical)
 		if converted_name_response.get('smiles') and not 'error' in converted_name_response:
 			# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
-			return True
+			# return True
+			return converted_name_response['smiles']
 		else:
 			# if an error was thrown, it was actually smiles so returns original version:
-			return False
+			return None
 
 	def get_chemid_from_actorws(self, chemical, chem_type_name=None):
 		_gsid = None
@@ -379,3 +389,39 @@ class ChemInfo(object):
 		except Exception as e:
 			logging.warning("Exception making CAS request: {}".format(e))
 			return "N/A"
+
+	def check_structure_request(self, chemical):
+		"""
+		Runs Jchem WS /structureChecker endpoint.
+		Initially implemented for validating SMILES
+		(e.g., "ccc" should be invalid).
+		"""
+		url = self.calc_obj.jchem_server_url + self.calc_obj.checker_endpoint
+		post = {
+			'structure': chemical
+		}
+		
+		results = self.calc_obj.web_call(url, post)
+
+		if not results.get('valid'):
+			return {
+				'error': "error requesting structure checker"
+			}
+		else:
+			return results
+
+	def check_aromaticity_results(self, check_struct_results):
+		"""
+		Checks results from Jchem WS /structureChecker.
+		"""
+		pass
+
+	def check_name_smiles_map(self, chemical):
+		"""
+		Checks user chemical agains map of name-smiles.
+		"""
+		if chemical.lower() in list(self.chem_names_smiles_map.keys()):
+			logging.info("Chemical matches chem_names_smiles_map.")
+			return self.chem_names_smiles_map[chemical.lower()]
+		else:
+			return chemical

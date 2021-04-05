@@ -40,6 +40,7 @@ class Calculator(object):
 		self.export_endpoint = '/webservices/rest-v0/util/calculate/molExport'
 		self.detail_endpoint = '/webservices/rest-v0/util/detail'
 		self.type_endpoint = '/webservices/rest-v0/util/analyze'
+		self.checker_endpoint = '/webservices/rest-v0/util/calculate/structureChecker'
 
 		# CTSWS (formerlly EFS) metabolizer endpoints:
 		self.efs_metabolizer_endpoint = '/ctsws/rest/metabolizer'
