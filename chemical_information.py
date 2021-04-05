@@ -192,6 +192,16 @@ class ChemInfo(object):
 		# Checks chemical against chem_name_smiles_map:
 		chemical = self.check_name_smiles_map(chemical)
 
+		is_valid_structure = self.check_structure_request(chemical)
+
+		# Checks for valid structure:
+		if "error" in is_valid_structure:
+			response_obj = {}
+			response_obj['status'] = False
+			response_obj['error'] = is_valid_structure["error"]
+			response_obj['request_post'] = request_post
+			return response_obj
+
 		# Determines chemical type from user (e.g., smiles, cas, name, etc.):
 		chem_type = self.calc_obj.get_chemical_type(chemical)
 
@@ -407,14 +417,22 @@ class ChemInfo(object):
 			return {
 				'error': "error requesting structure checker"
 			}
-		else:
-			return results
+		return self.is_valid_aromaticity(results)
 
-	def check_aromaticity_results(self, check_struct_results):
+	def is_valid_aromaticity(self, check_struct_results):
 		"""
-		Checks results from Jchem WS /structureChecker.
+		Checks aromaticity results for errors from Jchem WS /structureChecker.
 		"""
-		pass
+		assert isinstance(check_struct_results, dict), \
+			"is_valid_structure input must be dict of structure results"
+
+		if not "aromaticity" in check_struct_results:
+			return {"valid": True}
+		elif "description" in check_struct_results["aromaticity"]:
+			# returns jchem error to user
+			return {"error": check_struct_results["aromaticity"]["description"]}
+		else:
+			return {"error": "structure is not valid"}
 
 	def check_name_smiles_map(self, chemical):
 		"""

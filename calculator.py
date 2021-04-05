@@ -486,6 +486,7 @@ class Calculator(object):
 			valid_object = self.check_response_for_errors(results)
 
 			if valid_object.get('valid'):
+				results['valid'] = True
 				return results
 
 			else:
