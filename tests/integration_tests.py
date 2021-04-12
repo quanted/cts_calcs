@@ -8,7 +8,7 @@ import json
 # import linkcheck_helper
 # from . import linkcheck_helper
 from .test_objects import get_post_object
-from django.test import Client, TestCase
+# from django.test import Client, TestCase
 
 from temp_config.set_environment import DeployEnv
 
@@ -16,8 +16,8 @@ from temp_config.set_environment import DeployEnv
 runtime_env = DeployEnv()
 runtime_env.load_deployment_environment()
 
-import django
-django.setup()
+# import django
+# django.setup()
 
 servers = [os.getenv("CTS_REST_SERVER")]
 
@@ -54,7 +54,8 @@ api_endpoints_map = {
     "epi": "/cts/rest/epi/run",
     "measured": "/cts/rest/measured/run",
     "testws": "/cts/rest/testws/run",
-    "opera": "/cts/rest/opera/run"
+    "opera": "/cts/rest/opera/run",
+    "metabolizer": "/cts/rest/metabolizer/run"
 }
 
 # following are lists of url's to be processed with tests below
@@ -64,8 +65,8 @@ print("checking pages: {}".format(check_pages))
 # print("checking workflow outputs at: {}".format(workflow_test_urls))
 
 
-# class TestCTSPages(unittest.TestCase):
-class TestCTSPages(TestCase):
+class TestCTSPages(unittest.TestCase):
+# class TestCTSPages(TestCase):
     """
     this testing routine accepts a list of pages and performs a series of unit tests that ensure
     that the web pages are up and operational on the server.
@@ -77,46 +78,66 @@ class TestCTSPages(TestCase):
     def teardown(self):
         pass
 
-    def test_cts_200():
+    def test_cts_200(self):
         """
         Tests basic HTML pages.
         """
-        test_name = "Check page access "
+        test_name = "Checks page access "
         responses = [requests.get(p).status_code for p in check_pages]
         for response in responses:
             self.assertEqual(response, 200, "200 error")
         # npt.assert_array_equal(response, 200, '200 error', True)
 
-    def test_cts_workflows():
-        """
-        Tests workflow outputs.
-        """
+    # def test_cts_workflows():
+    #     """
+    #     Tests workflow outputs.
+    #     """
 
-        test_client = Client()
-        test_name = "Check workflow outputs "
-        response = []
+        # test_client = Client()
+    #     test_name = "Checks workflow outputs "
+    #     response = []
 
-        for p in workflow_endpoints:
-            workflow = p.split('/')[2]  # assuming /cts/model/output url structure, grabbing "model" part
-            url = os.getenv('CTS_REST_SERVER') + p
-            post_data = get_post_object(workflow)
+    #     for p in workflow_endpoints:
+    #         workflow = p.split('/')[2]  # assuming /cts/model/output url structure, grabbing "model" part
+    #         url = os.getenv('CTS_REST_SERVER') + p
+    #         post_data = get_post_object(workflow)
 
-            logging.info("url: {}".format(url))
-            logging.info("post: {}".format(post_data))
+    # print("~~~ {}".format(test_name))
+    #         print("url: {}".format(url))
+    #         print("post: {}".format(post_data))
 
-            res = test_client.post(url, post_data)
+    #         res = requests.post(url, data=post_data)
 
-            self.assertEqual(res.status_code, 200, "200 error")
-
+    #         self.assertEqual(res.status_code, 200, "200 error")
             # response.append(res.status_code)
         # npt.assert_array_equal(response, 200, '200 error', True)
+
+    def test_cts_metabolizer_endpoint(self):
+        """
+        Tests Metabolizer API endpoint.
+        """
+        test_name = "Checks CTS API Metabolizer endpoint "
+        # test_client = Client()
+        response = []
+        calc_name = "metabolizer"
+
+        calc_endpoint = api_endpoints_map[calc_name]
+        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        post_data = get_post_object(calc_name)
+
+        print("~~~ {}".format(test_name))
+        print("url: {}".format(url))
+        print("post: {}".format(post_data))
+
+        res = requests.post(url, data=post_data)
+        result = json.loads(res.content)
 
     def test_cts_api_chemaxon_endpoint(self):
         """
         Tests ChemAxon API endpoint.
         """
-        test_name = "Check CTS API ChemAxon endpoint "
-        test_client = Client()
+        test_name = "Checks CTS API ChemAxon endpoint "
+        # test_client = Client()
         response = []
         calc_name = "chemaxon"
 
@@ -124,10 +145,11 @@ class TestCTSPages(TestCase):
         url = os.getenv('CTS_REST_SERVER') + calc_endpoint
         post_data = get_post_object(calc_name)
 
-        logging.info("url: {}".format(url))
-        logging.info("post: {}".format(post_data))
+        print("~~~ {}".format(test_name))
+        print("url: {}".format(url))
+        print("post: {}".format(post_data))
 
-        res = test_client.post(url, post_data)
+        res = requests.post(url, data=post_data)
         result = json.loads(res.content)
 
         # npt.assert_equal(False, 'error' in result, verbose=True)
@@ -137,8 +159,8 @@ class TestCTSPages(TestCase):
         """
         Tests EPI API endpoint.
         """
-        test_name = "Check CTS API EPI Suite endpoint "
-        test_client = Client()
+        test_name = "Checks CTS API EPI Suite endpoint "
+        # test_client = Client()
         response = []
         calc_name = "epi"
 
@@ -146,10 +168,11 @@ class TestCTSPages(TestCase):
         url = os.getenv('CTS_REST_SERVER') + calc_endpoint
         post_data = get_post_object(calc_name)
 
-        logging.info("url: {}".format(url))
-        logging.info("post: {}".format(post_data))
+        print("~~~ {}".format(test_name))
+        print("url: {}".format(url))
+        print("post: {}".format(post_data))
 
-        res = test_client.post(url, post_data)
+        res = requests.post(url, data=post_data)
         result = json.loads(res.content)
 
         # npt.assert_equal(False, 'error' in result, verbose=True)
@@ -159,8 +182,8 @@ class TestCTSPages(TestCase):
         """
         Tests TESTWS API endpoint.
         """
-        test_name = "Check CTS API TESTWS endpoint "
-        test_client = Client()
+        test_name = "Checks CTS API TESTWS endpoint "
+        # test_client = Client()
         response = []
         calc_name = "testws"
 
@@ -168,10 +191,11 @@ class TestCTSPages(TestCase):
         url = os.getenv('CTS_REST_SERVER') + calc_endpoint
         post_data = get_post_object(calc_name)
 
-        logging.info("url: {}".format(url))
-        logging.info("post: {}".format(post_data))
+        print("~~~ {}".format(test_name))
+        print("url: {}".format(url))
+        print("post: {}".format(post_data))
 
-        res = test_client.post(url, post_data)
+        res = requests.post(url, data=post_data)
         result = json.loads(res.content)
 
         # npt.assert_equal(False, 'error' in result, verbose=True)
@@ -181,8 +205,8 @@ class TestCTSPages(TestCase):
         """
         Tests OPERA API endpoint.
         """
-        test_name = "Check CTS API OPERA endpoint "
-        test_client = Client()
+        test_name = "Checks CTS API OPERA endpoint "
+        # test_client = Client()
         response = []
         calc_name = "opera"
 
@@ -190,10 +214,11 @@ class TestCTSPages(TestCase):
         url = os.getenv('CTS_REST_SERVER') + calc_endpoint
         post_data = get_post_object(calc_name)
 
-        logging.info("url: {}".format(url))
-        logging.info("post: {}".format(post_data))
+        print("~~~ {}".format(test_name))
+        print("url: {}".format(url))
+        print("post: {}".format(post_data))
 
-        res = test_client.post(url, post_data)
+        res = requests.post(url, data=post_data)
         result = json.loads(res.content)
 
         # npt.assert_equal(True, result.get('valid'), verbose=True)
@@ -204,8 +229,8 @@ class TestCTSPages(TestCase):
         """
         Tests Measured API endpoint.
         """
-        test_name = "Check CTS API EPI's Measured endpoint "
-        test_client = Client()
+        test_name = "Checks CTS API EPI's Measured endpoint "
+        # test_client = Client()
         response = []
         calc_name = "measured"
 
@@ -213,10 +238,11 @@ class TestCTSPages(TestCase):
         url = os.getenv('CTS_REST_SERVER') + calc_endpoint
         post_data = get_post_object(calc_name)
 
-        logging.info("url: {}".format(url))
-        logging.info("post: {}".format(post_data))
+        print("~~~ {}".format(test_name))
+        print("url: {}".format(url))
+        print("post: {}".format(post_data))
 
-        res = test_client.post(url, post_data)
+        res = requests.post(url, data=post_data)
         result = json.loads(res.content)
 
         # npt.assert_equal(False, 'error' in result, verbose=True)
