@@ -7,7 +7,12 @@ import json
 # import numpy.testing as npt
 # import linkcheck_helper
 # from . import linkcheck_helper
-from .test_objects import get_post_object
+# from .test_objects import get_post_object
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(1, os.path.join(PROJECT_ROOT, "..", ".."))
+
+from cts_calcs.tests.test_objects import get_post_object
 # from django.test import Client, TestCase
 
 from temp_config.set_environment import DeployEnv
