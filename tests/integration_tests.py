@@ -128,7 +128,7 @@ class TestCTSPages(unittest.TestCase):
         calc_name = "metabolizer"
 
         calc_endpoint = api_endpoints_map[calc_name]
-        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        url = servers[0] + calc_endpoint
         post_data = get_post_object(calc_name)
 
         print("~~~ {}".format(test_name))
@@ -148,7 +148,7 @@ class TestCTSPages(unittest.TestCase):
         calc_name = "chemaxon"
 
         calc_endpoint = api_endpoints_map[calc_name]
-        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        url = servers[0] + calc_endpoint
         post_data = get_post_object(calc_name)
 
         print("~~~ {}".format(test_name))
@@ -171,7 +171,7 @@ class TestCTSPages(unittest.TestCase):
         calc_name = "epi"
 
         calc_endpoint = api_endpoints_map[calc_name]
-        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        url = servers[0] + calc_endpoint
         post_data = get_post_object(calc_name)
 
         print("~~~ {}".format(test_name))
@@ -194,7 +194,7 @@ class TestCTSPages(unittest.TestCase):
         calc_name = "testws"
 
         calc_endpoint = api_endpoints_map[calc_name]
-        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        url = servers[0] + calc_endpoint
         post_data = get_post_object(calc_name)
 
         print("~~~ {}".format(test_name))
@@ -217,7 +217,7 @@ class TestCTSPages(unittest.TestCase):
         calc_name = "opera"
 
         calc_endpoint = api_endpoints_map[calc_name]
-        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        url = servers[0] + calc_endpoint
         post_data = get_post_object(calc_name)
 
         print("~~~ {}".format(test_name))
@@ -241,7 +241,7 @@ class TestCTSPages(unittest.TestCase):
         calc_name = "measured"
 
         calc_endpoint = api_endpoints_map[calc_name]
-        url = os.getenv('CTS_REST_SERVER') + calc_endpoint
+        url = servers[0] + calc_endpoint
         post_data = get_post_object(calc_name)
 
         print("~~~ {}".format(test_name))
