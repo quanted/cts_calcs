@@ -24,7 +24,8 @@ runtime_env.load_deployment_environment()
 # import django
 # django.setup()
 
-servers = [os.getenv("CTS_REST_SERVER")]
+# servers = [os.getenv("CTS_REST_SERVER")]
+servers = ["https://qedlinux1stg.aws.epa.gov"]
 
 print("SERVERS: {}".format(servers))
 
