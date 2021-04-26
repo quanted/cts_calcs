@@ -5,6 +5,9 @@ import os
 import math
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
+from .mongodb_handler import MongoDBHandler
+
+db_handler = MongoDBHandler()  # mongodb handler for opera pchem data
 
 
 
@@ -298,6 +301,31 @@ class OperaCalc(Calculator):
             return False
         return True
 
+    def check_opera_db(self, request_post):
+        """
+        Checks to see if OPERA p-chem data is available in DB, returns it
+        if it exists, and returns False if not.
+        """
+        if not db_handler.is_connected:
+            return False
+        dsstox_result = self.chem_info_obj.get_cheminfo(request_post, only_dsstox=True)
+        if not dsstox_result or dsstox_result.get('dsstoxSubstanceId') == "N/A":
+            return False
+        dtxcid_result = db_handler.find_dtxcid_document({'DTXSID': dsstox_result.get('dsstoxSubstanceId')})
+        db_results = None
+        if not dtxcid_result:
+            return False
+        if request_post.get('prop') == 'kow_wph':
+            db_results = db_handler.pchem_collection.find({
+                'dsstoxSubstanceId': dtxcid_result.get('DTXCID'),
+                'ph': float(request_post.get('ph', 7.4))
+            })
+        else:
+            db_results = db_handler.pchem_collection.find({'dsstoxSubstanceId': dtxcid_result.get('DTXCID')})
+        if not db_results:
+            return False
+        return db_results
+
     def data_request_handler(self, request_dict):
         """
         Makes requests to the OPERA Suite server
@@ -317,7 +345,9 @@ class OperaCalc(Calculator):
 
         try:
             _result_obj = self.makeDataRequest(request_dict['chemical'])
-            _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)
+
+            _result_obj = self.parse_results_for_cts(_response_dict, _result_obj)       
+
             _response_dict['data'] = _result_obj
             _response_dict['valid'] = True
             return _response_dict
