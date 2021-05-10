@@ -44,7 +44,15 @@ class MetabolizerCalc(Calculator):
 
         self.gen_limit = 2
 
-        self.unranked_libs = ['photolysis']  # TODO: break into unranked_photolysis and ranked_photolysis
+        self.transformation_libraries = [
+            "hydrolysis",
+            "abiotic_reduction",
+            "photolysis_unranked",
+            "photolysis_ranked",
+            "mammalian_metabolism",
+            "combined_abioticreduction_hydrolysis",
+            "combined_photolysis_abiotic_hydrolysis"
+        ]
 
         # CTSWS Transformation Products Request
         self.transformation_request = {
@@ -54,6 +62,19 @@ class MetabolizerCalc(Calculator):
             'likelyLimit': 0.1,
             'transformationLibraries': ["hydrolysis", "abiotic_reduction"],  # NOTE: no transformationLibraries key:val for mammalian metabolism
             'excludeCondition': "hasValenceError()"
+        }
+
+        self.response_obj = {
+            'calc': "metabolizer",  # todo: change to metabolizer, change in template too
+            'prop': "procuts",
+            'node': None,
+            'data': None,
+            'total_products': 0,
+            'unique_products': 0,
+            'chemical': None,
+            'workflow': "gentrans",
+            'run_type': None,
+            'request_post': None
         }
 
         self.unique_products = []
@@ -181,29 +202,29 @@ class MetabolizerCalc(Calculator):
         _data_dict = request_dict.get('metabolizer_post')
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
+        _response_obj = dict(self.response_obj)
+        _response_obj['node'] = request_dict.get('node'),
+        _response_obj['chemical'] = request_dict.get('chemical'),
+        _response_obj['run_type'] = request_dict.get('run_type', 'batch'),
+        _response_obj['request_post'] = request_dict
+
         unranked = False
-        if 'photolysis' in _data_dict.get('transformationLibraries', []):
+        if 'photolysis_unranked' in _data_dict.get('transformationLibraries', []):
             unranked = True
 
         response = self.getTransProducts(_data_dict)
+
+        if "error" in response:
+            _response_obj["error"] = response["error"]
+            return _response_obj
 
         _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
 
         _products_data = json.loads(_results)
 
-        _response_obj = {
-            'calc': "chemaxon",  # todo: change to metabolizer, change in template too
-            'prop': "products",
-            'node': request_dict.get('node'),
-            'data': _products_data['tree'],
-            'total_products': _products_data['total_products'],
-            'unique_products': _products_data['unique_products'],
-            'chemical': request_dict.get('chemical'),
-            'workflow': 'gentrans',
-            'run_type': 'batch',
-            'request_post': request_dict            
-        }
-
+        _response_obj['data'] = _products_data['tree']
+        _response_obj['total_products'] = _products_data['total_products']
+        _response_obj['unique_products'] = _products_data['unique_products']
 
         return _response_obj
 
@@ -231,6 +252,20 @@ class MetabolizerCalc(Calculator):
         """
         Makes request to metabolizer
         """
+        structure = request_obj.get("structure")
+        gen_limit = request_obj.get("generationLimit")
+        trans_libs = request_obj.get("transformationLibraries", [])
+
+        if gen_limit > 4:
+            _response_obj = dict(request_obj)
+            _response_obj["error"] = "Must request generation limit <= 4 generations."
+            return _response_obj
+
+        if len(trans_libs) != 1:
+            _response_obj = dict(request_obj)
+            _response_obj["error"] = "Can only run one transformation library at a time."
+            return _response_obj
+
         url = self.efs_server_url + self.efs_metabolizer_endpoint
         self.request_timeout = 120
         return self.web_call(url, request_obj)
