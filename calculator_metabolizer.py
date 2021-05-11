@@ -217,6 +217,9 @@ class MetabolizerCalc(Calculator):
         if "error" in response:
             _response_obj["error"] = response["error"]
             return _response_obj
+        elif response.get("status") == "error":
+            _response_obj["error"] = "Error getting transformation products"
+            return _response_obj
 
         _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
 
