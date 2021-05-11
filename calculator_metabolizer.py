@@ -66,7 +66,7 @@ class MetabolizerCalc(Calculator):
 
         self.response_obj = {
             'calc': "metabolizer",  # todo: change to metabolizer, change in template too
-            'prop': "procuts",
+            'prop': "products",
             'node': None,
             'data': None,
             'total_products': 0,
