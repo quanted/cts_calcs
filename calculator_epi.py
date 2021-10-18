@@ -56,27 +56,33 @@ class EpiCalc(Calculator):
                 'methods': {'Arnot-Gobas': "A-G"}
             }
         }
+        self.qsar_request_map = {
+            'Halogenated Aliphatics: Elimination': 'hydrolysis/alkylhalide',
+            'Epoxide Hydrolysis': 'hydrolysis/epoxide',
+            'Organophosphorus Ester Hydrolysis 1 (Base-Catalyzed)': 'hydrolysis/ester',
+            'Organophosphorus Ester Hydrolysis 2 (Neutral or Acid-Catalyzed)': 'hydrolysis/ester',
+            'Carboxylic Acid Ester Hydrolysis': 'hydrolysis/ester',
+            'Anhydride Hydrolysis': 'hydrolysis/ester',
+            'Carbamate Hydrolysis': 'hydrolysis/carbamate'
+        }
 
 
     def getPostData(self, calc, prop, method=None):
         return {'structure': "", 'melting_point': None}
 
     
-    def makeDataRequest(self, structure, calc):
+    def makeDataRequest(self, url, structure, calc=None):
         _post = {'structure': structure}
         if self.melting_point != None:
             _post['melting_point'] = self.melting_point
-
-        # _url = self.baseUrl + self.urlStruct
-        _url = self.baseUrl
-
-        return self.request_logic(_url, _post)
+        return self.request_logic(url, _post)
 
     
     def request_logic(self, url, post_data):
         """
         Handles retries and validation of responses
         """
+
         _valid_result = False  # for retry logic
         _retries = 0
         while not _valid_result and _retries < self.max_retries:
@@ -119,6 +125,22 @@ class EpiCalc(Calculator):
         return None
 
 
+    def make_qsar_request(self, request_dict):
+        """
+        Makes requests to epi suite for half-lives.
+        """
+        structure = request_dict.get('chemical')
+        route = request_dict.get('route')
+        route_url = None
+
+        if not route in list(self.qsar_request_map.keys()):
+            raise Exception("Route not found.")
+
+        route_url = self.qsar_request_map[route]
+        url = self.baseUrl.replace('estimated', '') + route_url
+        response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
+        return response.content
+
 
     def data_request_handler(self, request_dict):
         """
@@ -133,6 +155,15 @@ class EpiCalc(Calculator):
             if not key == 'nodes':
                 _response_dict[key] = request_dict.get(key)
         _response_dict.update({'request_post': request_dict, 'method': None})
+
+
+        # Handle QSAR request or continue to the usual p-chem stuff
+        if request_dict.get('prop') == 'qsar':
+            # NOTE: Skipping smiles filter, should've already been filtered in node chem info requests
+            _result_obj = self.make_qsar_request(request_dict)
+            _response_dict.update(_result_obj)
+            _response_dict['valid'] = True
+            return _response_dict
 
         try:
             _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
@@ -154,13 +185,13 @@ class EpiCalc(Calculator):
             else:
                 self.melting_point = None
 
-            _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc']) # make call for data!
+            _result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc']) # make call for data!
 
             if _get_mp and not self.melting_point:
                 # MP not found from measured or test, getting from results,
                 # and requesting data again with set MP..
                 self.melting_point = self.get_mp_from_results(_result_obj)
-                _result_obj = self.makeDataRequest(_filtered_smiles, request_dict['calc'])  # Make request using MP
+                _result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc'])  # Make request using MP
 
             _response_dict.update(_result_obj)
             _response_dict['valid'] = True
