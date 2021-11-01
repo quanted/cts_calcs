@@ -57,13 +57,13 @@ class EpiCalc(Calculator):
             }
         }
         self.qsar_request_map = {
-            'Halogenated Aliphatics: Elimination': 'hydrolysis/alkylhalide',
-            'Epoxide Hydrolysis': 'hydrolysis/epoxide',
-            'Organophosphorus Ester Hydrolysis 1 (Base-Catalyzed)': 'hydrolysis/ester',
-            'Organophosphorus Ester Hydrolysis 2 (Neutral or Acid-Catalyzed)': 'hydrolysis/ester',
-            'Carboxylic Acid Ester Hydrolysis': 'hydrolysis/ester',
-            'Anhydride Hydrolysis': 'hydrolysis/ester',
-            'Carbamate Hydrolysis': 'hydrolysis/carbamate'
+            'halogenated aliphatics: elimination': 'hydrolysis/alkylhalide',
+            'epoxide hydrolysis': 'hydrolysis/epoxide',
+            'organophosphorus ester hydrolysis 1 (base-catalyzed)': 'hydrolysis/ester',
+            'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)': 'hydrolysis/ester',
+            'carboxylic acid ester hydrolysis': 'hydrolysis/ester',
+            'anhydride hydrolysis': 'hydrolysis/ester',
+            'carbamate hydrolysis': 'hydrolysis/carbamate'
         }
 
 
@@ -130,7 +130,7 @@ class EpiCalc(Calculator):
         Makes requests to epi suite for half-lives.
         """
         structure = request_dict.get('chemical')
-        route = request_dict.get('route')
+        route = request_dict.get('route').lower()
         route_url = None
 
         if not route in list(self.qsar_request_map.keys()):
@@ -139,7 +139,20 @@ class EpiCalc(Calculator):
         route_url = self.qsar_request_map[route]
         url = self.baseUrl.replace('estimated', '') + route_url
         response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
-        return response.content
+
+        if response.status_code != 200:
+            return {
+                "error": "Error getting QSAR data from EPI Suite",
+                "valid": False
+            }
+
+        logging.warning("RESPONSE: {}".format(response))
+        logging.warning("RESPONSE CONTENT: {}".format(response.content))
+
+        return {
+            "data": response.content,
+            "valid": True
+        }
 
 
     def data_request_handler(self, request_dict):
@@ -162,7 +175,9 @@ class EpiCalc(Calculator):
             # NOTE: Skipping smiles filter, should've already been filtered in node chem info requests
             _result_obj = self.make_qsar_request(request_dict)
             _response_dict.update(_result_obj)
-            _response_dict['valid'] = True
+
+            logging.warning("EPI RESPONSE: {}".format(_response_dict))
+
             return _response_dict
 
         try:
