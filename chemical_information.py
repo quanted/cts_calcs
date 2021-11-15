@@ -414,6 +414,7 @@ class ChemInfo(object):
 		results = self.calc_obj.web_call(url, post)
 
 		if not results.get('valid'):
+			logging.warning("STRUCTURE CHECK INVALID: {}".format(results))
 			return {
 				'error': "error requesting structure checker"
 			}
