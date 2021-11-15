@@ -436,7 +436,7 @@ class ChemInfo(object):
 
 	def check_name_smiles_map(self, chemical):
 		"""
-		Checks user chemical agains map of name-smiles.
+		Checks user chemical against map of name-smiles.
 		"""
 		if chemical.lower() in list(self.chem_names_smiles_map.keys()):
 			logging.info("Chemical matches chem_names_smiles_map.")
