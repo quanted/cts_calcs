@@ -83,7 +83,7 @@ class EnvipathCalc(Calculator):
 
             _products_dict.update({
                 "id": self.metID,
-                "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
+                "name": "<img class='blank_node' src='/static_qed/cts_app/images/loader_node.gif' />",
                 "data": {
                     'smiles': _parent,
                     'routes': "",
@@ -98,7 +98,7 @@ class EnvipathCalc(Calculator):
         else:
             _products_dict.update({
                 "id": self.metID,
-                "name": "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />",
+                "name": "<img class='blank_node' src='/static_qed/cts_app/images/loader_node.gif' />",
                 "data": {
                     'smiles': root['smiles'],
                     'routes': "",

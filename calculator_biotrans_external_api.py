@@ -91,7 +91,7 @@ class BiotransCalc(Calculator):
 			if parent not in all_items:
 				all_items[parent] = {}
 				all_items[parent]['id'] = met_id
-				all_items[parent]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
+				all_items[parent]['name'] = "<img class='blank_node' src='/static_qed/cts_app/images/loader_node.gif' />"
 				all_items[parent]['data'] = parent_obj
 				all_items[parent]['children'] = []
 				met_id += 1
@@ -100,7 +100,7 @@ class BiotransCalc(Calculator):
 				if child not in all_items:
 					all_items[child] = {}
 					all_items[child]['id'] = met_id
-					all_items[child]['name'] = "<img class='blank_node' src='/static_qed/cts/images/loader_node.gif' />"
+					all_items[child]['name'] = "<img class='blank_node' src='/static_qed/cts_app/images/loader_node.gif' />"
 					all_items[child]['data'] = child_obj
 					all_items[child]['children'] = []
 					met_id += 1
