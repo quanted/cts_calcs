@@ -54,6 +54,9 @@ class EpiCalc(Calculator):
             'log_baf': {
                 'result_key': 'log_baf',
                 'methods': {'Arnot-Gobas': "A-G"}
+            },
+            'qsar': {
+                'result_key': 'qsar',
             }
         }
         self.qsar_request_map = {
@@ -146,11 +149,8 @@ class EpiCalc(Calculator):
                 "valid": False
             }
 
-        logging.warning("RESPONSE: {}".format(response))
-        logging.warning("RESPONSE CONTENT: {}".format(response.content))
-
         return {
-            "data": response.content,
+            "data": json.loads(response.content),
             "valid": True
         }
 
@@ -174,9 +174,11 @@ class EpiCalc(Calculator):
         if request_dict.get('prop') == 'qsar':
             # NOTE: Skipping smiles filter, should've already been filtered in node chem info requests
             _result_obj = self.make_qsar_request(request_dict)
-            _response_dict.update(_result_obj)
 
-            logging.warning("EPI RESPONSE: {}".format(_response_dict))
+            # TODO: Account for not valid result_obj
+
+            _response_dict.update(_result_obj['data'])
+            _response_dict['valid'] = True
 
             return _response_dict
 
