@@ -34,7 +34,15 @@ class SMILESFilter(object):
 		Makes request to ctsws /isvalidchemical endpoint to check
 		if user smiles is valid. Returns boolean.
 		"""
-		is_valid_response = requests.post(self.is_valid_url, data=json.dumps({'smiles': smiles}), headers={'Content-Type': 'application/json'}, timeout=5)
+		
+		logging.warning("VALID URL: {}".format(self.is_valid_url))
+		
+		is_valid_response = requests.post(self.is_valid_url, data=json.dumps({'smiles': smiles}), headers={'Content-Type': 'application/json'}, timeout=10)
+		
+		logging.warning("VALID RESPONSE: {}".format(is_valid_response))
+		
+		logging.warning("RESPONSE CONTENT: {}".format(is_valid_response.content))
+		
 		is_valid = json.loads(is_valid_response.content).get('result')  # result should be "true" or "false"
 		if is_valid == "true":
 			return True
