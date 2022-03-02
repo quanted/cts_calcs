@@ -61,6 +61,7 @@ class EpiCalc(Calculator):
         }
         self.qsar_request_map = {
             'halogenated aliphatics: elimination': 'hydrolysis/alkylhalide',
+            'halogenated aliphatics: nucleophilic substitution (no adjacent x)': 'hydrolysis/alkylhalide',
             'epoxide hydrolysis': 'hydrolysis/epoxide',
             'organophosphorus ester hydrolysis 1 (base-catalyzed)': 'hydrolysis/ester',
             'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)': 'hydrolysis/ester',
@@ -141,6 +142,10 @@ class EpiCalc(Calculator):
 
         route_url = self.qsar_request_map[route]
         url = self.baseUrl.replace('estimated', '') + route_url
+
+        logging.warning("Incoming request_dict for QSAR request: {}".format(request_dict))
+        logging.warning("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
+
         response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
 
         if response.status_code != 200:
