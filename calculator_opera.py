@@ -314,33 +314,33 @@ class OperaCalc(Calculator):
         logging.warning("CHECK OPERA DB CALL: {}".format(request_post))
 
         db_handler.connect_to_db()
-        try:
-            if not db_handler.is_connected:
-                logging.warning("OPERA DB not connected.")
-                return False
-            dsstox_result = chem_info_obj.get_cheminfo(request_post, only_dsstox=True)
-            # dsstox_result = ccte_obj.get_chemical_results(request_post)
-            if not dsstox_result or dsstox_result.get('dsstoxSubstanceId') == "N/A":
-                logging.info("No DSSTOX substance ID value found.")
-                return False
-            dtxcid_result = db_handler.find_dtxcid_document({'DTXSID': dsstox_result.get('dsstoxSubstanceId')})
-            db_results = None
-            if not dtxcid_result:
-                logging.info("No DTXCID results found.")
-                return False
-            if request_post.get('prop') == 'kow_wph':
-                db_results = db_handler.pchem_collection.find({
-                    'dsstoxSubstanceId': dtxcid_result.get('DTXCID'),
-                    'ph': float(request_post.get('ph', 7.4))
-                })
-            else:
-                db_results = db_handler.pchem_collection.find({'dsstoxSubstanceId': dtxcid_result.get('DTXCID')})
-            if not db_results:
-                logging.info("No p-chem results found.")
-                return False
-        except Exception as e:
-            logging.warning("calculator_opera check_opera_db: {}".format(e))
-            db_handler.mongodb_conn.close()
+        # try:
+        if not db_handler.is_connected:
+            logging.warning("OPERA DB not connected.")
+            return False
+        dsstox_result = chem_info_obj.get_cheminfo(request_post, only_dsstox=True)
+        # dsstox_result = ccte_obj.get_chemical_results(request_post)
+        if not dsstox_result or dsstox_result.get('dsstoxSubstanceId') == "N/A":
+            logging.info("No DSSTOX substance ID value found.")
+            return False
+        dtxcid_result = db_handler.find_dtxcid_document({'DTXSID': dsstox_result.get('dsstoxSubstanceId')})
+        db_results = None
+        if not dtxcid_result:
+            logging.info("No DTXCID results found.")
+            return False
+        if request_post.get('prop') == 'kow_wph':
+            db_results = db_handler.pchem_collection.find({
+                'dsstoxSubstanceId': dtxcid_result.get('DTXCID'),
+                'ph': float(request_post.get('ph', 7.4))
+            })
+        else:
+            db_results = db_handler.pchem_collection.find({'dsstoxSubstanceId': dtxcid_result.get('DTXCID')})
+        if not db_results:
+            logging.info("No p-chem results found.")
+            return False
+        # except Exception as e:
+        #     logging.warning("calculator_opera check_opera_db: {}".format(e))
+        #     db_handler.mongodb_conn.close()
         db_handler.mongodb_conn.close()
         return db_results
 
