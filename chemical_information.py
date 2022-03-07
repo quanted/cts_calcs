@@ -4,7 +4,7 @@ import requests
 import logging
 import json
 from .calculator_metabolizer import MetabolizerCalc
-from .actorws import ACTORWS
+from .actorws import ACTORWS, CCTE
 from .smilesfilter import SMILESFilter
 
 
@@ -66,6 +66,7 @@ class ChemInfo(object):
 	"""
 	def __init__(self, chemical=""):
 		self.actorws_obj = ACTORWS()
+		self.ccte_obj = CCTE()
 		self.smiles_filter_obj = SMILESFilter()
 		self.calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
 		self.cas_url = "https://cactus.nci.nih.gov/chemical/structure/{}/cas"  # associated CAS
@@ -236,14 +237,13 @@ class ChemInfo(object):
 		# ACTORWS requests handling for getting DSSTOX data
 		if chem_type.get('type') == 'CAS#':
 			# Gets dsstox results using user-entered CAS#:
-			dsstox_results = self.actorws_obj.get_dsstox_results(chemical, "CAS#")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
+			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
+			_actor_results.update(dsstox_results)
+		elif chem_type.get("type") == "name":
+			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
 			_actor_results.update(dsstox_results)
 		else:
-			# Gets chemid from actorws using SMILES or name, then gets dsstox results:
-			chemid_results = self.get_chemid_from_actorws(chemical, chem_type['type'])
-			_gsid = chemid_results.get('synGsid')  # gets gsid from chem identifier
-			dsstox_results = self.actorws_obj.get_dsstox_results(_gsid, "gsid")  # keys: smiles, iupac, preferredName, dsstoxSubstanceId, casrn 
-			_actor_results.update(dsstox_results)
+			pass  # TODO: Use name or cas from ChemAxon to get CCTE data
 
 		# Returns dsstox substance ID if that's all that's needed,
 		# which is used as the DB key for the chem-info document:
@@ -261,21 +261,21 @@ class ChemInfo(object):
 			orig_smiles = self.calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
 
 		# Gets filtered SMILES:
-# 		try:
-		filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
-		if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
+		try:
+			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
+			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
+				response_obj = {}
+				response_obj['status'] = False
+				response_obj['request_post'] = request_post
+				response_obj['error'] = filtered_smiles['error']
+				return response_obj
+		except Exception as e:
+			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = {}
 			response_obj['status'] = False
+			response_obj['error'] = "Cannot process chemical"
 			response_obj['request_post'] = request_post
-			response_obj['error'] = filtered_smiles['error']
 			return response_obj
-# 		except Exception as e:
-# 			logging.warning("Error filtering SMILES: {}".format(e))
-# 			response_obj = {}
-# 			response_obj['status'] = False
-# 			response_obj['error'] = "Cannot process chemical"
-# 			response_obj['request_post'] = request_post
-# 			return response_obj
 
 		# Gets chemical details from jchem ws:
 		jchem_response = self.calc_obj.getChemDetails({'chemical': filtered_smiles})
