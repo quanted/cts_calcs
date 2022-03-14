@@ -311,8 +311,6 @@ class OperaCalc(Calculator):
         if it exists, and returns False if not.
         """
 
-        logging.warning("CHECK OPERA DB CALL: {}".format(request_post))
-
         db_handler.connect_to_db()
         try:
             if not db_handler.is_connected:
