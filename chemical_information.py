@@ -294,13 +294,11 @@ class ChemInfo(object):
 		if chem_type.get('type') == 'CAS#':
 			# Gets dsstox results using user-entered CAS#:
 			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
-			_actor_results.update(dsstox_results)
 		elif chem_type.get("type") == "name":
 			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
-			_actor_results.update(dsstox_results)
 		else:
-			pass  # TODO: Use name or cas from ChemAxon to get CCTE data
 			dsstox_results = self.ccte_obj.get_chemical_results(molecule_obj["preferredName"], "name")
+		_actor_results.update(dsstox_results)
 
 		# Returns dsstox substance ID if that's all that's needed,
 		# which is used as the DB key for the chem-info document:
