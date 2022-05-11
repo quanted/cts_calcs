@@ -286,10 +286,6 @@ class ChemInfo(object):
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
 		molecule_obj['smiles'] = filtered_smiles
 
-
-		logging.warning("MOLECULE OBJ: {}".format(molecule_obj))
-
-
 		# ACTORWS requests handling for getting DSSTOX data
 		if chem_type.get('type') == 'CAS#':
 			# Gets dsstox results using user-entered CAS#:
