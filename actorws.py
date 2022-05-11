@@ -176,7 +176,7 @@ class ACTORWS(object):
 			'molWeight': 'mass',
 		}
 
-		self.dsstox_result_keys = ['casrn', 'dsstoxSubstanceId', 'preferredName', 'smiles', 'iupac']
+		self.dsstox_result_keys = ['casrn', 'dtxsid', 'preferredName', 'smiles', 'iupac']
 		self.result_obj = {
 			'calc': "actorws",
 			'prop': "",
