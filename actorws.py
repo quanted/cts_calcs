@@ -90,7 +90,7 @@ class CCTE:
 
 	def _make_request(self, url, data):
 		try:
-			_response = requests.post(url, data=data, headers={'Content-Type': 'application/json'}, timeout=15)
+			_response = requests.post(url, json=data, headers={'Content-Type': 'application/json'}, timeout=15)
 		except requests.exceptions.Timeout as e:
 			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
 			return None
