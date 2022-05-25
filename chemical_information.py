@@ -409,7 +409,7 @@ class ChemInfo(object):
 		"""
 		try:
 			url = self.cas_url.format(requests.utils.quote(smiles))  # encoding smiles for url
-			response = requests.get(url, verify=False)
+			response = requests.get(url, verify=False, timeout=5)
 			if response.status_code != 200:
 				return "N/A"
 			if '<html>' in response.content.decode('utf-8'):
