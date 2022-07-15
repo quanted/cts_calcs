@@ -11,7 +11,7 @@ class CCTE:
 	"""
 	def __init__(self):
 		self.base_url = "https://ccte-api-ccd.epa.gov"
-		self.batch_url = self.base_url + "/batchsearch"
+		self.batch_url = self.base_url + "/batchsearch/results"
 		self.single_url = self.base_url + "/ccdapp1/search/chemical"
 		self.calc = "actorws"  # NOTE: Test before changing this
 		self.props = ['dsstox', 'chemid']
@@ -90,7 +90,7 @@ class CCTE:
 
 	def _make_request(self, url, data):
 		try:
-			_response = requests.post(url, data=data, timeout=15)
+			_response = requests.post(url, json=data, headers={'Content-Type': 'application/json'}, timeout=15)
 		except requests.exceptions.Timeout as e:
 			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
 			return None
@@ -176,7 +176,7 @@ class ACTORWS(object):
 			'molWeight': 'mass',
 		}
 
-		self.dsstox_result_keys = ['casrn', 'dsstoxSubstanceId', 'preferredName', 'smiles', 'iupac']
+		self.dsstox_result_keys = ['casrn', 'dtxsid', 'preferredName', 'smiles', 'iupac']
 		self.result_obj = {
 			'calc': "actorws",
 			'prop': "",

@@ -234,21 +234,21 @@ class ChemInfo(object):
 			chem_type['type'] = "name"
 			chemical = self.carbon_anomolies[chemical]
 		
-		# ACTORWS requests handling for getting DSSTOX data
-		if chem_type.get('type') == 'CAS#':
-			# Gets dsstox results using user-entered CAS#:
-			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
-			_actor_results.update(dsstox_results)
-		elif chem_type.get("type") == "name":
-			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
-			_actor_results.update(dsstox_results)
-		else:
-			pass  # TODO: Use name or cas from ChemAxon to get CCTE data
+		# # ACTORWS requests handling for getting DSSTOX data
+		# if chem_type.get('type') == 'CAS#':
+		# 	# Gets dsstox results using user-entered CAS#:
+		# 	dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
+		# 	_actor_results.update(dsstox_results)
+		# elif chem_type.get("type") == "name":
+		# 	dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
+		# 	_actor_results.update(dsstox_results)
+		# else:
+		# 	pass  # TODO: Use name or cas from ChemAxon to get CCTE data
 
-		# Returns dsstox substance ID if that's all that's needed,
-		# which is used as the DB key for the chem-info document:
-		if only_dsstox:
-			return dsstox_results.get('data', {})
+		# # Returns dsstox substance ID if that's all that's needed,
+		# # which is used as the DB key for the chem-info document:
+		# if only_dsstox:
+		# 	return dsstox_results.get('data', {})
 
 		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
 		if chem_type['type'] == 'smiles':
@@ -283,6 +283,25 @@ class ChemInfo(object):
 		# Creates molecule object with jchem response:
 		molecule_obj = Molecule().createMolecule(chemical, orig_smiles, jchem_response, get_sd)
 
+		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
+		molecule_obj['smiles'] = filtered_smiles
+
+		# ACTORWS requests handling for getting DSSTOX data
+		if chem_type.get('type') == 'CAS#':
+			# Gets dsstox results using user-entered CAS#:
+			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
+		elif chem_type.get("type") == "name":
+			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
+		else:
+			dsstox_results = self.ccte_obj.get_chemical_results(molecule_obj["preferredName"], "name")
+		_actor_results.update(dsstox_results)
+
+		# Returns dsstox substance ID if that's all that's needed,
+		# which is used as the DB key for the chem-info document:
+		if only_dsstox:
+			return dsstox_results.get('data', {})
+
+
 		cas_list = self.make_cas_request(filtered_smiles)  # gets CAS from cactus.nci.nih.gov (deprecated in jchemws)
 
 		molecule_obj['cas'] = cas_list
@@ -295,8 +314,8 @@ class ChemInfo(object):
 			molecule_obj['has_carbon'] = True
 
 
-		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
-		molecule_obj['smiles'] = filtered_smiles
+		# # Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
+		# molecule_obj['smiles'] = filtered_smiles
 
 		# Replaces certain keys in molecule_obj with actorws values:
 		for key, val in _actor_results.get('data', {}).items():
@@ -390,7 +409,7 @@ class ChemInfo(object):
 		"""
 		try:
 			url = self.cas_url.format(requests.utils.quote(smiles))  # encoding smiles for url
-			response = requests.get(url, verify=False)
+			response = requests.get(url, verify=False, timeout=5)
 			if response.status_code != 200:
 				return "N/A"
 			if '<html>' in response.content.decode('utf-8'):
