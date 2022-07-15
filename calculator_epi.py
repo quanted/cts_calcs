@@ -133,7 +133,7 @@ class EpiCalc(Calculator):
         """
         Makes requests to epi suite for half-lives.
         """
-        structure = request_dict.get('chemical')
+        structure = request_dict.get('filtered_smiles')
         route = request_dict.get('route').lower()
         route_url = None
 
@@ -143,8 +143,8 @@ class EpiCalc(Calculator):
         route_url = self.qsar_request_map[route]
         url = self.baseUrl.replace('estimated', '') + route_url
 
-        logging.warning("Incoming request_dict for QSAR request: {}".format(request_dict))
-        logging.warning("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
+        logging.info("Incoming request_dict for QSAR request: {}".format(request_dict))
+        logging.info("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
 
         response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
 
@@ -174,19 +174,6 @@ class EpiCalc(Calculator):
                 _response_dict[key] = request_dict.get(key)
         _response_dict.update({'request_post': request_dict, 'method': None})
 
-
-        # Handle QSAR request or continue to the usual p-chem stuff
-        if request_dict.get('prop') == 'qsar':
-            # NOTE: Skipping smiles filter, should've already been filtered in node chem info requests
-            _result_obj = self.make_qsar_request(request_dict)
-
-            # TODO: Account for not valid result_obj
-
-            _response_dict.update(_result_obj['data'])
-            _response_dict['valid'] = True
-
-            return _response_dict
-
         try:
             _filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
         except Exception as err:
@@ -195,6 +182,20 @@ class EpiCalc(Calculator):
                 'data': "Cannot filter SMILES",
                 'valid': False
             })
+            return _response_dict
+
+        # Handle QSAR request or continue to the usual p-chem stuff
+        if request_dict.get('prop') == 'qsar':
+            
+            request_dict['filtered_smiles'] = _filtered_smiles
+
+            _result_obj = self.make_qsar_request(request_dict)
+
+            # TODO: Account for not valid result_obj
+
+            _response_dict.update(_result_obj['data'])
+            _response_dict['valid'] = True
+
             return _response_dict
 
         try:
