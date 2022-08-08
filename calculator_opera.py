@@ -318,10 +318,10 @@ class OperaCalc(Calculator):
             return False
         dsstox_result = chem_info_obj.get_cheminfo(request_post, only_dsstox=True)
         # dsstox_result = ccte_obj.get_chemical_results(request_post)
-        if not dsstox_result or dsstox_result.get('dsstoxSubstanceId') == "N/A":
+        if not dsstox_result or dsstox_result.get('dtxsid') == "N/A":
             logging.info("No DSSTOX substance ID value found.")
             return False
-        dtxcid_result = db_handler.find_dtxcid_document({'DTXSID': dsstox_result.get('dsstoxSubstanceId')})
+        dtxcid_result = db_handler.find_dtxcid_document({'DTXSID': dsstox_result.get('dtxsid')})
         db_results = None
         if not dtxcid_result:
             logging.info("No DTXCID results found.")
