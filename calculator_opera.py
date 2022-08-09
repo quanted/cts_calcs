@@ -339,7 +339,7 @@ class OperaCalc(Calculator):
         # except Exception as e:
         #     logging.warning("calculator_opera check_opera_db: {}".format(e))
         #     db_handler.mongodb_conn.close()
-        db_handler.mongodb_conn.close()
+        # db_handler.mongodb_conn.close()
         return db_results
 
     def data_request_handler(self, request_dict):
