@@ -143,7 +143,7 @@ class MetabolizerCalc(Calculator):
             
             _products_dict.update({
                 "id": self.metID,
-                "name": "<img class='blank_node' src='/static_qed/cts_app/images/loader_node.gif' />",
+                "name": "<img class='blank_node' src='" + settings.STATIC_URL + "cts_app/images/loader_node.gif' />",
                 "data": {
                     'smiles': _parent,
                     'routes': root['route'],
@@ -166,7 +166,7 @@ class MetabolizerCalc(Calculator):
                 # continue walking tree until generation limit is met..
                 _products_dict.update({
                     "id": self.metID,
-                    "name": "<img class='blank_node' src='/static_qed/cts_app/images/loader_node.gif' />",
+                    "name": "<img class='blank_node' src='" + settings.STATIC_URL + "cts_app/images/loader_node.gif' />",
                     "data": {
                         'smiles': root['smiles'],
                         'routes': root['route'].split(',')[-1],
