@@ -11,7 +11,7 @@ class SparcCalc(Calculator):
 
         Calculator.__init__(self)  # inherit Calculator base class
 
-        self.base_url = os.environ['CTS_SPARC_SERVER']
+        self.base_url = os.environ.get('CTS_SPARC_SERVER')
         self.multiproperty_url = '/sparc-integration/rest/calc/multiProperty'
         self.name = "sparc"
         self.smiles = smiles
