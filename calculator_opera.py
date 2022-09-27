@@ -76,7 +76,7 @@ class OperaCalc(Calculator):
             'metaInfo': {
                 'model': "opera",
                 'collection': "qed",
-                'modelVersion': "2.3",
+                'modelVersion': "2.9",
                 'description': "OPERA is a free and open-source/open-data suite of QSAR models providing predictions on physicochemical properties, environmental fate and toxcicity endpoints as well as additional information including applicability domain and accuracy assessment.",
                 'status': '',
                 'timestamp': self.gen_jid(),
