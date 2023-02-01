@@ -49,6 +49,9 @@ class EnvipathCalc(Calculator):
         that thejit (visualization javascript
         library) understands
         """
+
+        logging.warning("Incoming data to recurse: {}".format(jsonDict))
+
         root = jsonDict['data']
         reDict = {}
         reDict.update({
@@ -78,6 +81,8 @@ class EnvipathCalc(Calculator):
         logging.info("metabolites: {}".format(self.metID))
 
         if self.metID == 1:
+
+            logging.warning("root: {}".format(root))
 
             _parent = root['smiles']
 
