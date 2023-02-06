@@ -37,7 +37,7 @@ class SMILESFilter(object):
 		
 		logging.warning("VALID URL: {}".format(self.is_valid_url))
 		
-		is_valid_response = requests.post(self.is_valid_url, data=json.dumps({'smiles': smiles}), headers={'Content-Type': 'application/json'}, timeout=10)
+		is_valid_response = requests.post(self.is_valid_url, data=json.dumps({'structure': smiles}), headers={'Content-Type': 'application/json'}, timeout=10)
 		
 		logging.warning("VALID RESPONSE: {}".format(is_valid_response))
 		
