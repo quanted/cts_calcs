@@ -2,15 +2,15 @@ import requests
 import json
 import logging
 import os
-#try:
-#    from cts_app.cts_calcs.calculator import Calculator
-#except ImportError as e:
-#    from cts_calcs.calculator import Calculator
+import urllib3
+from urllib3.util.ssl_ import create_urllib3_context
+import urllib.parse
+
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
 
-headers = {'Content-Type': 'application/json'}
 
+headers = {'Content-Type': 'application/json'}
 
 
 class TestWSCalc(Calculator):
@@ -105,23 +105,50 @@ class TestWSCalc(Calculator):
 		test_prop = self.propMap[prop]['urlKey'] # prop name TEST understands
 		_url = self.baseUrl + "/{}".format(test_prop)
 		_payload = {'smiles': structure, 'method': method}
+		url = "{}/{}?{}".format(self.baseUrl, test_prop, urllib.parse.urlencode(_payload))
 		try:
-			response = requests.get(_url, params=_payload, timeout=self.timeout)
-		except requests.exceptions.ConnectionError as ce:
-			logging.warning("connection exception: {}".format(ce))
-			return {'error': 'connection error'}
-		except requests.exceptions.Timeout as te:
+			response = self.ssl_legacy_request(url)
+		except urllib3.exceptions.TimeoutError:
 			logging.warning("timeout exception: {}".format(te))
 			return {'error': 'timeout error'}
+		except urllib3.exceptions.HTTPError:
+			logging.warning("connection exception: {}".format(ce))
+			return {'error': 'connection error'}
 		except Exception as e:
 			logging.warning("exception: {}".format(e))
-
+			return {'error': 'general error'}
 		self.results = response
 		return response
 
 
 
-	def data_request_handler(self, request_dict):		
+	def ssl_legacy_request(self, url):
+		"""
+		Bypassing SSL legacy error being thrown when making requests to comptox.
+		https://github.com/urllib3/urllib3/issues/2653
+		"""
+		response = None
+		ctx = create_urllib3_context()
+		ctx.load_default_certs()
+		ctx.options |= 0x4  # ssl.OP_LEGACY_SERVER_CONNECT
+		with urllib3.PoolManager(ssl_context=ctx) as http:
+			try:
+				response = http.request("GET", url)
+			except urllib3.exceptions.TimeoutError:
+				logging.warning("timeout exception: {}".format(te))
+				return {'error': 'timeout error'}
+			except urllib3.exceptions.HTTPError:
+				logging.warning("connection exception: {}".format(ce))
+				return {'error': 'connection error'}
+		response_obj = requests.Response()
+		response_obj.status_code = response.status
+		response_obj._content = response.data.decode("utf-8")
+		response_obj.content
+		return response_obj
+
+
+	
+	def data_request_handler(self, request_dict):	
 
 		_filtered_smiles = ''
 		_response_dict = {}
