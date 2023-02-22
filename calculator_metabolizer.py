@@ -131,15 +131,11 @@ class MetabolizerCalc(Calculator):
         logging.info("metabolites: {}".format(self.metID))
 
         if self.metID == 1:
-            # _parent = root.keys()[0]  # start with parent metabolite
+
             _parent = list(root.keys())[0]  # python 3 fix
-            
-            # skipping 2nd parent metabolite:
-            # second_parent = root[_parent]['metabolites'].keys()[0]
-            second_parent = list(root[_parent]['metabolites'].keys())[0]  # python 3 fix
-            root = root[_parent]['metabolites'][second_parent]
-            # not-skipping version without 2nd parent problem:
-            # root = root[_parent]
+        
+            # root = root[_parent]['metabolites']  # ctsws update
+            root = root[_parent][0]  # ctsws update 2
             
             _products_dict.update({
                 "id": self.metID,
@@ -178,20 +174,24 @@ class MetabolizerCalc(Calculator):
                     },
                     "children": []
                 })
+
+                # UNIQUE PRODUCTS DETERMINED HERE
                 # self.products_list.append(root['smiles'])
                 if not root['smiles'] in self.unique_products:
                     self.unique_products.append(root['smiles'])
 
+        # for key, value in root.items():
+        #     if isinstance(value, list) and len(value) > 0:
+        #         for met_obj in value:
+        #             if 'children' in _products_dict and root['generation'] < gen_limit:
+        #                 _products_dict['children'].append(self.traverse(met_obj, gen_limit, unranked))
 
-        for key, value in root.items():
-            if isinstance(value, dict):
-                for key2, value2 in root[key].items():
-                    root2 = root[key][key2]
-                    # if len(root2) > 0 and 'children' in _products_dict and root2['generation'] < gen_limit:
-                    if len(root2) > 0 and 'children' in _products_dict and root['generation'] < gen_limit:
-                        # continue walking branch if root2 has contents, one of those contents is 'children', and
-                        # the generation limit isn't exceeded..
-                        _products_dict['children'].append(self.traverse(root2, gen_limit, unranked))
+        # for key, value in root.items():
+        # if isinstance(value, list) and len(value) > 0:
+        if 'metabolites' in root and len(root['metabolites']) > 0:
+            for met_obj in root['metabolites']:
+                if 'children' in _products_dict and root['generation'] < gen_limit:
+                    _products_dict['children'].append(self.traverse(met_obj, gen_limit, unranked))
 
         return _products_dict
 
