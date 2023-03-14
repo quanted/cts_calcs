@@ -129,6 +129,19 @@ class EpiCalc(Calculator):
         return None
 
 
+    def round_half_life(self, value):
+        upper_bound = 1e3
+        lower_bound = 1e-1
+
+        if type(value) != float:
+            value = float(value)
+
+        if abs(value) > upper_bound or abs(value) < lower_bound:
+            return "{:.2e}".format(value)
+        else:
+            return round(value, 2)
+
+
     def make_qsar_request(self, request_dict):
         """
         Makes requests to epi suite for half-lives.
@@ -154,10 +167,22 @@ class EpiCalc(Calculator):
                 "valid": False
             }
 
-        return {
-            "data": json.loads(response.content),
-            "valid": True
-        }
+        try:
+            response_obj = json.loads(response.content)
+            if not response_obj.get("data") or len(response_obj.get("data")) != 1:
+                raise Exception("Half-life response does not have excepted 'data' key or size is unexpected.\nResponse: {}".format(response_obj))
+            halfLifeValue = response_obj["data"][0]["data"]
+            response_obj["data"][0]["data"] = self.round_half_life(halfLifeValue)
+            return {
+                "data": response_obj,
+                "valid": True
+            }
+        except Exception as e:
+            logging.warning("Error parsing QSAR response: {}".format(e))
+            return {
+                "error": "Error getting QSAR data from EPI Suite",
+                "valid": False
+            }
 
 
     def data_request_handler(self, request_dict):
