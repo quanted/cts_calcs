@@ -66,7 +66,7 @@ class EpiCalc(Calculator):
             'organophosphorus ester hydrolysis 1 (base-catalyzed)': 'hydrolysis/ester',
             'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)': 'hydrolysis/ester',
             'carboxylic acid ester hydrolysis': 'hydrolysis/ester',
-            'anhydride hydrolysis': 'hydrolysis/ester',
+            'anhydride hydrolysis': 'hydrolysis/anhydride',
             'carbamate hydrolysis': 'hydrolysis/carbamate'
         }
 
