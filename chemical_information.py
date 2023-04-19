@@ -261,21 +261,21 @@ class ChemInfo(object):
 			orig_smiles = self.calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
 
 		# Gets filtered SMILES:
-		# try:
-		filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
-		if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
+		try:
+			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
+			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
+				response_obj = {}
+				response_obj['status'] = False
+				response_obj['request_post'] = request_post
+				response_obj['error'] = filtered_smiles['error']
+				return response_obj
+		except Exception as e:
+			logging.warning("Error filtering SMILES: {}".format(e))
 			response_obj = {}
 			response_obj['status'] = False
+			response_obj['error'] = "Cannot process chemical"
 			response_obj['request_post'] = request_post
-			response_obj['error'] = filtered_smiles['error']
 			return response_obj
-		# except Exception as e:
-		# 	logging.warning("Error filtering SMILES: {}".format(e))
-		# 	response_obj = {}
-		# 	response_obj['status'] = False
-		# 	response_obj['error'] = "Cannot process chemical"
-		# 	response_obj['request_post'] = request_post
-		# 	return response_obj
 
 		# Gets chemical details from jchem ws:
 		jchem_response = self.calc_obj.getChemDetails({'chemical': filtered_smiles})
