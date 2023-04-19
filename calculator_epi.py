@@ -9,8 +9,8 @@ from .chemical_information import SMILESFilter
 
 class EpiCalc(Calculator):
     """
-	EPI Suite Calculator
-	"""
+    EPI Suite Calculator
+    """
     def __init__(self):
         Calculator.__init__(self)
         self.method = None
@@ -62,13 +62,26 @@ class EpiCalc(Calculator):
         self.qsar_request_map = {
             'halogenated aliphatics: elimination': 'hydrolysis/alkylhalide',
             'halogenated aliphatics: nucleophilic substitution (no adjacent x)': 'hydrolysis/alkylhalide',
+            'halogenated aliphatics: nucleophilic substitution (vicinal x)': 'hydrolysis/alkylhalide',
+            'halogenated aliphatics: nucleophilic substitution (geminal x)': 'hydrolysis/alkylhalide',
             'epoxide hydrolysis': 'hydrolysis/epoxide',
-            'organophosphorus ester hydrolysis 1 (base-catalyzed)': 'hydrolysis/ester',
-            'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)': 'hydrolysis/ester',
+            'organophosphorus ester hydrolysis 1 (base-catalyzed)': 'hydrolysis/phosphate',  # Phosphate or Thiophosphate
+            'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)': 'hydrolysis/phosphate',  # Phosphate or Thiophosphate
             'carboxylic acid ester hydrolysis': 'hydrolysis/ester',
             'anhydride hydrolysis': 'hydrolysis/anhydride',
             'carbamate hydrolysis': 'hydrolysis/carbamate'
         }
+        self.cleaved_list = [
+            'organophosphorus ester hydrolysis 1 (base-catalyzed)'
+            'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)'
+            'carboxylic acid ester hydrolysis'
+            'anhydride hydrolysis'
+            'carbamate hydrolysis'
+        ]
+        self.op_esters = [
+            'organophosphorus ester hydrolysis 1 (base-catalyzed)'
+            'organophosphorus ester hydrolysis 2 (neutral or acid-catalyzed)'
+        ]
 
 
     def getPostData(self, calc, prop, method=None):
@@ -149,6 +162,7 @@ class EpiCalc(Calculator):
         structure = request_dict.get('filtered_smiles')
         route = request_dict.get('route').lower()
         route_url = None
+        num_sites = None
 
         if not route in list(self.qsar_request_map.keys()):
             raise Exception("Route not found.")
@@ -156,8 +170,17 @@ class EpiCalc(Calculator):
         route_url = self.qsar_request_map[route]
         url = self.baseUrl.replace('estimated', '') + route_url
 
+        if route in self.cleaved_list:
+            logging.info("Route in cleaved list.")
+            num_sites = request_dict.get("chemical").count("P")  # gets count of "P" from parent smiles
+
         logging.info("Incoming request_dict for QSAR request: {}".format(request_dict))
+        logging.info("Number of sites: ".format(num_sites))
         logging.info("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
+
+
+        # TODO: Account for OP Ester route where num_sites > 1 (cases C and D).
+
 
         response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
 
@@ -171,8 +194,23 @@ class EpiCalc(Calculator):
             response_obj = json.loads(response.content)
             if not response_obj.get("data") or len(response_obj.get("data")) != 1:
                 raise Exception("Half-life response does not have excepted 'data' key or size is unexpected.\nResponse: {}".format(response_obj))
-            halfLifeValue = response_obj["data"][0]["data"]
-            response_obj["data"][0]["data"] = self.round_half_life(halfLifeValue)
+            
+            # NOTE: If OP Ester 1/2 and num_sites < 1, pick specific half-life value from set.
+            # Get Kb if OP Ester 1, and Ka/n for OP Ester 2
+
+            halfLifeValue = None
+            for data_obj in response_obj["data"]:
+                if route == self.op_esters[0] and data_obj["prop"] == "Kn":
+                    halfLifeValue = self.round_half_life(data_obj["data"])
+                    break
+                elif route == self.op_esters[1] and (data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn"):
+                    halfLifeValue = self.round_half_life(data_obj["data"])
+                    break            
+            if not halfLifeValue:
+                halfLifeValue = self.round_half_life(response_obj["data"][0]["data"])
+            
+            response_obj["data"][0]["data"] = halfLifeValue
+            
             return {
                 "data": response_obj,
                 "valid": True
