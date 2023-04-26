@@ -9,8 +9,8 @@ from .chemical_information import SMILESFilter
 
 class EpiCalc(Calculator):
     """
-	EPI Suite Calculator
-	"""
+    EPI Suite Calculator
+    """
     def __init__(self):
         Calculator.__init__(self)
         self.method = None
