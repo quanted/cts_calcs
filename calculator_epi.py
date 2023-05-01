@@ -200,7 +200,7 @@ class EpiCalc(Calculator):
             halfLifeValue = None
             for data_obj in response_obj["data"]:
                 if num_sites <= 1:
-                    if route == self.op_esters[0] and data_obj["prop"] == "Kn":
+                    if route == self.op_esters[0] and data_obj["prop"] == "Kb":
                         halfLifeValue = self.round_half_life(data_obj["data"])
                         break
                     elif route == self.op_esters[1] and (data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn"):
@@ -208,9 +208,9 @@ class EpiCalc(Calculator):
                         break
             if not halfLifeValue:
                 halfLifeValue = self.round_half_life(response_obj["data"][0]["data"])
-            
+
             response_obj["data"][0]["data"] = halfLifeValue
-            
+
             return {
                 "data": response_obj,
                 "valid": True
