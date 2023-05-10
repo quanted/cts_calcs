@@ -163,6 +163,7 @@ class EpiCalc(Calculator):
         route = request_dict.get('route').lower()
         route_url = None
         num_sites = None
+        unique_schemes_count = int(request_dict.get("uniqueSchemesCount"))
 
         if not route in list(self.qsar_request_map.keys()):
             raise Exception("Route not found.")
@@ -170,12 +171,18 @@ class EpiCalc(Calculator):
         route_url = self.qsar_request_map[route]
         url = self.baseUrl.replace('estimated', '') + route_url
 
-        if route in self.cleaved_list:
-            logging.info("Route in cleaved list.")
+        if route in self.cleaved_list and route in self.op_esters:
+            logging.info("Route in cleaved list and an OP Ester.")
             num_sites = request_dict.get("chemical").count("P")  # gets count of "P" from parent smiles
+        elif route in self.cleaved_list and not route in self.op_esters:
+            logging.info("Route in cleaved list but not OP Ester.")
+            num_sites = int(request_dict.get("productCount")) / 2
+        else:
+            logging.info("Route not in cleavd list.")
+            num_sites = int(request_dict.get("productCount"))
 
         logging.info("Incoming request_dict for QSAR request: {}".format(request_dict))
-        logging.info("Number of sites: ".format(num_sites))
+        logging.info("Number of sites: {}".format(num_sites))
         logging.info("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
 
         # TODO: Account for OP Ester route where num_sites > 1 (cases C and D).
@@ -197,15 +204,57 @@ class EpiCalc(Calculator):
             # NOTE: If OP Ester 1/2 and num_sites <= 1, pick specific half-life value from set.
             # Get Kb if OP Ester 1, and Ka/n for OP Ester 2
 
+            logging.info("Half-life response data: {}".format(response_obj["data"]))
+
             halfLifeValue = None
             for data_obj in response_obj["data"]:
                 if num_sites <= 1:
+                    logging.info("Number of sites <= 1")
                     if route == self.op_esters[0] and data_obj["prop"] == "Kb":
                         halfLifeValue = self.round_half_life(data_obj["data"])
                         break
                     elif route == self.op_esters[1] and (data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn"):
                         halfLifeValue = self.round_half_life(data_obj["data"])
                         break
+                else:
+                    logging.info("Number of sites > 1")
+                    # Case C or D
+                    if unique_schemes_count > 1:
+                        logging.info("unique_schemes_count > 1")
+                        # Case C
+                        pass  # don't see case C example in excel file
+                    else:
+                        logging.info("unique_schemes_count <= 1")
+                        # Case D
+                        if "halogenated aliphatics" in route.lower():
+                            # return N/A
+                            logging.info("Case D halogenated aliphatics")
+                            halfLifeValue = "N/A"
+                            break
+                        elif "epoxide" in route.lower() and (data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn"):
+                            # return Ka/n
+                            logging.info("Case D epoxide, returning Ka/n")
+                            halfLifeValue = self.round_half_life(data_obj["data"])
+                            break
+                        
+                        if route in self.cleaved_list:
+                            if "anhydride" in route.lower():
+                                logging.info("Case D cleaved anhydride")
+                                # return kb1 kb2 factored in (on epi wrapper side)
+                                halfLifeValue = self.round_half_life(data_obj["data"])
+                                break
+                            elif data_obj["prop"] == "Kb":
+                                logging.info("Case D not anhydride, returning Kb")
+                                # return Kb
+                                halfLifeValue = self.round_half_life(data_obj["data"])
+                                break
+
+                        elif data_obj["prop"] == "Kb":
+                            logging.info("Case D not cleaved, returning Kb")
+                            # return Kb
+                            halfLifeValue = self.round_half_life(data_obj["data"])
+                            break
+
             if not halfLifeValue:
                 halfLifeValue = self.round_half_life(response_obj["data"][0]["data"])
 
