@@ -162,7 +162,7 @@ class EpiCalc(Calculator):
             return round(value, 2)
 
 
-    def handle_cases_a_and_b(self, response_obj, route, num_sites, unique_schemes_count):
+    def handle_cases_a_and_b(self, response_obj, route, num_sites):
         """
         Handles OP Ester workflow cases A and B.
         """
@@ -173,7 +173,6 @@ class EpiCalc(Calculator):
 
         for data_obj in response_obj["data"]:
             # Accounting for cases A and B:
-            logging.info("Number of sites <= 1")
             if route == self.op_esters[0] and data_obj["prop"] == "Kb":
                 halfLifeValue = self.round_half_life(data_obj["data"])
                 break
@@ -283,26 +282,25 @@ class EpiCalc(Calculator):
         """
         Determines halflife based on response.
         """
-
-        logging.warning("determine_halflife called.\nresponse_obj: {}\nroute: {}\nnum_sites: {}\nunique_schemes_count: {}".format(response_obj, route, num_sites, unique_schemes_count))
-
         halfLifeValue = None
         case = None
 
         if num_sites <= 1:
             # Cases A and B
-            halfLifeValue = self.handle_cases_a_and_b()
-
-        if unique_schemes_count > 1:
-            # Case C
-            logging.info("unique_schemes_count > 1")
-            logging.info("Case C: Skipping for now.")
-            halfLifeValue = self.handle_case_c(response_obj, route, num_sites, unique_schemes_count)
+            logging.info("Handle case A or case B getting called.")
+            halfLifeValue = self.handle_cases_a_and_b(response_obj, route, num_sites)
         else:
-            # Case D
-            halfLifeValue, case = self.handle_case_d(response_obj, route, num_sites, unique_schemes_count)
+            if unique_schemes_count > 1:
+                # Case C
+                logging.info("unique_schemes_count > 1")
+                logging.info("Case C: Skipping for now.")
+                halfLifeValue = self.handle_case_c(response_obj, route, num_sites, unique_schemes_count)
+            else:
+                # Case D
+                halfLifeValue, case = self.handle_case_d(response_obj, route, num_sites, unique_schemes_count)
 
         if not halfLifeValue:
+            logging.warning("halfLifeValue not set, getting data from response_obj: {}".format(response_obj))
             halfLifeValue = self.round_half_life(response_obj["data"][0]["data"])
 
         return halfLifeValue, case
@@ -312,11 +310,6 @@ class EpiCalc(Calculator):
         """
         Makes requests to epi suite for half-lives.
         """
-
-
-        # logging.warning("request_dict childNodes: {}".format(request_dict.get("childNodes")))
-
-        # logging.warning("childNodes getlist: {}".format(request_dict.POST.getlist("childNodes")))
 
         structure = request_dict.get("filtered_smiles")
         unique_schemes_count = int(request_dict.get("uniqueSchemesCount"))
@@ -367,15 +360,12 @@ class EpiCalc(Calculator):
 
             try:
                 response_obj = json.loads(response.content)
-                # if not response_obj.get("data") or len(response_obj.get("data")) != 1:
+
                 if not response_obj.get("data") or len(response_obj.get("data")) < 1:
                     raise Exception("Half-life response does not have excepted 'data' key or size is unexpected.\nResponse: {}".format(response_obj))
                 
                 # NOTE: If OP Ester 1/2 and num_sites <= 1, pick specific half-life value from set.
                 # Get Kb if OP Ester 1, and Ka/n for OP Ester 2
-
-                # qsar_response = {}
-                # qsar_response.update(child_obj)
 
                 halfLifeValue, case = self.determine_halflife(response_obj, route, num_sites, unique_schemes_count)
 
