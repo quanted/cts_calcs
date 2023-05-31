@@ -333,15 +333,25 @@ class EpiCalc(Calculator):
             url = self.baseUrl.replace("estimated", "") + route_url
 
             if route in self.cleaved_list and route in self.op_esters:
-                logging.info("Route in cleaved list and an OP Ester.")
+                logging.info("Route in cleaved list and an OP Ester. Counting 'P's to determine number of sites")
                 # num_sites = request_dict.get("chemical").count("P")  # gets count of "P" from original parent smiles
                 num_sites = structure.count("P")  # gets count of "P" from filtered parent smiles
+
+                if num_sites > 1:
+                    logging.info("Number of sites from 'P' count is greater than one, using qualitative descriptor for half-life.")
+                    qsar_response = {}
+                    qsar_response.update(child_obj)
+                    qsar_response["data"] = None
+                    qsar_response["prop"] = "qsar"
+                    qsar_response["valid"] = True
+                    qsar_responses.append(qsar_response)
+                    continue
 
             elif route in self.cleaved_list and not route in self.op_esters:
                 logging.info("Route in cleaved list but not OP Ester.")
                 num_sites = product_count / 2
             else:
-                logging.info("Route not in cleavd list.")
+                logging.info("Route not in cleaved list.")
                 num_sites = product_count
 
             logging.info("Incoming child_obj for QSAR request: {}".format(child_obj))
