@@ -307,6 +307,14 @@ class EpiCalc(Calculator):
         return halfLifeValue, case
 
 
+    def is_num_sites_1():
+        """
+        Determines whether number of sites is 1. Returns a
+        boolean values.
+        """
+
+
+
     def make_qsar_request(self, request_dict):
         """
         Makes requests to epi suite for half-lives.
@@ -316,12 +324,9 @@ class EpiCalc(Calculator):
         unique_schemes_count = int(request_dict.get("uniqueSchemesCount"))
         product_count = int(request_dict.get("productCount"))
         child_nodes = request_dict.get("childNodes")  # children of a single/given parent
-
         qsar_responses = []
 
         for child_obj in child_nodes:
-
-            # TODO: Make request per child node
 
             route = child_obj.get("routes").lower()
             route_url = None
@@ -334,67 +339,44 @@ class EpiCalc(Calculator):
             route_url = self.qsar_request_map[route]
             url = self.baseUrl.replace("estimated", "") + route_url
 
-            # if route in self.cleaved_list and route in self.op_esters:
-            #     logging.info("Route in cleaved list and an OP Ester. Counting 'P's to determine number of sites")
-            #     # num_sites = request_dict.get("chemical").count("P")  # gets count of "P" from original parent smiles
-            #     num_sites = structure.count("P")  # gets count of "P" from filtered parent smiles
-
-            #     if num_sites > 1:
-            #         logging.info("Number of sites from 'P' count is greater than one, using qualitative descriptor for half-life.")
-            #         qsar_response = {}
-            #         qsar_response.update(child_obj)
-            #         qsar_response["data"] = None
-            #         qsar_response["prop"] = "qsar"
-            #         qsar_response["valid"] = True
-            #         qsar_responses.append(qsar_response)
-            #         continue
-
-            # elif route in self.cleaved_list and not route in self.op_esters:
-            #     logging.info("Route in cleaved list but not OP Ester.")
-            #     num_sites = product_count / 2
-            # else:
-            #     logging.info("Route not in cleaved list.")
-            #     num_sites = product_count
-
             if not route in self.cleaved_list:
+                logging.info("Route not in cleaved list. Product count: {}".format(product_count))
                 if product_count > 1:
                     is_num_sites_1 = False
                 else:
                     is_num_sites_1 = True
 
             elif route in self.cleaved_list and not route in self.op_esters:
-                logging.info("Route in cleaved list but not OP Ester.")
+                logging.info("Route in cleaved list but not OP Ester. Product count: {}".format(product_count))
                 if product_count > 2:
                     is_num_sites_1 = False
                 else:
                     is_num_sites_1 = True
 
             elif route in self.cleaved_list and route in self.op_esters:
-                logging.info("Route in cleaved list and an OP Ester.")
+                logging.info("Route in cleaved list and an OP Ester. Product count: {}".format(product_count))
                 if product_count > 4:
                     is_num_sites_1 = False
+                    qsar_response = {}
+                    qsar_response.update(child_obj)
+                    qsar_response["data"] = None
+                    qsar_response["prop"] = "qsar"
+                    qsar_response["valid"] = True
+                    qsar_responses.append(qsar_response)
+                    continue
                 else:
                     is_num_sites_1 = True
 
             else:
                 is_num_sites_1 = True
 
-            # logging.info("Incoming child_obj for QSAR request: {}".format(child_obj))
             logging.info(">>> Is number of sites one?: {}".format(is_num_sites_1))
             logging.info("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
 
-            # TODO: Account for OP Ester route where num_sites > 1 (cases C and D).
-
             response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
-
-            logging.warning("RESPONSE: {}".format(response))
 
             if response.status_code != 200:
                 logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
-                # return {
-                #     "error": "Error getting QSAR data from EPI Suite",
-                #     "valid": False
-                # }
                 qsar_response = {}
                 qsar_response.update(child_obj)
                 qsar_response["data"] = None
@@ -406,15 +388,12 @@ class EpiCalc(Calculator):
             try:
                 response_obj = json.loads(response.content)
 
-                print("RESPONSE OBJECT: {}".format(response_obj))
-
                 if not response_obj.get("data") or len(response_obj.get("data")) < 1:
                     raise Exception("Half-life response does not have excepted 'data' key or size is unexpected.\nResponse: {}".format(response_obj))
                 
                 # NOTE: If OP Ester 1/2 and num_sites <= 1, pick specific half-life value from set.
                 # Get Kb if OP Ester 1, and Ka/n for OP Ester 2
 
-                # halfLifeValue, case = self.determine_halflife(response_obj, route, num_sites, unique_schemes_count)
                 halfLifeValue, case = self.determine_halflife(response_obj, route, is_num_sites_1, unique_schemes_count)
 
                 if case == "case D not anhydride":
