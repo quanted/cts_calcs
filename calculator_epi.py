@@ -126,14 +126,6 @@ class EpiCalc(Calculator):
             'organophosphorus ester hydrolysis 1',
             'organophosphorus ester hydrolysis 2'
         ]
-        self.cases = [
-            "case A",
-            "case B",
-            "case C",
-            "case C qualitative",
-            "case D",
-            "case D not anhydride"
-        ]
 
 
     def getPostData(self, calc, prop, method=None):
@@ -185,7 +177,6 @@ class EpiCalc(Calculator):
         return True
 
 
-
     def get_mp_from_results(self, results):
         for data_obj in results['data']:
                 if data_obj.get('prop') == 'melting_point':
@@ -211,177 +202,12 @@ class EpiCalc(Calculator):
         """
         Returns number of products that have op ester 1 or 2 routes.
         """
+        logging.info("Counting op esters, child_nodes: {}".format(child_nodes))
         num_op_esters = 0
         for child in child_nodes:
-            if child['route'] in self.op_esters:
+            if child.get("routes").lower() in self.op_esters:
                 num_op_esters += 1
         return num_op_esters
-
-
-    def handle_cases_a_and_b(self, response_obj, route, is_num_sites_1):
-        """
-        Handles OP Ester workflow cases A and B.
-        """
-        halfLifeValue = None
-
-        if not is_num_sites_1:
-            return None
-
-        for data_obj in response_obj["data"]:
-            # Accounting for cases A and B:
-            if route == self.op_esters[0] and data_obj["prop"] == "Kb":
-                halfLifeValue = self.round_half_life(data_obj["data"])
-                break
-            elif route == self.op_esters[1] and (data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn"):
-                halfLifeValue = self.round_half_life(data_obj["data"])
-                break
-
-        return halfLifeValue
-
-
-    def handle_case_c(self, structure, response_obj, child_nodes, route, unique_schemes_count):
-        """
-        Handles OP Ester Workflow case C.
-        """
-        halfLifeValue = None
-        case = None
-
-        if not unique_schemes_count > 1:
-            logging.warning("unique_schemes_count must be greater than 1 for case C. Returning None.")
-            return None
-
-        logging.info("unique_schemes_count > 1")
-        logging.info("Case C: response_obj: {}".format(response_obj))
-
-        if route in self.op_esters:
-
-            logging.info("Check if OpProductCount > 4.")
-
-            num_op_esters = self.count_op_esters(child_nodes)
-
-            logging.info("OpProductCount: {}".format(num_op_esters))
-
-            if num_op_esters > 4:
-                # Return qualitative for all products, or just the OP Ester ones?
-                logging.info("Return N/A (use qualitative values for HL).")
-                case = "case C qualitative"
-                halfLifeValue = None
-                return halfLifeValue, case
-            else:
-                logging.info("Returning specific values if op ester 1 or 2.")
-                if route == self.op_esters[0]:
-                    logging.info("# op ester hydrolysis 1, returning Kb.")
-                    kb_values = self.get_kb_values(response_obj)
-                    logging.info("kb_values: {}".format(kb_values))
-                    halfLifeValue = self.round_half_life(kb_values[0]['data'])
-                    return halfLifeValue, None
-                elif route == self.op_esters[1]:
-                    logging.info("# op ester hydrolysis 2, returning Ka/n.")
-                    ka_kn_values = self.get_ka_kn_values(response_obj)
-                    halfLifeValue = self.round_half_life(ka_kn_values[0]['data'])
-                    return halfLifeValue, None
-
-        else:
-
-            # if route == 'epoxide hydrolysis':
-            if 'epoxide' in route.lower():
-                logging.info("Sort Ka/n by atomNum.")
-
-                sorted_response = self.sort_k_by_atom_number(response_obj, "Ka/n")
-
-                # TODO: Validate sorted_response.
-
-            elif route in self.cleaved_list:
-                if route == 'anhydride hydrolysis' or route == 'carboxylic acid ester hydrolysis':
-                    logging.info("Find functional group, assign to atomNum.")
-                    func_groups = self.rdkit.get_functional_groups(route, structure)
-                    logging.info("Functional groups for smiles: {}, route: {}: {}".format(structure, route, func_groups))
-                    matched_data = self.match_atom_with_func_groups(response_obj, func_groups, ["Kb"])
-                    if route == 'anhydride hydrolysis':
-                        if len(matched_data) > 0 and "data" in matched_data[0]:
-                            logging.info("Return Kb1, Kb2.")  # NOTE: think this happens on the epi wrapper side
-                            halfLifeValue = self.round_half_life(matched_data[0]["data"])
-                            logging.info("Setting half-life to {}.".format(halfLifeValue))
-                    else:
-                        # TODO: matched_data list gets sorted by atomNum, and (potentially, asking Lindsay) those values get
-                        # split up amongst the child products.
-                        logging.info("CAE - Sort Kb by atomNum.")
-                        sorted_response = self.sort_k_by_atom_number(response_obj, "Kb")
-                        logging.info("Sorted response: {}".format(sorted_response))
-
-                else:
-                    logging.info("Not CAE nor AH - Sort Kb by atomNum.")
-                    sorted_response = self.sort_k_by_atom_number(response_obj, "Kb")
-                    logging.info("Sorted response: {}".format(sorted_response))
-
-            else:
-                logging.info("No EH nor cleaved - Sort Kb by atomNum.")
-                sorted_response = self.sort_k_by_atom_number(response_obj, "Kb")
-                logging.info("Sorted response: {}".format(sorted_response))
-
-
-        return halfLifeValue, case
-
-
-    def handle_case_d(self, response_obj, route, unique_schemes_count):
-        """
-        Handles OP Ester Workflow case D.
-        """
-        halfLifeValue = None
-        case = None
-
-        if unique_schemes_count > 1:
-            logging.warning("unique_schemes_count must be 1 or less for case D. Returning None.")
-            return None
-
-        for data_obj in response_obj["data"]:
-            
-
-            logging.info("\n\n")
-
-            logging.info("unique_schemes_count <= 1")
-            logging.info("Case D")
-
-            logging.info("Half-life response data object: {}".format(data_obj))
-
-
-
-            # Case D
-            if "halogenated aliphatics" in route.lower():
-                # return N/A
-                logging.info("Case D halogenated aliphatics")
-                halfLifeValue = "N/A"
-                break
-            elif "epoxide" in route.lower() and (data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn"):
-                # return Ka/n
-                logging.info("Case D epoxide, returning Ka/n")
-                halfLifeValue = self.round_half_life(data_obj["data"])
-                break
-            
-            if route in self.cleaved_list:
-                if "anhydride" in route.lower():
-                    logging.info("Case D cleaved anhydride")
-                    # return kb1 kb2 factored in (on epi wrapper side)
-                    halfLifeValue = self.round_half_life(data_obj["data"])
-                    break
-                elif data_obj["prop"] == "Kb":
-                    logging.info("case D not anhydride, returning Kb")
-
-                    halfLifeValue1 = self.round_half_life(response_obj["data"][0]["data"])
-                    halfLifeValue2 = self.round_half_life(response_obj["data"][1]["data"])
-                    halfLifeValue = halfLifeValue1 + ", " + halfLifeValue2
-
-                    case = "case D not anhydride"
-
-                    break
-
-            elif data_obj["prop"] == "Kb":
-                logging.info("Case D not cleaved, returning Kb")
-                # return Kb
-                halfLifeValue = self.round_half_life(data_obj["data"])
-                break
-
-        return halfLifeValue, case
 
 
     def sort_k_by_atom_number(self, response_obj, prop):
@@ -439,13 +265,15 @@ class EpiCalc(Calculator):
         return filtered_response
 
 
-    def match_atom_with_func_groups(self, hl_response, func_group, props):
+    def match_atom_with_func_groups(self, route, structure, hl_response, props):
         """
         Matches atom number from HL response with functional group.
         """
         if not "data" in hl_response:
             logging.warning("Data key not in hl_response.")
             return False
+
+        func_group = self.rdkit.get_functional_groups(route, structure)
 
         matched_data = []
 
@@ -471,7 +299,7 @@ class EpiCalc(Calculator):
 
         logging.info("Matched data: {}.".format(matched_data))
 
-        if len(matched_data) > 0:
+        if len(matched_data) < 1:
             logging.warning("No matches for functional group and atom numbers. Returning blank HL object.")
             return [{"data": None}]  # returns empty HL response
 
@@ -504,76 +332,453 @@ class EpiCalc(Calculator):
         """
         Using qualitative descriptor for half life values.
         """
-        qsar_responses = []
         for child_obj in child_nodes:
-            qsar_response = {}
-            qsar_response.update(child_obj)
-            qsar_response["data"] = None
-            qsar_response["prop"] = "qsar"
-            qsar_response["valid"] = False
-            qsar_responses.append(qsar_response)
-        return qsar_responses
+            child_obj["data"] = None
+            child_obj["prop"] = "qsar"
+            child_obj["valid"] = False
+        return child_nodes
 
 
-    def assign_both_kb(self, child_nodes, halfLifeValue):
+    def is_num_sites_1(self, child_obj, product_count, route):
         """
-        Two Kb values are returned and the first half of children get the first,
-        and the second half get the second half-life.
+        Returns boolean if number of sites is 1 or not.
         """
+        is_one = False  # whether num_sites is == 1 or > 1
 
-        
-        # NOTE: This is assuming that two Kb values are returned (but what about > 2 Kb values?)
-
-
-        halfLifeValue1 = halfLifeValue.split(",")[0]
-        halfLifeValue2 = halfLifeValue.split(",")[1]
-        i = 0
-        qsar_responses = []
-        for child_obj in child_nodes:
-            qsar_response = {}
-            qsar_response.update(child_obj)
-            qsar_response["prop"] = "qsar"
-            qsar_response["valid"] = True
-
-            # qsar_responses.append(qsar_response)
-            if i < len(child_nodes) / 2:
-                # assign first value
-                qsar_response["data"] = halfLifeValue1
+        if not route in self.cleaved_list:
+            logging.info("Route not in cleaved list. Product count: {}".format(product_count))
+            if product_count > 1:
+                is_one = False
             else:
-                # assign second value
-                qsar_response["data"] = halfLifeValue2
-
-            qsar_responses.append(qsar_response)
-
-            i += 1
-
-        return qsar_responses
-
-
-
-    def determine_halflife(self, structure, response_obj, child_nodes, route, is_num_sites_1, unique_schemes_count):
-        """
-        Determines halflife based on response.
-        """
-        halfLifeValue = None
-        case = None
-
-        if is_num_sites_1:
-            # Cases A and B
-            halfLifeValue = self.handle_cases_a_and_b(response_obj, route, is_num_sites_1)
+                is_one = True
+        elif route in self.cleaved_list and not route in self.op_esters:
+            logging.info("Route in cleaved list but not OP Ester. Product count: {}".format(product_count))
+            if product_count > 2:
+                is_one = False
+            else:
+                is_one = True
+        elif route in self.cleaved_list and route in self.op_esters:
+            logging.info("Route in cleaved list and an OP Ester. Product count: {}".format(product_count))
+            if product_count > 4:
+                logging.info("Product count > 4.")
+                is_one = False
+            else:
+                logging.info("Product count <= 4.")
+                is_one = True
         else:
-            if unique_schemes_count > 1:
-                # Case C
-                halfLifeValue, case = self.handle_case_c(structure, response_obj, child_nodes, route, unique_schemes_count)
+            is_one = True
+
+        return is_one
+
+
+    def is_op_ester(self, route):
+        """
+        Returns boolean indicating if route is an op ester or not.
+        """
+        if route.lower() in self.op_esters:
+            return True
+        else:
+            return False
+
+
+    def sort_products_by_case(self, parent, unique_schemes_count, product_count, child_nodes):
+        """
+        Loops child nodes and organizes them by case before determining HL.
+        """
+        qsar_map = {
+            ""
+        }
+        for child_obj in child_nodes:
+
+            logging.info("ORIGINAL CHILD OBJ: {}".format(child_obj))
+
+            route = child_obj.get("routes").lower()
+            is_one = self.is_num_sites_1(child_obj, product_count, route)
+            op_ester = self.is_op_ester(route)
+
+            logging.info("Route: {}".format(route))
+            logging.info("Is one: {}".format(is_one))
+            logging.info("Is OP ester: {}".format(op_ester))
+            logging.info("Unique schemes: {}".format(unique_schemes_count))
+
+            if is_one:
+                if op_ester:
+                    # case B
+                    child_obj["case"] = "B"
+                    child_obj["path"] = "1"  # NOTE: case B only has one path: single-site OP Esters
+                else:
+                    # NOTE: case A (no op esters, right? that's case B)
+                    child_obj["case"] = "A"
+                    child_obj["path"] = self.determine_path(child_obj, route, child_nodes)
             else:
-                # Case D
-                halfLifeValue, case = self.handle_case_d(response_obj, route, unique_schemes_count)
+                if unique_schemes_count > 1:
+                    # case C
+                    child_obj["case"] = "C"
+                    child_obj["path"] = self.determine_path(child_obj, route, child_nodes)
+                else:
+                    # case D
+                    child_obj["case"] = "D"
+                    child_obj["path"] = self.determine_path(child_obj, route, child_nodes)
 
-        if not halfLifeValue:
-            logging.warning("halfLifeValue not set, getting data from response_obj: {}".format(response_obj))
-            halfLifeValue = self.round_half_life(response_obj["data"][0]["data"])
+            logging.info("UPDATED CHILD OBJ: {}".format(child_obj))
 
-        return halfLifeValue, case
+        return child_nodes
+
+
+    def determine_path(self, child_obj, route, child_nodes):
+        """
+        Determine path for a product's case.
+        """
+        if not child_obj.get("case"):
+            logging.warning("determine_path() - 'case' not in child_obj.")
+            return False
+
+        path = None
+
+        if child_obj["case"] == "A":
+            path = self.handle_case_a_path(route)
+        elif child_obj["case"] == "B":
+            path = "1"  # NOTE: only one path for case B
+        elif child_obj["case"] == "C":
+            path = self.handle_case_c_path(route, child_nodes)
+        elif child_obj["case"] == "D":
+            path = self.handle_case_d_path(route)
+
+        return path
+
+
+    def handle_case_a_path(self, route):
+        """
+        Case A - for single-site non-op esters.
+        """
+        path = None
+        if route == "epoxide":
+            path = "1"
+        elif route in self.cleaved_list:
+            if "anhydride" in route:
+                path = "4"
+            else:
+                path = "5"
+        elif "halogenated aliphatics" in route:
+            path = "2"
+        else:
+            path = "3"
+        return path
+
+
+    def handle_case_c_path(self, route, child_nodes):
+        """
+        Case C - for multi-site with unique schemes.
+        """
+        path = None
+        if route in self.op_esters:
+            num_op_esters = self.count_op_esters(child_nodes)
+            if num_op_esters > 4:
+                path = "1"
+            else:
+                path = "2"
+        elif "epoxide" in route:
+            path = "3"
+        elif route in self.cleaved_list:
+            if "anhydride hydrolysis" in route:
+                path = "6"
+            elif "carboxylic acid ester" in route:
+                path = "5"
+            else:
+                path = "4"
+        else:
+            path = "4"
+        return path
+
+    def handle_case_d_path(self, route):
+        """
+        Case D - for multi-site with single scheme.
+        """
+        path = None
+        if "halogenated aliphatics" in route:
+            path = "1"
+        elif "epoxide" in route:
+            path = "2"
+        elif route in self.cleaved_list:
+            if "anhydride" in route:
+                path = "5"
+            else:
+                path = "3"
+        else:
+            path = "4"
+        return path
+
+
+    def group_products(self, child_nodes):
+        """
+        Loops child products and groups them by their case and path/scheme.
+        """
+        # Creating key for group that's case + path, e.g., "A2" = case A path 2
+        grouped_products = {}
+        for child_obj in child_nodes:
+            key = child_obj["case"] + child_obj["path"]
+            if key in list(grouped_products.keys()):
+                grouped_products[key].append(child_obj)
+            else:
+                grouped_products[key] = [child_obj]
+        return grouped_products
+
+
+    def validate_path_routes(self, child_obj_list):
+        """
+        Validates that all the child_obj's for a given path (e.g., "A5") 
+        are the same route.
+        """
+        if len(child_obj_list) < 1:
+            logging.warning("Cannot check routes, child_obj_list less than one.")
+            return False
+
+        init_route = child_obj_list[0].get("routes")
+        
+        for child_obj in child_obj_list[1:]:
+            route = child_obj.get("routes")
+
+            if self.is_op_ester(init_route) and not self.is_op_ester(route):
+                logging.warning("OP ester routes of the same path do not match.")
+                return False
+
+            elif not self.is_op_ester(init_route) and route != init_route:
+                logging.warning("Routes of the same path do not match.")
+                return False
+
+        return True
+
+
+    def get_qsar_for_products(self, parent, grouped_products):
+        """
+        Makes request to EPI for QSAR data.
+
+        grouped_products example:
+            {
+                "A5": [{child_obj}, {child_obj}, ..],
+                "B1": [{child_obj}, {child_obj}, ..]
+            }
+
+        NOTE: Each key indicating a path (e.g., "A5") should have the same route/scheme.
+        """
+        logging.info("get_qsar_for_products() grouped_products: {}".format(grouped_products))
+
+        all_products_list = []
+
+        for path_key, child_obj_list in grouped_products.items():
+
+            logging.info("Path key: {}\nchild_obj_list: {}".format(path_key, child_obj_list))
+
+            # NOTE: Case B path 1 has op ester 1 and 2, but are flagged as not matching
+            if not self.validate_path_routes(child_obj_list):
+                logging.warning("Routes for a given path do not match: {}".format(child_obj_list))
+                return False
+
+            case = path_key[0]
+            path = path_key[1]
+            route = child_obj_list[0]["routes"].lower()  # routes for child_obj_list should all be the same
+            route_endpoint = self.qsar_request_map[route]
+            url = self.baseUrl.replace("estimated", "") + route_endpoint
+
+            logging.info("Path key: {}\nRoute: {}\nUrl: {}".format(path_key, route, url))
+
+            response_obj = {
+                "status": False,
+                "qsar_response": None
+            }
+
+            if path_key in ["A2", "C1", "D1"]:
+                logging.info("Skipping request for case: {}, path: {}, assigning qualitative values.".format(case, path))
+                child_obj_list = self.assign_qualitative_values(child_obj_list)
+                all_products_list += child_obj_list
+                continue
+
+            try:
+
+                logging.info("Making QSAR request to EPI.")
+
+                response = requests.post(url, data=json.dumps({'structure': parent}), headers=self.headers)
+
+                if response.status_code != 200:
+                    logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
+                    for child_obj in child_obj_list:
+                        child_obj["error"] = "Error requesting half-life data from EPI."
+                        child_obj["prop"] = "qsar"
+                        child_obj["valid"] = False
+                    all_products_list += child_obj_list
+                    continue
+
+                response_obj = json.loads(response.content)
+
+                if not response_obj.get("data") or len(response_obj.get("data")) < 1:
+                    logging.warning("Error parsing half-life data from EPI response.")
+                    for child_obj in child_obj_list:
+                        child_obj["error"] = "Error parsing half-life data from EPI response."
+                        child_obj["prop"] = "qsar"
+                        child_obj["valid"] = False
+                    all_products_list += child_obj_list
+                    continue
+                
+                # Assigns data to products in list based on case and path.
+                child_obj_list = self.handle_hl_response(response_obj, parent, route, case, path, child_obj_list)
+
+                all_products_list += child_obj_list
+
+            except Exception as e:
+                logging.warning("Error making QSAR request: {}".format(e))
+                for child_obj in child_obj_list:
+                    # child_obj["data"] = None
+                    child_obj["error"] = "Error making request to EPI for half-life."
+                    child_obj["prop"] = "qsar"
+                    child_obj["valid"] = False
+                continue
+
+        return all_products_list
+
+
+    def handle_hl_response(self, response_obj, parent, route, case, path, child_obj_list):
+        """
+        Assigns HL to product based on case and path.
+        """
+        logging.info("HL Response: {}".format(response_obj))
+
+        site_type = ""
+
+        if case in ["A", "B"]:
+            site_type = "single"
+        elif case in ["C", "D"]:
+            site_type = "multi"
+
+        logging.info("Site type: {}".format(site_type))
+
+        num_hls = len(response_obj["data"])
+
+        logging.info("NUMBER OF HLS: {}".format(num_hls))
+            
+        if case == "A":
+            if path == "1":
+                return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
+            elif path == "2":
+                return self.assign_qualitative_values(child_obj_list)
+            else:
+                return self.hl_result_pattern("Kb", child_obj_list, response_obj)
+        elif case == "B":
+            return self.handle_op_ester_values(response_obj, child_obj_list)
+        elif case == "D":
+            child_obj_list = self.handle_case_d_results(path, response_obj, child_obj_list)
+        elif case == "C":
+            child_obj_list = self.handle_case_c_results(parent, path, route, response_obj, child_obj_list)
+
+        return child_obj_list
+
+
+    def handle_op_ester_values(self, response_obj, child_obj_list):
+        """
+        Assigns HL values based on OP ester 1 or 2.
+        """
+        op1_hl = None
+        op2_hl = None
+
+        # Gets HL values for OP ester 1 and 2:
+        for data_obj in response_obj.get("data"):
+            if data_obj["prop"] == "Kb":
+                op1_hl = data_obj.get("data")
+            elif data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn":
+                op2_hl = data_obj.get("data")
+
+        # Splits up op ester 1 and 2 values:
+        for child_obj in child_obj_list:
+            route = child_obj.get("routes").lower()
+            if route == self.op_esters[0]:
+                child_obj["data"] = self.round_half_life(op1_hl)
+            elif route == self.op_esters[1]:
+                child_obj["data"] = self.round_half_life(op2_hl)
+
+        return child_obj_list
+
+
+    def handle_case_d_results(self, path, response_obj, child_obj_list):
+        """
+        Assigns HL values to products based on case D paths.
+        """
+        logging.info("Case: D{}".format(path))
+        if path == "1":
+            return self.assign_qualitative_values(child_obj_list)
+        elif path == "2":
+            return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
+        elif path in ["3", "4", "5"]:
+            return self.hl_result_pattern("Kb", child_obj_list, response_obj)
+
+
+    def handle_case_c_results(self, parent, path, route, response_obj, child_obj_list):
+        """
+        Assigns HL values to products based on case C paths.
+        """
+        logging.info("Case: C{}".format(path))
+        if path == "1":
+            return self.assign_qualitative_values(child_obj_list)
+        elif path == "2":
+            return self.handle_op_ester_values(response_obj, child_obj_list)
+        elif path == "3":
+            return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
+        elif path == "4":
+            return self.hl_result_pattern("Kb", child_obj_list, response_obj)
+        elif path == "5" or path == "6":
+            matched_data = self.match_atom_with_func_groups(route, parent, response_obj, ["Kb"])
+            # logging.info("Functional groups for smiles: {}, route: {}: {}".format(parent, route, func_groups))
+            
+            if len(matched_data) < 1 or not "data" in matched_data[0]:
+                logging.warning("Matched data invalid size or 'data' not in list item. Using qualitative values.")
+                return self.assign_qualitative_values(child_obj_list)
+
+            logging.info("RESPONSE OBJ: {}".format(response_obj))
+            logging.info("MATCHED DATA: {}".format(matched_data))
+
+            return self.hl_result_pattern("Kb", child_obj_list, {"data": matched_data})
+
+
+    def hl_result_pattern(self, sort_prop, child_obj_list, response_obj):
+        """
+        Consolidating similar HL value assignment logic that accounts
+        for number of HL values. Shared across various cases.
+        """
+        sorted_response = self.sort_k_by_atom_number(response_obj, sort_prop)
+        if len(sorted_response) == 1:
+            for child_obj in child_obj_list:
+                child_obj["data"] = self.round_half_life(sorted_response[0]["data"])
+            return child_obj_list
+        elif len(sorted_response) > 1:
+            return self.split_hl_values(child_obj_list, sorted_response, "Kb")
+        else:
+            raise Exception("I'm not even supposed to be here.")
+
+
+    def split_hl_values(self, child_obj_list, sorted_response, sort_prop="Kb"):
+        """
+        Splits up HL values across products.
+
+        NOTE: This assumes two HLs and an even number of products!
+        """
+        # sorted_response = self.sort_k_by_atom_number(response_obj, sort_prop)  # NOTE: Now called in hl_result_pattern()
+        logging.info("Sorted response: {}".format(sorted_response))
+
+        num_products = len(child_obj_list)
+        num_hls = len(sorted_response)
+        mid_point = int(num_products / 2)
+
+        logging.info("Mid point: {}\nMid point type: {}".format(mid_point, type(mid_point)))
+
+        logging.info("Number of products: {}\nNumber of HLs: {}".format(num_products, num_hls))
+
+        # NOTE: This setup assumes that there are only 2 HLs
+
+        for child_obj in child_obj_list[0:mid_point]:
+            child_obj["data"] = self.round_half_life(sorted_response[0]["data"])
+
+        for child_obj in child_obj_list[mid_point:]:
+            child_obj["data"] = self.round_half_life(sorted_response[1]["data"])
+
+        return child_obj_list
 
 
     def make_qsar_request(self, request_dict):
@@ -581,125 +786,26 @@ class EpiCalc(Calculator):
         Makes requests to epi suite for half-lives.
         """
 
-        structure = request_dict.get("filtered_smiles")
+        # structure = request_dict.get("filtered_smiles")
+        parent = request_dict.get("filtered_smiles")
         unique_schemes_count = int(request_dict.get("uniqueSchemesCount"))  
         product_count = int(request_dict.get("productCount"))
         child_nodes = request_dict.get("childNodes")  # children of a single/given parent
         qsar_responses = []
 
-        logging.info("\n\n\n Starting main QSAR request loop.")
+        logging.info("\n\nStarting main QSAR request loop.\n\n")
 
-        for child_obj in child_nodes:
+        child_nodes = self.sort_products_by_case(parent, unique_schemes_count, product_count, child_nodes)
 
-            logging.info("~Child object: {}".format(child_obj))
+        grouped_products = self.group_products(child_nodes)
 
-            route = child_obj.get("routes").lower()
-            route_url = None
-            num_sites = None
-            is_num_sites_1 = False  # whether num_sites is == 1 or > 1
+        logging.info("GROUPED PRODUCTS: {}".format(grouped_products))
 
-            if not route in list(self.qsar_request_map.keys()):
-                # raise Exception("Route not found: {}.".format(route))
-                logging.warning("Route not found: {}".format(route))
-                qsar_response = {}
-                qsar_response.update(child_obj)
-                qsar_response["data"] = None
-                qsar_response["prop"] = "qsar"
-                qsar_response["valid"] = False
-                qsar_responses.append(qsar_response)
-                continue
+        qsar_responses = self.get_qsar_for_products(parent, grouped_products)
 
-            route_url = self.qsar_request_map[route]
-            url = self.baseUrl.replace("estimated", "") + route_url
+        logging.info("UPDATED CHILD NODES TO USE TO DETERMINE HL REQUESTS AND VALUE ASSIGNMENT: {}".format(child_nodes))
 
-            if not route in self.cleaved_list:
-                logging.info("Route not in cleaved list. Product count: {}".format(product_count))
-                if product_count > 1:
-                    is_num_sites_1 = False
-                else:
-                    is_num_sites_1 = True
-
-            elif route in self.cleaved_list and not route in self.op_esters:
-                logging.info("Route in cleaved list but not OP Ester. Product count: {}".format(product_count))
-                if product_count > 2:
-                    is_num_sites_1 = False
-                else:
-                    is_num_sites_1 = True
-
-            elif route in self.cleaved_list and route in self.op_esters:
-                logging.info("Route in cleaved list and an OP Ester. Product count: {}".format(product_count))
-                if product_count > 4:
-                    logging.info("Product count > 4.")
-                    is_num_sites_1 = False
-                    # qsar_response = {}
-                    # qsar_response.update(child_obj)
-                    # qsar_response["data"] = None
-                    # qsar_response["prop"] = "qsar"
-                    # qsar_response["valid"] = True
-                    # qsar_responses.append(qsar_response)
-                    # continue
-                else:
-                    logging.info("Product count <= 4.")
-                    is_num_sites_1 = True
-
-            else:
-                is_num_sites_1 = True
-
-            logging.info(">>> Is number of sites one?: {}".format(is_num_sites_1))
-            logging.info("Request to EPI for half life:\nURL:{}\nStructure:{}".format(url, structure))
-
-            response = requests.post(url, data=json.dumps({'structure': structure}), headers=self.headers)
-
-            if response.status_code != 200:
-                logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
-                qsar_response = {}
-                qsar_response.update(child_obj)
-                qsar_response["data"] = None
-                qsar_response["prop"] = "qsar"
-                qsar_response["valid"] = False
-                qsar_responses.append(qsar_response)
-                continue
-
-            # try:
-            response_obj = json.loads(response.content)
-
-            if not response_obj.get("data") or len(response_obj.get("data")) < 1:
-                raise Exception("Half-life response does not have excepted 'data' key or size is unexpected.\nResponse: {}".format(response_obj))
-            
-            # NOTE: If OP Ester 1/2 and num_sites <= 1, pick specific half-life value from set.
-            # Get Kb if OP Ester 1, and Ka/n for OP Ester 2
-
-            halfLifeValue, case = self.determine_halflife(structure, response_obj, child_nodes, route, is_num_sites_1, unique_schemes_count)
-
-            if case == "case D not anhydride":
-                # Assign HL1 to first half of children, HL2 to second half, no need to 
-                # continue looping and requesting.
-                logging.info("case D not anhydride.")
-                qsar_responses = self.assign_both_kb(child_nodes, halfLifeValue)
-                return qsar_responses
-            # elif case == "case C qualitative":
-            #     # Uses qualitative descriptor for half life values
-            #     logging.info("case C qualitative.")
-            #     qsar_responses = self.assign_qualitative_values(child_nodes)
-            #     return qsar_responses
-
-            qsar_response = {}
-            qsar_response.update(child_obj)
-            qsar_response["data"] = halfLifeValue
-            qsar_response["prop"] = "qsar"
-            qsar_response["valid"] = True
-
-            logging.info("QSAR response: {}\n\n".format(qsar_response))
-
-            qsar_responses.append(qsar_response)
-
-            # except Exception as e:
-            #     logging.warning("Error parsing QSAR response: {}".format(e))
-            #     qsar_response = {}
-            #     qsar_response["error"] = "Error getting QSAR data from EPI Suite"
-            #     qsar_response["valid"] = False
-            #     qsar_responses.append(qsar_response)
-
+        logging.info("QSAR RESPONSES: {}".format(qsar_responses))
 
         return qsar_responses
 
@@ -738,8 +844,6 @@ class EpiCalc(Calculator):
             # TODO: Account for not valid result_obj
 
             _response_dict['data'] = _result_obj
-
-            # _response_dict.update(_result_obj['data'])
             _response_dict['valid'] = True
 
             return _response_dict
