@@ -501,12 +501,7 @@ class EpiCalc(Calculator):
         elif "epoxide" in route:
             path = "3"
         elif route in self.cleaved_list:
-            if "anhydride hydrolysis" in route:
-                path = "6"
-            elif "carboxylic acid ester" in route:
-                path = "5"
-            else:
-                path = "4"
+            path = "5"
         else:
             path = "4"
         return path
@@ -521,10 +516,7 @@ class EpiCalc(Calculator):
         elif "epoxide" in route:
             path = "2"
         elif route in self.cleaved_list:
-            if "anhydride" in route:
-                path = "5"
-            else:
-                path = "3"
+            path = "3"
         else:
             path = "4"
         return path
@@ -674,13 +666,15 @@ class EpiCalc(Calculator):
 
         num_hls = len(response_obj["data"])
 
-        logging.info("NUMBER OF HLS: {}".format(num_hls))
+        logging.info("Number of HLs: {}".format(num_hls))
             
         if case == "A":
             if path == "1":
                 return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
             elif path == "2":
                 return self.assign_qualitative_values(child_obj_list)
+            elif path == "4":
+                return self.handle_functional_group_case(route, parent, response_obj, child_obj_list)
             else:
                 return self.hl_result_pattern("Kb", child_obj_list, response_obj)
         elif case == "B":
@@ -718,6 +712,20 @@ class EpiCalc(Calculator):
         return child_obj_list
 
 
+    def handle_functional_group_case(self, route, parent, response_obj, child_obj_list):
+        """
+        Finds HLs for any atom numbers that match ones returned 
+        by the functional groups. If number of sites is one, returns
+        an HL value.
+        """
+        matched_data = self.match_atom_with_func_groups(route, parent, response_obj, ["Kb"])
+        if len(matched_data) == 1 and "data" in matched_data[0]:
+            logging.info("Matched Data: {}".format(matched_data))
+            return self.hl_result_pattern("Kb", child_obj_list, {"data": matched_data})
+        logging.warning("Matched data not equal to one: {}. Using qualitative values.".format(matched_data))
+        return self.assign_qualitative_values(child_obj_list)
+
+
     def handle_case_d_results(self, path, response_obj, child_obj_list):
         """
         Assigns HL values to products based on case D paths.
@@ -727,7 +735,7 @@ class EpiCalc(Calculator):
             return self.assign_qualitative_values(child_obj_list)
         elif path == "2":
             return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
-        elif path in ["3", "4", "5"]:
+        elif path in ["3", "4"]:
             return self.hl_result_pattern("Kb", child_obj_list, response_obj)
 
 
@@ -742,20 +750,8 @@ class EpiCalc(Calculator):
             return self.handle_op_ester_values(response_obj, child_obj_list)
         elif path == "3":
             return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
-        elif path == "4":
+        elif path == "4" or path == "5":
             return self.hl_result_pattern("Kb", child_obj_list, response_obj)
-        elif path == "5" or path == "6":
-            matched_data = self.match_atom_with_func_groups(route, parent, response_obj, ["Kb"])
-            # logging.info("Functional groups for smiles: {}, route: {}: {}".format(parent, route, func_groups))
-            
-            if len(matched_data) < 1 or not "data" in matched_data[0]:
-                logging.warning("Matched data invalid size or 'data' not in list item. Using qualitative values.")
-                return self.assign_qualitative_values(child_obj_list)
-
-            logging.info("RESPONSE OBJ: {}".format(response_obj))
-            logging.info("MATCHED DATA: {}".format(matched_data))
-
-            return self.hl_result_pattern("Kb", child_obj_list, {"data": matched_data})
 
 
     def hl_result_pattern(self, sort_prop, child_obj_list, response_obj):
