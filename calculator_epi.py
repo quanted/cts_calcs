@@ -298,31 +298,32 @@ class EpiCalc(Calculator):
 
         matched_data = []
 
-        logging.info("HL Response: {}.".format(hl_response))
+        logging.warning("HL Response: {}.".format(hl_response))
+        logging.warning("Functional groups: {}".format(func_group))
 
         for data_obj in hl_response["data"]:
             
             atom_number = data_obj["atom_number"]
-            logging.info("Atom number: {}.".format(atom_number))
+            logging.warning("Atom number: {}.".format(atom_number))
 
             if not atom_number:
-                logging.info("Atom number is null, skipping to next one.")
+                logging.warning("Atom number is null, skipping to next one.")
                 continue
 
             for group_number in func_group:
 
-                logging.info("Group number: {}.".format(group_number))
+                logging.warning("Group number: {}.".format(group_number))
 
                 # if int(group_number) == int(atom_number) and data_obj["prop"] == prop:
                 if int(group_number) == int(atom_number) and data_obj["prop"] in props:
-                    logging.info("Matched atom with group number.")
+                    logging.warning("Matched atom with group number.")
                     matched_data.append(data_obj)
 
         logging.info("Matched data: {}.".format(matched_data))
 
         if len(matched_data) < 1:
             logging.warning("No matches for functional group and atom numbers. Returning blank HL object.")
-            return [{"data": None}]  # returns empty HL response
+            return None  # returns empty HL response
 
         return matched_data
 
@@ -720,7 +721,7 @@ class EpiCalc(Calculator):
         """
         matched_data = self.match_atom_with_func_groups(route, parent, response_obj, ["Kb"])
         if len(matched_data) == 1 and "data" in matched_data[0]:
-            logging.info("Matched Data: {}".format(matched_data))
+            logging.warning("Matched Data: {}".format(matched_data))
             return self.hl_result_pattern("Kb", child_obj_list, {"data": matched_data})
         logging.warning("Matched data not equal to one: {}. Using qualitative values.".format(matched_data))
         return self.assign_qualitative_values(child_obj_list)
