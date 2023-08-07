@@ -20,13 +20,32 @@ class RdkitCalc:
         self.CarbAnhydride_smarts = '[CX3;$([H0][#6]),$([H1])](=[OX1])[#8X2][CX3;$([H0][#6]),$([H1])](=[OX1])'
         self.CarbAnhydride = Chem.MolFromSmarts(self.CarbAnhydride_smarts)
 
+    def flatten(self, l):
+        """
+        Flattens a list of lists.
+        """
+        return [item for sublist in l for item in sublist]
+
+    def increment_atom_number(self, atom_list):
+        """
+        GetSubstructMatches uses 0-start index hydrowin use 1-start index.
+        this functions adds +1 to all list items in the return atom number list in the FindFG function to match better
+        """
+        updated_atoms = []
+        for atom in atom_list:
+            new_atom = atom + 1
+            updated_atoms.append(new_atom)
+        return updated_atoms
+
     def get_functional_groups_anhydride(self, smiles):
         """
         List of atoms in anhydride functional group.
         """
         mol = Chem.MolFromSmiles(smiles)
-        anhydride_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True)[0])
+        anhydride_atom = self.flatten(list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True)))
         logging.info("Anhydride group: {}".format(anhydride_atom))
+        anhydride_atom = self.increment_atom_number(anhydride_atom)
+        logging.info("Updated Anhydride group: {}".format(anhydride_atom))
         return anhydride_atom
 
     def get_functional_groups_cae(self, smiles):
@@ -34,8 +53,10 @@ class RdkitCalc:
         List of atoms in carboxylic acid ester functional group.
         """
         mol = Chem.MolFromSmiles(smiles)
-        CAE_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True)[0])
+        CAE_atom = self.flatten(list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True)))
         logging.info("CAE group: {}".format(CAE_atom))
+        CAE_atom = self.increment_atom_number(CAE_atom)
+        logging.info("Updated CAE group: {}".format(CAE_atom))
         return CAE_atom
 
     def get_functional_groups(self, route, smiles):
