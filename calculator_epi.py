@@ -323,7 +323,7 @@ class EpiCalc(Calculator):
 
         if len(matched_data) < 1:
             logging.warning("No matches for functional group and atom numbers. Returning blank HL object.")
-            return None  # returns empty HL response
+            return []  # returns empty HL response
 
         return matched_data
 
@@ -582,11 +582,6 @@ class EpiCalc(Calculator):
         for path_key, child_obj_list in grouped_products.items():
 
             logging.info("Path key: {}\nchild_obj_list: {}".format(path_key, child_obj_list))
-
-            # NOTE: Case B path 1 has op ester 1 and 2, but are flagged as not matching
-            if not self.validate_path_routes(child_obj_list):
-                logging.warning("Routes for a given path do not match: {}".format(child_obj_list))
-                return False
 
             case = path_key[0]
             path = path_key[1]
