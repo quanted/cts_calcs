@@ -20,32 +20,23 @@ class RdkitCalc:
         self.CarbAnhydride_smarts = '[CX3;$([H0][#6]),$([H1])](=[OX1])[#8X2][CX3;$([H0][#6]),$([H1])](=[OX1])'
         self.CarbAnhydride = Chem.MolFromSmarts(self.CarbAnhydride_smarts)
 
-    def flatten(self, l):
-        """
-        Flattens a list of lists.
-        """
-        return [item for sublist in l for item in sublist]
-
     def increment_atom_number(self, atom_list):
-        """
-        GetSubstructMatches uses 0-start index hydrowin use 1-start index.
-        this functions adds +1 to all list items in the return atom number list in the FindFG function to match better
-        """
-        updated_atoms = []
-        for atom in atom_list:
-            new_atom = atom + 1
-            updated_atoms.append(new_atom)
-        return updated_atoms
+        atoms = []
+        for site in atom_list:
+            new=[i+1 for i in site]
+            atoms.append(new)
+        logging.warning("Incremented atoms: {}".format(atoms))
+        return(atoms)
 
     def get_functional_groups_anhydride(self, smiles):
         """
         List of atoms in anhydride functional group.
         """
         mol = Chem.MolFromSmiles(smiles)
-        anhydride_atom = self.flatten(list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True)))
+        anhydride_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True))
         logging.info("Anhydride group: {}".format(anhydride_atom))
-        anhydride_atom = self.increment_atom_number(anhydride_atom)
-        logging.info("Updated Anhydride group: {}".format(anhydride_atom))
+        # anhydride_atom = self.increment_atom_number(anhydride_atom)
+        # logging.info("Updated Anhydride group: {}".format(anhydride_atom))
         return anhydride_atom
 
     def get_functional_groups_cae(self, smiles):
@@ -53,10 +44,10 @@ class RdkitCalc:
         List of atoms in carboxylic acid ester functional group.
         """
         mol = Chem.MolFromSmiles(smiles)
-        CAE_atom = self.flatten(list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True)))
+        CAE_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True))
         logging.info("CAE group: {}".format(CAE_atom))
-        CAE_atom = self.increment_atom_number(CAE_atom)
-        logging.info("Updated CAE group: {}".format(CAE_atom))
+        # CAE_atom = self.increment_atom_number(CAE_atom)
+        # logging.info("Updated CAE group: {}".format(CAE_atom))
         return CAE_atom
 
     def get_functional_groups(self, route, smiles):
@@ -68,6 +59,12 @@ class RdkitCalc:
             func_group = self.get_functional_groups_anhydride(smiles)
         elif route.lower() == "carboxylic acid ester hydrolysis":
             func_group = self.get_functional_groups_cae(smiles)
+
+        # increments atom numbers:
+        func_group = self.increment_atom_number(func_group)
+
+        logging.warning("Incremented groups: {}".format(func_group))
+
         return func_group
 
 
@@ -251,7 +248,14 @@ class EpiCalc(Calculator):
         # TODO: Create/filter list that's just Kb (or just Ka/n):
         filtered_hl_values = self.filter_by_property(response_obj, prop)
 
-        sorted_hl_values = sorted(response_obj['data'], key=lambda x: int(x["atom_number"]))
+        def sorting_func(item):
+            if "atom_number" in item and item["atom_number"] != None:
+                return int(item["atom_number"])
+            else:
+                return None
+
+        # sorted_hl_values = sorted(response_obj['data'], key=lambda x: int(x.get("atom_number")))
+        sorted_hl_values = sorted(response_obj['data'], key=sorting_func)
 
         # What to do with the sorted values?
 
@@ -284,70 +288,6 @@ class EpiCalc(Calculator):
         logging.debug("Filtered half-life response: {}".format(filtered_response))
 
         return filtered_response
-
-
-    def match_atom_with_func_groups(self, route, structure, hl_response, props):
-        """
-        Matches atom number from HL response with functional group.
-        """
-        if not "data" in hl_response:
-            logging.warning("Data key not in hl_response.")
-            return False
-
-        func_group = self.rdkit.get_functional_groups(route, structure)
-
-        matched_data = []
-
-        logging.warning("HL Response: {}.".format(hl_response))
-        logging.warning("Functional groups: {}".format(func_group))
-
-        for data_obj in hl_response["data"]:
-            
-            atom_number = data_obj["atom_number"]
-            logging.warning("Atom number: {}.".format(atom_number))
-
-            if not atom_number:
-                logging.warning("Atom number is null, skipping to next one.")
-                continue
-
-            for group_number in func_group:
-
-                logging.warning("Group number: {}.".format(group_number))
-
-                # if int(group_number) == int(atom_number) and data_obj["prop"] == prop:
-                if int(group_number) == int(atom_number) and data_obj["prop"] in props:
-                    logging.warning("Matched atom with group number.")
-                    matched_data.append(data_obj)
-
-        logging.info("Matched data: {}.".format(matched_data))
-
-        if len(matched_data) < 1:
-            logging.warning("No matches for functional group and atom numbers. Returning blank HL object.")
-            return []  # returns empty HL response
-
-        return matched_data
-
-
-    def get_kb_values(self, response_obj):
-        """
-        Returns data for Kb values.
-        """
-        kb_data = []
-        for data_obj in response_obj.get("data"):
-            if data_obj["prop"] == "Kb":
-                kb_data.append(data_obj)
-        return kb_data
-
-
-    def get_ka_kn_values(self, response_obj):
-        """
-        Returns data for Kb values.
-        """
-        ka_kn_data = []
-        for data_obj in response_obj.get("data"):
-            if data_obj["prop"] == "Ka" or data_obj["prop"] == "Kn":
-                ka_kn_data.append(data_obj)
-        return ka_kn_data
 
 
     def assign_qualitative_values(self, child_nodes):
@@ -538,31 +478,6 @@ class EpiCalc(Calculator):
         return grouped_products
 
 
-    def validate_path_routes(self, child_obj_list):
-        """
-        Validates that all the child_obj's for a given path (e.g., "A5") 
-        are the same route.
-        """
-        if len(child_obj_list) < 1:
-            logging.warning("Cannot check routes, child_obj_list less than one.")
-            return False
-
-        init_route = child_obj_list[0].get("routes")
-        
-        for child_obj in child_obj_list[1:]:
-            route = child_obj.get("routes")
-
-            if self.is_op_ester(init_route) and not self.is_op_ester(route):
-                logging.warning("OP ester routes of the same path do not match.")
-                return False
-
-            elif not self.is_op_ester(init_route) and route != init_route:
-                logging.warning("Routes of the same path do not match.")
-                return False
-
-        return True
-
-
     def get_qsar_for_products(self, parent, grouped_products):
         """
         Makes request to EPI for QSAR data.
@@ -640,6 +555,7 @@ class EpiCalc(Calculator):
                     child_obj["error"] = "Error making request to EPI for half-life."
                     child_obj["prop"] = "qsar"
                     child_obj["valid"] = False
+                all_products_list += child_obj_list
                 continue
 
         return all_products_list
@@ -714,11 +630,12 @@ class EpiCalc(Calculator):
         by the functional groups. If number of sites is one, returns
         an HL value.
         """
-        matched_data = self.match_atom_with_func_groups(route, parent, response_obj, ["Kb"])
-        if len(matched_data) == 1 and "data" in matched_data[0]:
-            logging.warning("Matched Data: {}".format(matched_data))
-            return self.hl_result_pattern("Kb", child_obj_list, {"data": matched_data})
-        logging.warning("Matched data not equal to one: {}. Using qualitative values.".format(matched_data))
+        func_group = self.rdkit.get_functional_groups(route, parent)
+        logging.warning("Functional groups: {}".format(func_group))
+        logging.warning("Num of sites for FGs: {}".format(len(func_group)))
+        logging.warning("response_obj: {}".format(response_obj))
+        if len(func_group) == 1:
+            return self.hl_result_pattern("Kb", child_obj_list, response_obj)
         return self.assign_qualitative_values(child_obj_list)
 
 
