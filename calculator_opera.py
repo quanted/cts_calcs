@@ -7,12 +7,12 @@ from .calculator import Calculator
 # from .chemical_information import SMILESFilter
 from .chemical_information import ChemInfo
 from .mongodb_handler import MongoDBHandler
-from .actorws import CCTE
+from .actorws import CCTE_EPA
 
 
 db_handler = MongoDBHandler()  # mongodb handler for opera pchem data
 chem_info_obj = ChemInfo()
-ccte_obj = CCTE()
+ccte_obj = CCTE_EPA()
 
 
 class OperaCalc(Calculator):

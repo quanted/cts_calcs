@@ -4,10 +4,13 @@ import logging
 
 
 
-class CCTE:
+class CCTE_EPA:
 	"""
 	New endpoints to use instead of ACTORWS.
-	https://ccte-api-ccd.epa.gov
+	https://ccte-api-ccd.epa.gov.
+	Only available within the EPA network, and technically
+	a staging server. Public endpoints deployed at
+	https://api-ccte.epa.gov/
 	"""
 	def __init__(self):
 		self.base_url = "https://ccte-api-ccd.epa.gov"

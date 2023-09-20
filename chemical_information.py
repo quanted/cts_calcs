@@ -4,8 +4,9 @@ import requests
 import logging
 import json
 from .calculator_metabolizer import MetabolizerCalc
-from .actorws import ACTORWS, CCTE
+from .actorws import ACTORWS, CCTE_EPA
 from .smilesfilter import SMILESFilter
+from .ccte import CCTE
 
 
 
@@ -66,6 +67,7 @@ class ChemInfo(object):
 	"""
 	def __init__(self, chemical=""):
 		self.actorws_obj = ACTORWS()
+		self.ccte_epa_obj = CCTE_EPA()
 		self.ccte_obj = CCTE()
 		self.smiles_filter_obj = SMILESFilter()
 		self.calc_obj = MetabolizerCalc()  # note: inherits Calculator class as well
@@ -207,8 +209,13 @@ class ChemInfo(object):
 		chem_type = self.calc_obj.get_chemical_type(chemical)
 
 		if not chem_type.get('type') or 'error' in chem_type:
-			 # If ChemAxon can't get chemical type, then try to get chem info
-			 # data from ACTORWS instead.
+			
+
+			# TODO: Return error message if chem_type cannot be received from chemaxon.
+
+
+			# If ChemAxon can't get chemical type, then try to get chem info
+			# data from ACTORWS instead.
 			logging.info("Couldn't get chemical type from ChemAxon. Trying to get data from ACTORWS.")
 			chemid_results = self.handle_no_chemaxon(chemical, request_post)
 			if 'error' in chemid_results:
@@ -219,6 +226,7 @@ class ChemInfo(object):
 			elif chemid_results.get('casrn'):
 				chemical = chemid_results['casrn']
 				logging.info("Setting chemical to ACTORWS casrn to continue chem info routine.")
+
 
 		# Checks chemical to make sure it's not actually an acronym instead of smiles (e.g., PFAS):
 		if chem_type.get('type') == 'smiles' or chem_type.get('type') == 'smarts':
@@ -237,10 +245,10 @@ class ChemInfo(object):
 		# # ACTORWS requests handling for getting DSSTOX data
 		# if chem_type.get('type') == 'CAS#':
 		# 	# Gets dsstox results using user-entered CAS#:
-		# 	dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
+		# 	dsstox_results = self.ccte_epa_obj.get_chemical_results(chemical, "casrn")
 		# 	_actor_results.update(dsstox_results)
 		# elif chem_type.get("type") == "name":
-		# 	dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
+		# 	dsstox_results = self.ccte_epa_obj.get_chemical_results(chemical, "name")
 		# 	_actor_results.update(dsstox_results)
 		# else:
 		# 	pass  # TODO: Use name or cas from ChemAxon to get CCTE data
@@ -250,12 +258,18 @@ class ChemInfo(object):
 		# if only_dsstox:
 		# 	return dsstox_results.get('data', {})
 
-		# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
+		# # Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
+		# if chem_type['type'] == 'smiles':
+		# 	orig_smiles = chemical  # use user-entered smiles as orig_siles
+		# elif 'smiles' in _actor_results.get('data', {}) and _actor_results['data']['smiles']:
+		# 	orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
+		# 	logging.info("Using actorws smiles as original smiles..")
+		# else:
+		# 	logging.info("smiles not in user request or actorws results, getting from jchem ws..")
+		# 	orig_smiles = self.calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
+				# Uses SMILES from actorws if it's there, or user's smiles if not, then jchem smiles if the previous are false:
 		if chem_type['type'] == 'smiles':
 			orig_smiles = chemical  # use user-entered smiles as orig_siles
-		elif 'smiles' in _actor_results.get('data', {}) and _actor_results['data']['smiles']:
-			orig_smiles = _actor_results['data']['smiles']  # use actorws smiles as orig_smiles
-			logging.info("Using actorws smiles as original smiles..")
 		else:
 			logging.info("smiles not in user request or actorws results, getting from jchem ws..")
 			orig_smiles = self.calc_obj.convertToSMILES({'chemical': chemical}).get('structure')
@@ -286,15 +300,21 @@ class ChemInfo(object):
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
 		molecule_obj['smiles'] = filtered_smiles
 
-		# ACTORWS requests handling for getting DSSTOX data
-		if chem_type.get('type') == 'CAS#':
-			# Gets dsstox results using user-entered CAS#:
-			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "casrn")
-		elif chem_type.get("type") == "name":
-			dsstox_results = self.ccte_obj.get_chemical_results(chemical, "name")
-		else:
-			dsstox_results = self.ccte_obj.get_chemical_results(molecule_obj["preferredName"], "name")
-		_actor_results.update(dsstox_results)
+
+		# # ACTORWS requests handling for getting DSSTOX data
+		# if chem_type.get('type') == 'CAS#':
+		# 	# Gets dsstox results using user-entered CAS#:
+		# 	dsstox_results = self.ccte_epa_obj.get_chemical_results(chemical, "casrn")
+		# elif chem_type.get("type") == "name":
+		# 	dsstox_results = self.ccte_epa_obj.get_chemical_results(chemical, "name")
+		# else:
+		# 	dsstox_results = self.ccte_epa_obj.get_chemical_results(molecule_obj["preferredName"], "name")
+		# _actor_results.update(dsstox_results)
+
+		# Public CCTE requests handling for getting DSSTOX data
+		ccte_results = self.ccte_obj.make_search_request(molecule_obj["preferredName"])
+		_actor_results.update(ccte_results)
+		logging.warning("CCTE RESULTS: {}".format(ccte_results))
 
 		# Returns dsstox substance ID if that's all that's needed,
 		# which is used as the DB key for the chem-info document:
