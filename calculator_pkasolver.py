@@ -82,22 +82,36 @@ class PkaSolverCalc(Calculator):
         post_data = {
             "smiles": chemical
         }
-        # if data_type and :
-        #     post_data["data_type"] = data_type
 
-        # try:
-        response = requests.get(self.pkasolver_api_url, params=post_data, timeout=self.timeout)
-        # except requests.exceptions.RequestException as e:
-        #     logging.warning("calculator_pkasolver exception: {}".format(e))
-        #     _response_obj.update({'error': "Error getting data from pkasolver"})
-        #     return _response_obj
 
-        logging.warning("Response: {}".format(response))
-        logging.warning("Response content: {}".format(response.content))
+        
+        # TODO: Error handling for request. If pkasolver fails continue on with the
+        # normal speciation output.
 
-        _results = json.loads(response.content)
 
-        _response_obj['data'] = _results
+
+        try:
+            response = requests.get(self.pkasolver_api_url, params=post_data, timeout=self.timeout)
+        except requests.exceptions.RequestException as e:
+            logging.warning("calculator_pkasolver exception: {}".format(e))
+            _response_obj.update({'error': "Error getting data from pkasolver"})
+            return _response_obj
+
+        results = json.loads(response.content)
+
+        microspecies = []
+
+        # Get chem info for returned microspecies:
+        for key, smiles in results.get("species", {}).items():
+            chem_info = self.getStructInfo(smiles)
+            ms_key = "microspecies" + str(int(key) + 1)
+            chem_info.update({"key": ms_key})
+            microspecies.append(chem_info)
+
+        results["pka_microspecies"] = microspecies
+        del results["species"]
+
+        _response_obj['data'] = results
         _response_obj['chemical'] = request_dict.get('chemical')
         _response_obj['request_post'] = request_dict
 
