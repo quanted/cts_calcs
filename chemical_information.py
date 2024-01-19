@@ -313,13 +313,17 @@ class ChemInfo(object):
 
 		# Public CCTE requests handling for getting DSSTOX data
 		ccte_results = self.ccte_obj.make_search_request(molecule_obj["preferredName"])
-		_actor_results.update(ccte_results)
+
+		if ccte_results:
+			_actor_results.update(ccte_results)
+			
 		logging.warning("CCTE RESULTS: {}".format(ccte_results))
 
 		# Returns dsstox substance ID if that's all that's needed,
 		# which is used as the DB key for the chem-info document:
 		if only_dsstox:
-			return dsstox_results.get('data', {})
+			# return dsstox_results.get('data', {})
+			return _actor_results.get('data', {})
 
 
 		cas_list = self.make_cas_request(filtered_smiles)  # gets CAS from cactus.nci.nih.gov (deprecated in jchemws)

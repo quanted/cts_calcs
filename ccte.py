@@ -172,7 +172,7 @@ class CCTE:
 			logging.info("Search response for {}: {}".format())
 			return json.loads(response.content)
 		except Exception as e:
-			logging.warning("ccte make_details_request exception, url: {}: {}".format(url, e))
+			logging.warning("CCTE make_details_request exception, url: {}: {}".format(url, e))
 			return False
 
 	def get_details_results(self, response):
