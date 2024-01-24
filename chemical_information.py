@@ -316,7 +316,7 @@ class ChemInfo(object):
 
 		if ccte_results:
 			_actor_results.update(ccte_results)
-			
+
 		logging.warning("CCTE RESULTS: {}".format(ccte_results))
 
 		# Returns dsstox substance ID if that's all that's needed,
@@ -343,6 +343,8 @@ class ChemInfo(object):
 
 		# Replaces certain keys in molecule_obj with actorws values:
 		for key, val in _actor_results.get('data', {}).items():
+			if not val:
+				continue
 			if key != 'iupac' and key != 'smiles':
 				molecule_obj[key] = val
 
