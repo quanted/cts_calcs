@@ -30,6 +30,8 @@ class CCTE_EPA:
 			"searchItems": ""
 		}
 
+		self.default_timeout = 5
+
 		########################################
 		# BATCH REQUEST EXAMPLES
 		########################################
@@ -93,7 +95,7 @@ class CCTE_EPA:
 
 	def _make_request(self, url, data):
 		try:
-			_response = requests.post(url, json=data, headers={'Content-Type': 'application/json'}, timeout=15)
+			_response = requests.post(url, json=data, headers={'Content-Type': 'application/json'}, timeout=self.default_timeout)
 		except requests.exceptions.Timeout as e:
 			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
 			return None
@@ -189,7 +191,7 @@ class ACTORWS(object):
 
 	def make_request(self, url, payload):
 		try:
-			_response = requests.get(url, params=payload, timeout=15)
+			_response = requests.get(url, params=payload, timeout=self.default_timeout)
 		except requests.exceptions.Timeout as e:
 			logging.warning("Request to {} timed out.. No data from actorws..".format(url))
 			return None
