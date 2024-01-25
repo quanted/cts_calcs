@@ -32,6 +32,8 @@ class CCTE:
 			"x-api-key": None  # API key they provided us (set in env/config)
 		}
 
+		self.default_timeout = 5
+
 		self.dsstox_result_keys = ['casrn', 'dtxsid', 'preferredName', 'smiles']  # result keys for chem info
 		self.keys_of_interest = ["dtxsid", "casrn", "preferredName", "smiles"]  # (from actorws.py)
 
@@ -139,7 +141,7 @@ class CCTE:
 		url = self.ccte_base_url + self.chem_search_equal_url.format(html.escape(chemical))
 		response = None
 		try:
-			response = requests.get(url, headers=self.headers)
+			response = requests.get(url, headers=self.headers, timeout=self.default_timeout)
 		except Exception as e:
 			logging.warning("ccte make_search_request exception, url: {}: {}".format(url, e))
 			return False
