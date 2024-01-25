@@ -32,7 +32,7 @@ class CCTE:
 			"x-api-key": None  # API key they provided us (set in env/config)
 		}
 
-		self.default_timeout = 5
+		self.default_timeout = 2
 
 		self.dsstox_result_keys = ['casrn', 'dtxsid', 'preferredName', 'smiles']  # result keys for chem info
 		self.keys_of_interest = ["dtxsid", "casrn", "preferredName", "smiles"]  # (from actorws.py)
