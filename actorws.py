@@ -30,7 +30,7 @@ class CCTE_EPA:
 			"searchItems": ""
 		}
 
-		self.default_timeout = 3
+		self.default_timeout = 2
 
 		########################################
 		# BATCH REQUEST EXAMPLES
