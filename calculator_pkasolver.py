@@ -17,7 +17,7 @@ class PkaSolverCalc(Calculator):
         self.urlStruct = "/pkasolver/data"
         self.pkasolver_api_url = self.baseUrl + self.urlStruct
         self.name = 'pkasolver'
-        self.timeout = 600  # request timeout in seconds
+        self.timeout = 10  # request timeout in seconds
         self.products_list = []  # single-level list of products with genKey
         self.metID = 0  # unique id for each node
         self.meta_info = {
