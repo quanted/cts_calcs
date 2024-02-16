@@ -6,6 +6,7 @@ import redis
 from .chemical_information import SMILESFilter
 from .calculator import Calculator
 from .jchem_properties import JchemProperty
+from rdkit import Chem
 
 
 
@@ -53,6 +54,31 @@ class JchemCalc(Calculator):
             'stereoisomers_maxNoOfStructures': None,
         }
 
+
+    def sort_microspecies(self, ms_list):
+        """
+        Sorts MS by pka using rdkit.
+        """
+        formalCharge={}
+        for ms_obj in ms_list:
+            chemical = ms_obj["structureData"]["structure"]
+            smiles_resp = self.convertToSMILES({"chemical": chemical})
+            smiles = smiles_resp.get("structure")
+            mol = Chem.MolFromSmiles(smiles)
+            fc = Chem.rdmolops.GetFormalCharge(mol)  # calculates formal charge
+            ms_obj["fc"] = fc  # adding key:val for FC for each MS
+
+        sorted_ms_list = sorted(ms_list, key=lambda item: item["fc"], reverse=True)
+        sorted_ms_list = self.update_ms_id(sorted_ms_list)
+
+        return sorted_ms_list
+
+    def update_ms_id(self, ms_list):
+        """
+        """
+        for i, ms in enumerate(ms_list):
+            ms["key"] = "microspecies{}".format(i + 1)
+        return ms_list 
 
 
     def data_request_handler(self, request_dict):
@@ -145,6 +171,10 @@ class JchemCalc(Calculator):
             })
             self.jchem_prop_obj.make_data_request(request['chemical'], pkaObj)
             jchemPropObjects['pKa'] = pkaObj
+
+            ms = pkaObj.results["microspecies"]  # orig results, pre <img> wrappers and IDs
+            sorted_ms_list = self.sort_microspecies(ms)  # sorts by FC
+            sorted_ms_list = pkaObj.getMicrospecies()  # wraps MS for output page
 
             # Makes call for majorMS:
             majorMsObj = JchemProperty.getPropObject('majorMicrospecies')
