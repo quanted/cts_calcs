@@ -69,7 +69,7 @@ class JchemCalc(Calculator):
             ms_obj["fc"] = fc  # adding key:val for FC for each MS
 
         sorted_ms_list = sorted(ms_list, key=lambda item: item["fc"], reverse=True)
-        sorted_ms_list = self.update_ms_id(sorted_ms_list)
+        # sorted_ms_list = self.update_ms_id(sorted_ms_list)
 
         return sorted_ms_list
 
@@ -173,8 +173,14 @@ class JchemCalc(Calculator):
             jchemPropObjects['pKa'] = pkaObj
 
             ms = pkaObj.results["microspecies"]  # orig results, pre <img> wrappers and IDs
+
             sorted_ms_list = self.sort_microspecies(ms)  # sorts by FC
+
+            pkaObj.results["microspecies"] = sorted_ms_list  # sets ms in pka object
+
             sorted_ms_list = pkaObj.getMicrospecies()  # wraps MS for output page
+
+            # sorted_ms_list = self.update_ms_id(sorted_ms_list)
 
             # Makes call for majorMS:
             majorMsObj = JchemProperty.getPropObject('majorMicrospecies')
