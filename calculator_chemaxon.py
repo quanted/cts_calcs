@@ -78,10 +78,8 @@ class JchemCalc(Calculator):
         """
         """
         for i, ms in enumerate(ms_list):
-            logging.warning("orig key: {}".format(ms["key"]))
             new_key = "microspecies{}".format(i + 1)
             ms["key"] = new_key
-            logging.warning("new key: {}".format(ms["key"]))
         return ms_list 
 
 
@@ -116,11 +114,7 @@ class JchemCalc(Calculator):
                 'run_type': "single",
                 'request_post': request_dict
             }
-
             speciation_data = self.get_speciation_results(request_dict)
-
-            logging.warning("speciation_data: {}".format(speciation_data))
-
             data_obj['request_post'] = {'service': "speciation"}
             data_obj['data'] = speciation_data
 
