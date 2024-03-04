@@ -59,17 +59,18 @@ class JchemCalc(Calculator):
         """
         Sorts MS by pka using rdkit.
         """
+        sorted_keys = []  # re-ordered using original indices
         formalCharge={}
-        for ms_obj in ms_list:
+        for i, ms_obj in enumerate(ms_list):
             chemical = ms_obj["structureData"]["structure"]
             smiles_resp = self.convertToSMILES({"chemical": chemical})
             smiles = smiles_resp.get("structure")
             mol = Chem.MolFromSmiles(smiles)
             fc = Chem.rdmolops.GetFormalCharge(mol)  # calculates formal charge
             ms_obj["fc"] = fc  # adding key:val for FC for each MS
+            ms_obj["orig_key"] = "microspecies" + str(i + 1)
 
         sorted_ms_list = sorted(ms_list, key=lambda item: item["fc"], reverse=True)
-        # sorted_ms_list = self.update_ms_id(sorted_ms_list)
 
         return sorted_ms_list
 
@@ -77,7 +78,10 @@ class JchemCalc(Calculator):
         """
         """
         for i, ms in enumerate(ms_list):
-            ms["key"] = "microspecies{}".format(i + 1)
+            logging.warning("orig key: {}".format(ms["key"]))
+            new_key = "microspecies{}".format(i + 1)
+            ms["key"] = new_key
+            logging.warning("new key: {}".format(ms["key"]))
         return ms_list 
 
 
@@ -114,6 +118,8 @@ class JchemCalc(Calculator):
             }
 
             speciation_data = self.get_speciation_results(request_dict)
+
+            logging.warning("speciation_data: {}".format(speciation_data))
 
             data_obj['request_post'] = {'service': "speciation"}
             data_obj['data'] = speciation_data
@@ -172,15 +178,18 @@ class JchemCalc(Calculator):
             self.jchem_prop_obj.make_data_request(request['chemical'], pkaObj)
             jchemPropObjects['pKa'] = pkaObj
 
+            # MS sorting:
             ms = pkaObj.results["microspecies"]  # orig results, pre <img> wrappers and IDs
-
             sorted_ms_list = self.sort_microspecies(ms)  # sorts by FC
+            sorted_keys = [item.get("orig_key") for item in sorted_ms_list]  # list of keys in new order
+            sorted_ms_list = self.update_ms_id(sorted_ms_list)  # renumbers keys
+            pkaObj.results["microspecies"] = sorted_ms_list
 
-            pkaObj.results["microspecies"] = sorted_ms_list  # sets ms in pka object
-
-            sorted_ms_list = pkaObj.getMicrospecies()  # wraps MS for output page
-
-            # sorted_ms_list = self.update_ms_id(sorted_ms_list)
+            # Chart data sorting:
+            pka_chartdata = pkaObj.results["chartData"]
+            sorted_pka_chartdata = sorted(pka_chartdata, key=lambda obj: sorted_keys.index(obj["key"]))  # sorts chart data like ms list
+            sorted_pka_chartdata =  self.update_ms_id(sorted_pka_chartdata)  # renumbers keys
+            pkaObj.results["chartData"] = sorted_pka_chartdata
 
             # Makes call for majorMS:
             majorMsObj = JchemProperty.getPropObject('majorMicrospecies')
