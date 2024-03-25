@@ -42,7 +42,7 @@ class PkaSolverCalc(Calculator):
             'request_post': None            
         }
 
-    def validate_response(self, response):
+    def validate_response(self, results):
         """
         Validate response content from cts_pkasolver.
         Example repsonse: {
@@ -50,7 +50,7 @@ class PkaSolverCalc(Calculator):
             "status": true
         }
         """
-        if response.get("status") != True:
+        if results.get("status") != True:
             # TODO: Send error like other calculator_*.py modules.
             error_response = {
                 "data": "Error making request to cts-pkasolver",
@@ -58,22 +58,12 @@ class PkaSolverCalc(Calculator):
             }
             return error_response
 
-        # Gets pka values as a list:
-        pka_list = response.get("pka_list")
-
-        if not pka_list or len(pka_list) < 1:
-            error_response = {
-                "data": "Error making request to cts-pkasolver",
-                "valid": False
-            }
-            return error_response
-
-        return pka_list
+        return results
 
     def data_request_handler(self, request_dict):
 
         chemical = request_dict["chemical"]
-        # data_type = request_dict.get("data_type")
+        microspecies = []  # pkasolver microspecies
 
         # TODO: Any sort of SMILES validation??
 
@@ -83,23 +73,16 @@ class PkaSolverCalc(Calculator):
             "smiles": chemical
         }
 
-
-        
-        # TODO: Error handling for request. If pkasolver fails continue on with the
-        # normal speciation output.
-
-
+        results = None
 
         try:
             response = requests.get(self.pkasolver_api_url, params=post_data, timeout=self.timeout)
-        except requests.exceptions.RequestException as e:
+            results = json.loads(response.content)
+            results = self.validate_response(results)
+        except Exception as e:
             logging.warning("calculator_pkasolver exception: {}".format(e))
-            _response_obj.update({'error': "Error getting data from pkasolver"})
+            _response_obj.update({"valid": False, 'data': "Error getting data from pkasolver"})
             return _response_obj
-
-        results = json.loads(response.content)
-
-        microspecies = []
 
         # Get chem info for returned microspecies:
         for key, smiles in results.get("species", {}).items():
