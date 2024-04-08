@@ -43,7 +43,7 @@ class MolgpkaCalc(Calculator):
         if results.get("status") != True:
             # TODO: Send error like other calculator_*.py modules.
             error_response = {
-                "data": "Error making request to cts-pkasolver",
+                "error": "Error making request to cts-pkasolver",
                 "valid": False
             }
             return error_response

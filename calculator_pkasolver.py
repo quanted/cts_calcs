@@ -53,7 +53,7 @@ class PkaSolverCalc(Calculator):
         if results.get("status") != True:
             # TODO: Send error like other calculator_*.py modules.
             error_response = {
-                "data": "Error making request to cts-pkasolver",
+                "error": "Error making request to cts-pkasolver",
                 "valid": False
             }
             return error_response
@@ -81,7 +81,7 @@ class PkaSolverCalc(Calculator):
             results = self.validate_response(results)
         except Exception as e:
             logging.warning("calculator_pkasolver exception: {}".format(e))
-            _response_obj.update({"valid": False, 'data': "Error getting data from pkasolver"})
+            _response_obj.update({"valid": False, 'error': "Error getting data from pkasolver"})
             return _response_obj
 
         # Get chem info for returned microspecies:
