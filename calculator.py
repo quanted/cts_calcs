@@ -6,7 +6,7 @@ import requests
 import json
 import logging
 import os
-import redis
+# import redis
 import datetime
 import pytz
 
@@ -29,9 +29,9 @@ class Calculator(object):
 
 		self.default_ph = 7.0
 
-		self.redis_hostname = os.environ.get('REDIS_HOSTNAME')
-		self.redis_port = os.environ.get('REDIS_PORT')
-		self.redis_conn = redis.StrictRedis(host=self.redis_hostname, port=self.redis_port, db=0)
+		# self.redis_hostname = os.environ.get('REDIS_HOSTNAME')
+		# self.redis_port = os.environ.get('REDIS_PORT')
+		# self.redis_conn = redis.StrictRedis(host=self.redis_hostname, port=self.redis_port, db=0)
 
 		self.jchem_server_url = os.environ.get('CTS_JCHEM_SERVER', 'localhost:8080')
 		self.efs_server_url = os.environ.get('CTS_EFS_SERVER', 'localhost:8080')

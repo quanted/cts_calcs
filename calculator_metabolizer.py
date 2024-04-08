@@ -2,7 +2,7 @@ import requests
 import json
 import logging
 import os
-import redis
+# import redis
 from .calculator import Calculator
 
 

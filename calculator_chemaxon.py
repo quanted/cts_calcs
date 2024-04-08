@@ -2,7 +2,7 @@ import requests
 import json
 import logging
 import os
-import redis
+# import redis
 from .chemical_information import SMILESFilter
 from .calculator import Calculator
 from .jchem_properties import JchemProperty
