@@ -13,7 +13,7 @@ class MolgpkaCalc(Calculator):
 
     def __init__(self):
         Calculator.__init__(self)
-        self.baseUrl = os.environ.get('CTS_MOLGPKA_SERVER')
+        self.baseUrl = os.environ.get('CTS_MOLGPKA_SERVER', 'http://localhost')
         self.urlStruct = "/molgpka/data"
         self.molgpka_api_url = self.baseUrl + self.urlStruct
         self.name = 'molgpka'
@@ -68,9 +68,9 @@ class MolgpkaCalc(Calculator):
             response = requests.get(self.molgpka_api_url, params=post_data, timeout=self.timeout)
             results = json.loads(response.content)
             results = self.validate_response(results)
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logging.warning("calculator_molgpka exception: {}".format(e))
-            _response_obj.update({'error': "Error getting data from molgpka"})
+            _response_obj.update({"valid": False, "error": "Error getting data from molgpka"})
             return _response_obj
 
         _response_obj['data'] = results
