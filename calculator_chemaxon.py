@@ -29,6 +29,7 @@ class JchemCalc(Calculator):
         self.props = ['water_sol', 'ion_con', 'kow_no_ph', 'kow_wph', 'water_sol_ph']  # available pchem props
         self.prop_name = prop_name  # prop name for JchemCalc instance
         self.format_url = '/rest-v0/util/analyze'  # returns chemical's format (e.g., "smiles", "casrn")
+        self.ctsws_pka_url = os.environ['CTS_EFS_SERVER'] + "/ctsws/rest/pka"
         self.jchem_prop_obj = JchemProperty()
 
         # Chemaxon speciation request object:
@@ -80,7 +81,59 @@ class JchemCalc(Calculator):
         for i, ms in enumerate(ms_list):
             new_key = "microspecies{}".format(i + 1)
             ms["key"] = new_key
-        return ms_list 
+        return ms_list
+
+
+    def make_pka_request(self, request_dict):
+        """
+        Makes request to CTSWS pka endpoint.
+
+        NOTE: Use smiles from molgpka (I think).
+
+        Example response:
+        {
+            "results": {
+                "pka_dict": {
+                    "2.469229772182635": 10,
+                    "9.446936344396194": 0
+                },
+                "pkb": [
+                    9.446936344396194
+                ],
+                "pka": [
+                    2.469229772182635
+                ]
+            },
+            "status": "success"
+        }
+        """
+
+        request_obj = {
+            "inputFormat": "smiles",
+            "micro": False,
+            "outputFormat": "mrv",
+            "outputStructureIncluded": False,
+            "pKaLowerLimit": 0,
+            "pKaUpperLimit": 14,
+            "prefix": "DYNAMIC",
+            "structure": "",
+            "temperature": 298,
+            "types": "pKa, acidic, basic"
+        }
+        request_obj["structure"] = request_dict["chemical"]
+
+        try:
+            response = requests.post(self.ctsws_pka_url, json=request_obj)
+            response_json = json.loads(response.content)
+        except Exception as e:
+            logging.error("Could not make request to ctsws pka: {}".format(e))
+            request_obj.update({"data": "Cannot reach ctsws for pka"})
+            return request_obj
+
+        response_dict = dict(request_obj)
+
+        response_dict.update(response_json)
+        return response_dict
 
 
     def data_request_handler(self, request_dict):
@@ -171,6 +224,15 @@ class JchemCalc(Calculator):
             })
             self.jchem_prop_obj.make_data_request(request['chemical'], pkaObj)
             jchemPropObjects['pKa'] = pkaObj
+
+
+            # Gets pka, pkb, and pka_dict from ctsws pka module:
+            pka_response = self.make_pka_request(request)
+            jchem_pka_dict = pka_response["results"]["pka_dict"]
+            pkaObj.results["pka_dict"] = {key: round(float(val), 2) for key, val in jchem_pka_dict.items()}
+            pkaObj.results["pka"] = pka_response["results"]["pka"]
+            pkaObj.results["pkb"] = pka_response["results"]["pkb"]
+
 
             # MS sorting:
             ms = pkaObj.results["microspecies"]  # orig results, pre <img> wrappers and IDs

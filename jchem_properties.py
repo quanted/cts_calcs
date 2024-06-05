@@ -163,8 +163,11 @@ class JchemProperty(Calculator):
 
             if key == 'pKa':
                 jchem_results_obj.update({
-                    'pka': jchemResultObjects['pKa'].getMostAcidicPka(),
-                    'pkb': jchemResultObjects['pKa'].getMostBasicPka(),
+                    # 'pka': jchemResultObjects['pKa'].getMostAcidicPka(),
+                    # 'pkb': jchemResultObjects['pKa'].getMostBasicPka(),
+                    'pka_dict': jchemResultObjects['pKa'].getPkaDict(),
+                    'pka': jchemResultObjects['pKa'].getPka(),
+                    'pkb': jchemResultObjects['pKa'].getPkb(),
                     'pka_parent': jchemResultObjects['pKa'].getParent(),
                     'pka_microspecies': jchemResultObjects['pKa'].getMicrospecies(),
                     'pka_chartdata': jchemResultObjects['pKa'].getChartData()
@@ -201,6 +204,43 @@ class Pka(JchemProperty):
             "pKaUpperLimit": 14.0,
             "prefix": "DYNAMIC"
         }
+
+    def getPkaDict(self):
+        """
+        Gets dict of pka where key is atom index and val is pka.
+        """
+        pka_dict = {}
+        if not 'pka_dict' in self.results:
+            logging.warning("key: 'pka_dict' not in self.results")
+            return pka_dict
+        else:
+            return self.results['pka_dict']
+
+    def getPka(self):
+        """
+        Picks out pKa acidic value(s) from CTSWS, returns list
+        """
+        pkaValList = []
+        if 'pka' in self.results:
+            for pkaVal in self.results['pka']:
+                pkaValList.append(pkaVal)
+            return pkaValList
+        else:
+            logging.warning("key: 'pka' not in self.results")
+            return pkaValList
+
+    def getPkb(self):
+        """
+        Picks out pKa Basic value(s) from CTSWS, returns list
+        """
+        pkaValList = []
+        if 'pkb' in self.results:
+            for pkaVal in self.results['pkb']:
+                pkaValList.append(pkaVal)
+            return pkaValList
+        else:
+            logging.warning("no key 'pkb' in results")
+            return pkaValList
 
     def getMostAcidicPka(self):
         """
@@ -293,9 +333,13 @@ class Pka(JchemProperty):
         """
 
         # Now want it back to pKa and pKb like it used to be:
+        # pka_values = {
+        #     'pKa': self.getMostAcidicPka(),
+        #     'pKb': self.getMostBasicPka()
+        # }
         pka_values = {
-            'pKa': self.getMostAcidicPka(),
-            'pKb': self.getMostBasicPka()
+            'pKa': self.getPka(),
+            'pKb': self.getPkb()
         }
 
         if not pka_values['pKa'] and not pka_values['pKb']:
