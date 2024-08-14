@@ -78,12 +78,14 @@ class RdkitCalc(Calculator):
 
         return func_group
 
-    def get_diffusivity(self, smiles):
+    def get_diffusivity(self, request_dict):
         """
         Returns diffusivity in air and water.
         Diffusivity in Water returns W-C (Wilke-Chang equation) and H-L (Hayduk and Luadie equation) methods.
         Diffusivity in Air returns FSG (Fuller, Schettler, and Giddings equation) method.
         """
+
+        smiles = request_dict.get("chemical")
 
         #get molecular weight
         mw=Chem.Descriptors.ExactMolWt(Chem.MolFromSmiles(smiles))
@@ -114,5 +116,14 @@ class RdkitCalc(Calculator):
         
          #calculate Hayduk-Laudie (water) diffusivity coefficinent
         HL=13.26E-5/((n**1.14)*((vol)**0.589))
+
+        diff_vals = {
+            'FSG': FSG,
+            'Wilk-Chang': WC,
+            'Hayduk-Laudie': HL
+        }
+
+        response_obj = dict(request_dict)
+        response_obj["data"] = diff_vals
         
-        return {'FSG': FSG, 'Wilk-Chang': WC, 'Hayduk-Laudie': HL}
+        return response_obj
