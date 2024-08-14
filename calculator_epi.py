@@ -2,70 +2,11 @@ import requests
 import json
 import logging
 import os
-from rdkit import Chem
 
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
+from .calculator_rdkit import RdkitCalc
 
-
-
-class RdkitCalc:
-    """
-    rdkit
-    """
-    def __init__(self):
-        # Establish smarts objects, NOTE these strings will not change!
-        self.CAE_smarts = '[CX3;$([R0][#6]),$([H1R0])](=[OX1])[OX2][#6;!$(C=[O,N,S])]'
-        self.CAE = Chem.MolFromSmarts(self.CAE_smarts)
-        self.CarbAnhydride_smarts = '[CX3;$([H0][#6]),$([H1])](=[OX1])[#8X2][CX3;$([H0][#6]),$([H1])](=[OX1])'
-        self.CarbAnhydride = Chem.MolFromSmarts(self.CarbAnhydride_smarts)
-
-    def increment_atom_number(self, atom_list):
-        atoms = []
-        for site in atom_list:
-            new=[i+1 for i in site]
-            atoms.append(new)
-        logging.warning("Incremented atoms: {}".format(atoms))
-        return(atoms)
-
-    def get_functional_groups_anhydride(self, smiles):
-        """
-        List of atoms in anhydride functional group.
-        """
-        mol = Chem.MolFromSmiles(smiles)
-        anhydride_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True))
-        logging.info("Anhydride group: {}".format(anhydride_atom))
-        # anhydride_atom = self.increment_atom_number(anhydride_atom)
-        # logging.info("Updated Anhydride group: {}".format(anhydride_atom))
-        return anhydride_atom
-
-    def get_functional_groups_cae(self, smiles):
-        """
-        List of atoms in carboxylic acid ester functional group.
-        """
-        mol = Chem.MolFromSmiles(smiles)
-        CAE_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True))
-        logging.info("CAE group: {}".format(CAE_atom))
-        # CAE_atom = self.increment_atom_number(CAE_atom)
-        # logging.info("Updated CAE group: {}".format(CAE_atom))
-        return CAE_atom
-
-    def get_functional_groups(self, route, smiles):
-        """
-        Calls rdkit to get functional groups.
-        """
-        func_group = []
-        if "anhydride" in route.lower():
-            func_group = self.get_functional_groups_anhydride(smiles)
-        elif route.lower() == "carboxylic acid ester hydrolysis":
-            func_group = self.get_functional_groups_cae(smiles)
-
-        # increments atom numbers:
-        func_group = self.increment_atom_number(func_group)
-
-        logging.warning("Incremented groups: {}".format(func_group))
-
-        return func_group
 
 
 class EpiCalc(Calculator):
