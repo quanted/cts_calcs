@@ -22,7 +22,7 @@ class Calculator(object):
 		self.urlStruct = ''
 		self.results = ''
 		self.headers = {'Content-Type': 'application/json'}
-		self.request_timeout = 30  # default, set unique ones in calc sub classes
+		self.request_timeout = 15  # default, set unique ones in calc sub classes
 		self.max_retries = 3
 
 		self.image_scale = 50

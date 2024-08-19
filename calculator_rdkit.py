@@ -119,8 +119,8 @@ class RdkitCalc(Calculator):
 
         diff_vals = {
             'FSG': FSG,
-            'Wilk-Chang': WC,
-            'Hayduk-Laudie': HL
+            'W-C': WC,
+            'H-L': HL
         }
 
         response_obj = dict(request_dict)
