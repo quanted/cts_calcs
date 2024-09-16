@@ -151,9 +151,12 @@ class ChemInfo(object):
 			{'Entered chemical': workflow_obj.chem_struct},
 			{'Initial SMILES': workflow_obj.orig_smiles},
 			{'Standardized SMILES': workflow_obj.smiles},
+			{'Preferred Name': workflow_obj.preferredName},
 			{'IUPAC': workflow_obj.name},
 			{'Formula': workflow_obj.formula},
+			{'Preferred CAS': workflow_obj.casrn},
 			{'CAS #': workflow_obj.cas},
+			{'DTXSID': workflow_obj.dtxsid},
 			{'Average Mass': workflow_obj.mass},
 			{'Monoisotopic Mass': workflow_obj.exactMass}
 		]
