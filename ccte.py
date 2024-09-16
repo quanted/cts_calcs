@@ -171,7 +171,7 @@ class CCTE:
 		try:
 			url = self.ccte_base_url + self.chem_details_dtxsid_url.format(html.escape(dtxsid))
 			response = requests.get(url, headers=self.headers)
-			logging.info("Search response for {}: {}".format())
+			logging.info("Details response for {}: {}".format())
 			return json.loads(response.content)
 		except Exception as e:
 			logging.warning("CCTE make_details_request exception, url: {}: {}".format(url, e))
@@ -191,7 +191,7 @@ class CCTE:
 		try:
 			url = self.ccte_base_url + self.chem_prop_dtxsid_url.format(html.escape(dtxsid))
 			response = requests.get(url, headers=self.headers)
-			logging.info("Search response for {}: {}".format())
+			logging.info("Property response for {}: {}".format(url, response.content))
 			return json.loads(response.content)
 		except Exception as e:
 			logging.warning("ccte make_propery_request exception, url: {}: {}".format(url, e))
@@ -199,23 +199,48 @@ class CCTE:
 
 	def get_property_results(self, response):
 		"""
-		Gets chemical property results.
+		Gets chemical property results with propType 'experimental'.
+		Example response:
+		[{
+		    "name": "Water Solubility",
+		    "value": 0.0245471,
+		    "id": 985066,
+		    "source": "Tetko et al. J. Chem. Inf. and Comp. Sci.\xc2\xa041.6 (2001): 1488-1493",
+		    "description": "Tetko, Igor V., et al. \\"Estimation of aqueous solubility of chemical compounds using E-state indices.\\"\xc2\xa0. <a href=\'https://pubs.acs.org/doi/10.1021/ci000392t\'target=\'_blank\'>J. Chem. Inf. and Comp. Sci.\xc2\xa041.6 (2001): 1488-1493</a>",
+		    "dtxsid": "DTXSID5020108",
+		    "dtxcid": "DTXCID50108",
+		    "propType": "experimental",
+		    "unit": "mol/L",
+		    "propertyId": "water-solubility"
+		}]
 		"""
-		pass
+		if not isinstance(response, list):
+			return False
+		
+		prop_data = []
+		for data_obj in response:
+			if data_obj.get("propType") != "experimental":
+				continue
+			prop_data.append(data_obj)
+		return prop_data
 
 	def make_fate_request(self, dtxsid):
 		"""
 		Makes a chemical search request using DTXSID as the
 		input type.
 		"""
-		try:
-			url = self.ccte_base_url + self.chem_fate_url.format(html.escape(dtxsid))
-			response = requests.get(url, headers=self.headers)
-			logging.info("Search response for {}: {}".format())
-			return json.loads(response.content)
-		except Exception as e:
-			logging.warning("ccte make_fate_request exception, url: {}: {}".format(url, e))
-			return False
+		# try:
+		logging.warning("dtxsid: {}".format(dtxsid))
+		esp_dtxsid = html.escape(dtxsid)
+		logging.warning("esp_dtxsid: {}".format(esp_dtxsid))
+		# url = self.ccte_base_url + self.chem_fate_url.format(html.escape(dtxsid))
+		url = self.ccte_base_url + self.chem_fate_url.format(dtxsid)
+		response = requests.get(url, headers=self.headers)
+		logging.info("Fate response for {}: {}".format())
+		return json.loads(response.content)
+		# except Exception as e:
+		# 	logging.warning("ccte make_fate_request exception, url: {}: {}".format(url, e))
+		# 	return False
 
 	def get_fate_results(self, response):
 		"""
