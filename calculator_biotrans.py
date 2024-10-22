@@ -45,7 +45,7 @@ class BiotransCalc(Calculator):
 		Returns an ID for looking up response and status.
 		"""
 		try:
-			return requests.post(url, json=post_data, headers=headers, timeout=self.request_timeout)
+			return requests.post(url, json=post_data, headers=headers, timeout=self.request_timeout, verify=False)
 		except Exception as e:
 			logging.warning("Exception in calculator_biotrans: {}".format(e))
 			return {"error": "Error making request to biotransformer."}
