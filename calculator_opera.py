@@ -7,12 +7,10 @@ from .calculator import Calculator
 # from .chemical_information import SMILESFilter
 from .chemical_information import ChemInfo
 from .mongodb_handler import MongoDBHandler
-from .actorws import CCTE_EPA
 
 
 db_handler = MongoDBHandler()  # mongodb handler for opera pchem data
 chem_info_obj = ChemInfo()
-ccte_obj = CCTE_EPA()
 
 
 class OperaCalc(Calculator):
@@ -317,7 +315,6 @@ class OperaCalc(Calculator):
             logging.warning("OPERA DB not connected.")
             return False
         dsstox_result = chem_info_obj.get_cheminfo(request_post, only_dsstox=True)
-        # dsstox_result = ccte_obj.get_chemical_results(request_post)
         if not dsstox_result or dsstox_result.get('dtxsid') == "N/A":
             logging.info("No DSSTOX substance ID value found.")
             return False
