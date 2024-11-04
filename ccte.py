@@ -191,7 +191,7 @@ class CCTE:
 		try:
 			url = self.ccte_base_url + self.chem_prop_dtxsid_url.format(html.escape(dtxsid))
 			response = requests.get(url, headers=self.headers)
-			logging.info("Property response for {}: {}".format(url, response.content))
+			# logging.info("Property response for {}: {}".format(url, response.content))
 			return json.loads(response.content)
 		except Exception as e:
 			logging.warning("ccte make_propery_request exception, url: {}: {}".format(url, e))
