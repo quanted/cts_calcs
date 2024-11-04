@@ -14,7 +14,8 @@ class MongoDBHandler:
 
 	def __init__(self):
 		# MongoDB Settings:
-		self.db = None  # opens cts database (set in connection function)
+		self.cts_db = None  # opens cts database (set in connection function)
+		self.measured_db = None
 		self.chem_info_collection = None  # chem info data collection (set in connection function)
 		self.pchem_collection = None  # pchem data collection
 		self.db_conn_timeout = 1
@@ -42,10 +43,16 @@ class MongoDBHandler:
 			logging.info("(mongodb_handler.py) Connecting to MongoDB at: {}".format(self.mongodb_host	))
 			self.mongodb_conn = pymongo.MongoClient(host=self.mongodb_host, serverSelectionTimeoutMS=200, connectTimeoutMS=200)
 			self.is_connected = True
-			self.db = self.mongodb_conn.cts  # opens cts database
-			# self.chem_info_collection = self.db.chem_info  # chem info data collection
-			self.pchem_collection = self.db.pchem  # pchem data collection
-			self.dtxcid_collection = self.db.dtxcid  # dtxcid data collection
+			self.cts_db = self.mongodb_conn.cts  # opens cts database
+			# self.chem_info_collection = self.cts_db.chem_info  # chem info data collection
+			self.pchem_collection = self.cts_db.pchem  # pchem data collection
+			self.dtxcid_collection = self.cts_db.dtxcid  # dtxcid data collection
+
+
+			self.measured_db = self.mongodb_conn.measured
+			self.pka_collection = self.measured_db.pka
+
+
 			self.test_db_connection()
 		except pymongo.errors.ConnectionFailure as e:
 			logging.warning("(mongodb_handler.py) Unable to connect to db: {}".format(e))
@@ -177,3 +184,10 @@ class MongoDBHandler:
 	# 	db_object = self.create_dtxcid_document(dtxcid_obj)
 	# 	dtxcid_obj = self.dtxcid_collection.insert_one(db_object)  # inserts query object
 	# 	return dtxcid_obj
+
+	def find_pka_document(self, query_obj):
+		"""
+		Searches for pka data using dtxsid, or standardized smiles
+		if dtxsid isn't available.
+		"""
+		pass

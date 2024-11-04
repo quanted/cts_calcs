@@ -8,9 +8,13 @@ from collections import defaultdict
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
 from .ccte import CCTE
+from .mongodb_handler import MongoDBHandler
+
 
 
 headers = {'Content-Type': 'application/json'}
+
+db_handler = MongoDBHandler()
 
 
 
@@ -90,6 +94,14 @@ class MeasuredCalc(Calculator, CCTE):
 			'structure': '',
 			'propertyname': '',
 			'propertyvalue': None
+		}
+
+		self.response_obj = {
+			'calc': "measured",  # todo: change to metabolizer, change in template too
+			'prop': "pchem",
+			'data': None,
+			'chemical': None,
+			'request_post': None            
 		}
 
 	def getPostData(self):
@@ -173,7 +185,112 @@ class MeasuredCalc(Calculator, CCTE):
 		return acronym
 
 
+	def parse_pka_data(self, db_results):
+		"""
+		Parses db results into response for speciation workflow.
+		"""
+		data_obj = {}
+		pka_list = []
+
+		for i in range(1, 7):
+			key = "pKa_{}".format(i)
+			val = db_results[key]
+			if val == "":
+				break
+			pka_list.append(val)
+		
+		smiles = db_results.get("Standardized_SMILES")
+		if not smiles:
+			smiles = db_results.get("SMILES")
+		
+		data_obj["pka_list"] = pka_list
+		data_obj["smiles"] = smiles
+		data_obj["status"] = True
+		
+		return data_obj
+
+
+	def handle_pka_request(self, request_dict):
+		"""
+		Requests Measured pka data from mongodb. Uses "DTXSID" to find data
+		or "Standardized_SMILES" column if the former doesn't exist.
+
+		Example DB document:
+		{
+			'_id': ObjectId('671fa9b3fdf54bb02fa35eaa'),
+			'SheetName': 'Prankerd',
+			'Name': 'Aspirin',
+			'CASRN': '50-78-2',
+			'CASRN_updated': '50-78-2',
+			'DTXSID': 'DTXSID5020108',
+			'Standardized_SMILES': '',
+			'SMILES': 'CC(=O)OC1=C(C=CC=C1)C(O)=O',
+			'Temp °C': 17,
+			'pKa_1': 3.565,
+			'pKa_2': '',
+			'pKa_3': '',
+			'pKa_4': '',
+			'pKa_5': '',
+			'pKa_6': '',
+			'Compound_Type': '',
+			'Condition': '',
+			'Ionization': '-',
+			'Reference': 'Edwards LJ, The hydrolysis of aspirin, Trans. Farad. Soc., 46, 723–735\n(1950).',
+			'Ref_number': ''
+		}
+		"""
+
+		dtxsid = request_dict.get("dtxsid")
+
+		smiles = request_dict.get("chemical")  # TODO: Determine best key to use, may be "smiles"
+
+		try:
+
+			db_handler.connect_to_db()
+
+			# try:
+			
+			if not db_handler.is_connected:
+				logging.warning("OPERA DB not connected.")
+				return False
+
+			# TODO: Check that dtxsid value already in request_dict.
+			# NOTE: Use standardized smiles if dtxsid not available in DB.
+
+			db_results = None
+
+			# db_results = db_handler.find_pka_document
+			db_results = db_handler.pka_collection.find_one({
+				"DTXSID": dtxsid
+			})
+
+			if len(db_results) < 1:
+				# Checks to see if Standardized_SMILES exists if no results from dtxsid:
+				db_results = db_handler.pka_collection.find_one({
+					"Standardized_SMILES": smiles
+				})
+
+			if len(db_results) > 0:
+				db_results = self.parse_pka_data(db_results)
+				if db_results and "_id" in db_results:
+					del db_results["_id"]
+				return db_results
+			else:
+				return False
+
+		except Exception as e:
+			logging.error("calculator_measured handle_pka_request error: {}".format(e))
+			return False
+
+		finally:
+			db_handler.mongodb_conn.close()
+
+		return db_results
+
+
 	def data_request_handler(self, request_dict):
+
+		# logging.warning("calculator_measured request_dict: {}".format(request_dict))
 
 		_filtered_smiles = ''
 		_response_dict = {}
@@ -184,6 +301,22 @@ class MeasuredCalc(Calculator, CCTE):
 			if not key == 'nodes':
 				_response_dict[key] = request_dict.get(key)
 		_response_dict.update({'request_post': request_dict, 'method': None})
+
+		# NOTE: Assuming no SMILES filter by calc for pka in speciation:
+		if request_dict.get("prop") == "ion_con" or request_dict.get("service") == "getSpeciationData":
+			_response_obj = dict(self.response_obj)
+			try:
+				# Gets pka from measured DB
+				db_results = self.handle_pka_request(request_dict)
+				_response_obj['data'] = db_results
+				_response_obj['chemical'] = request_dict.get('chemical')
+				_response_obj['request_post'] = request_dict
+			except Exception as e:
+				logging.error("calculator_measured exception: {}".format(e))
+				_response_obj.update({"valid": False, 'error': "Error getting data from measured"})
+				return _response_obj
+
+			return _response_obj
 
 		try:
 			_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict['chemical'], request_dict['calc']) # call smilesfilter
@@ -208,6 +341,7 @@ class MeasuredCalc(Calculator, CCTE):
 			})
 			return _response_dict
 
+
 		# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW.
 		prop_response = self.make_propery_request(dtxsid)
 
@@ -224,8 +358,10 @@ class MeasuredCalc(Calculator, CCTE):
 		_response_dict.update({"prop_results": results})
 
 
+		########################################################
 		# TODO: 
 		# # 2. Make fate request to CCTE for KOC, BCF, and BAF.
+		########################################################
 		# fate_response = self.make_fate_request(dtxsid)
 		# logging.warning("calculator_measured fate_response: {}".format(fate_response))
 		# if not fate_response:
