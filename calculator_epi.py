@@ -118,7 +118,7 @@ class EpiCalc(Calculator):
 
 
     def get_mp_from_results(self, results):
-        logging.warning("get_mp_from_results results: {}".format(results))
+        # logging.warning("get_mp_from_results results: {}".format(results))
         for data_obj in results['data']:
                 if data_obj.get('prop') == 'melting_point':
                     logging.info("Found MP in EPI results..")
@@ -159,7 +159,6 @@ class EpiCalc(Calculator):
                 i = 0
                 for api_prop in api_key:
                     estimated_value = results[api_prop].get("estimatedValue", {}).get("value", None)
-                    logging.warning("estimated_value: {}".format(estimated_value))
                     new_item = dict(data_obj)
                     new_item["method"] = method_vals[i]
                     new_item["data"] = str(estimated_value)
@@ -167,14 +166,12 @@ class EpiCalc(Calculator):
                     i += 1
             elif cts_prop == "log_bcf":
                 estimated_value =  results.get("bioconcentration", {}).get("logBioconcentrationFactor", None)
-                logging.warning("estimated_value: {}".format(estimated_value))
                 data1 = dict(data_obj)
                 data1["method"] = methods["regression"]
                 data1["data"] = str(estimated_value)
                 parsed_data["data"].append(data1)
                 
                 estimated_value =  results.get("bioconcentration", {}).get("arnotGobasBcfBafEstimates", {})[0].get("logBioconcentrationFactor", None)
-                logging.warning("estimated_value: {}".format(estimated_value))
                 data2 = dict(data_obj)
                 data2["method"] = methods["Arnot-Gobas"]
                 data2["data"] = str(estimated_value)
@@ -182,14 +179,12 @@ class EpiCalc(Calculator):
                 
             elif cts_prop == "log_baf":
                 estimated_value =  results.get("bioconcentration", {}).get("logBioaccumulationFactor", None)
-                logging.warning("estimated_value: {}".format(estimated_value))
                 new_item = dict(data_obj)
                 new_item["method"] = methods["Arnot-Gobas"]
                 new_item["data"] = str(estimated_value)
                 parsed_data["data"].append(new_item)
             else:
                 estimated_value = results[api_key].get("estimatedValue", {}).get("value", None)
-                logging.warning("estimated_value: {}".format(estimated_value))
                 new_item = dict(data_obj)
                 if "methods" in api_info:
                     new_item["method"] = list(methods.values())[0]
