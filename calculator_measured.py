@@ -87,6 +87,17 @@ class MeasuredCalc(Calculator, CCTE):
 			"logkow-octanol-water": "kow_no_ph"
 		}
 
+		self.ccte_fate_map = {
+			"Soil Adsorp. Coeff. (Koc)": "koc",
+			"Bioconcentration Factor": "log_bcf",
+			"Bioaccumulation Factor": "log_baf"  # NOTE: unverified key name
+		}
+
+		self.fate_result = {
+			"valueType": "experimental",
+			"endpointName": None
+		}
+
 		self.props = ["melting_point", "boiling_point", "water_sol", "vapor_press", "henrys_law_con", "kow_no_ph"]
 		self.fate = ["koc", "log_bcf", "log_baf"]
 
@@ -108,22 +119,39 @@ class MeasuredCalc(Calculator, CCTE):
 		return {"structure": ""}
 
 
-	def add_cts_keys(self, results):
+	def add_cts_keys_prop_data(self, results):
 		"""
 		Curates prop data from CCTE into keys that CTS understands,
 		e.g., 'prop', 'data', 'method', 'chemical'.
 		"""
+		new_results = []
 		for data_obj in results:
 			if not data_obj["propertyId"] in list(self.ccte_prop_map.keys()):
 				continue
-			data_obj["prop"] = self.ccte_prop_map[data_obj["propertyId"]]
-			data_obj["method"] = self.convert_to_acronym(data_obj["source"])
+			new_data_obj = dict(data_obj)
+			new_data_obj["prop"] = self.ccte_prop_map[data_obj["propertyId"]]
+			new_data_obj["method"] = self.convert_to_acronym(data_obj["source"])
+			new_data_obj["data"] = data_obj["value"]
+			new_results.append(new_data_obj)
+		return new_results
 
-			# TODO: Value conversions where necessary.
 
-			data_obj["data"] = data_obj["value"]
-
-		return results
+	def add_cts_keys_fate_data(self, results):
+		"""
+		Curates prop data from CCTE into keys that CTS understands,
+		e.g., 'prop', 'data', 'method', 'chemical'.
+		"""
+		new_results = []
+		for data_obj in results:
+			if not data_obj["valueType"] == "experimental" \
+				or not data_obj["endpointName"] in list(self.ccte_fate_map.keys()):
+					continue
+			new_data_obj = dict(data_obj)
+			new_data_obj["prop"] = self.ccte_fate_map[data_obj["endpointName"]]
+			new_data_obj["method"] = self.convert_to_acronym(data_obj["modelSource"])
+			new_data_obj["data"] = data_obj["resultValue"]
+			new_results.append(new_data_obj)
+		return new_results
 
 
 	def group_by_acronym(self, props_list):
@@ -342,34 +370,40 @@ class MeasuredCalc(Calculator, CCTE):
 			return _response_dict
 
 
-		# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW.
-		prop_response = self.make_propery_request(dtxsid)
 
-		if not prop_response:
-			_response_dict.update({
-				'data': "Cannot get properties from CCTE",
-				'valid': False
-			})
-			return _response_dict
+		####################################################################
+		# TODO: Add conditional to only request props or fate endpoints if
+		# they're in the user request.
+		####################################################################
 
-		prop_results = self.get_property_results(prop_response)
-		full_results = self.add_cts_keys(prop_results)
-		results = self.group_by_acronym(full_results)
-		_response_dict.update({"prop_results": results})
+		prop_response = None
+		_response_dict.update({"prop_results": []})
 
+		if any(prop in request_props for prop in self.props):
+			# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW.
+			prop_response = self.make_propery_request(dtxsid)
+			if not prop_response:
+				_response_dict.update({
+					'data': "Cannot get prop from CCTE",
+					'valid': False
+				})
+				return _response_dict
+			prop_results = self.get_property_results(prop_response)
+			curated_results = self.add_cts_keys_prop_data(prop_results)
+			final_prop_results = self.group_by_acronym(curated_results)
+			_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
 
-		########################################################
-		# TODO: 
-		# # 2. Make fate request to CCTE for KOC, BCF, and BAF.
-		########################################################
-		# fate_response = self.make_fate_request(dtxsid)
-		# logging.warning("calculator_measured fate_response: {}".format(fate_response))
-		# if not fate_response:
-		# 	_response_dict.update({
-		# 		'data': "Cannot get fate data from CCTE",
-		# 		'valid': False
-		# 	})
-		# 	return _response_dict
+		if any(fate in request_props for fate in self.fate):
+			# Makes fate request to CCTE for KOC, BCF, and BAF.
+			fate_response = self.make_fate_request(dtxsid)
+			if not fate_response:
+				_response_dict.update({
+					'data': "Cannot get fate data from CCTE",
+					'valid': False
+				})
+				return _response_dict
 
+			fate_results = self.add_cts_keys_fate_data(fate_response)
+			_response_dict["prop_results"] = _response_dict["prop_results"] + fate_results
 
 		return _response_dict
