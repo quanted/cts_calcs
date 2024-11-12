@@ -236,7 +236,6 @@ class CCTE:
 		# url = self.ccte_base_url + self.chem_fate_url.format(html.escape(dtxsid))
 		url = self.ccte_base_url + self.chem_fate_url.format(dtxsid)
 		response = requests.get(url, headers=self.headers)
-		logging.info("Fate response for {}: {}".format())
 		return json.loads(response.content)
 		# except Exception as e:
 		# 	logging.warning("ccte make_fate_request exception, url: {}: {}".format(url, e))
