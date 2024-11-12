@@ -154,17 +154,29 @@ class MeasuredCalc(Calculator, CCTE):
 		return new_results
 
 
-	def group_by_acronym(self, props_list):
+	def group_by_acronym(self, props_list, data_type):
 		"""
 		Consolidates data objects with the same prop and method
 		into one object and concatenates data into a comma-separated string.
 		"""
 		new_list = []
 		new_dict = {}
+
+		data_key = None
+		data_map_keys = None
+
+		if data_type == "prop":
+			data_key = "propertyId"
+			data_map_keys = list(self.ccte_prop_map.keys())
+		elif data_type == "fate":
+			data_key = "endpointName"
+			data_map_keys = list(self.ccte_fate_map.keys())
+
+
 		# Process each entry in the data list
 		for item in props_list:
 
-			if not item["propertyId"] in list(self.ccte_prop_map.keys()):
+			if not item[data_key] in data_map_keys:
 				continue
 
 			match_key = (item['method'], item['prop'])
@@ -369,13 +381,6 @@ class MeasuredCalc(Calculator, CCTE):
 			})
 			return _response_dict
 
-
-
-		####################################################################
-		# TODO: Add conditional to only request props or fate endpoints if
-		# they're in the user request.
-		####################################################################
-
 		prop_response = None
 		_response_dict.update({"prop_results": []})
 
@@ -390,7 +395,7 @@ class MeasuredCalc(Calculator, CCTE):
 				return _response_dict
 			prop_results = self.get_property_results(prop_response)
 			curated_results = self.add_cts_keys_prop_data(prop_results)
-			final_prop_results = self.group_by_acronym(curated_results)
+			final_prop_results = self.group_by_acronym(curated_results, "prop")
 			_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
 
 		if any(fate in request_props for fate in self.fate):
@@ -402,8 +407,8 @@ class MeasuredCalc(Calculator, CCTE):
 					'valid': False
 				})
 				return _response_dict
-
 			fate_results = self.add_cts_keys_fate_data(fate_response)
-			_response_dict["prop_results"] = _response_dict["prop_results"] + fate_results
+			final_fate_results = self.group_by_acronym(fate_results, "fate")
+			_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
 
 		return _response_dict
