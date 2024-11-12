@@ -394,6 +394,7 @@ class MeasuredCalc(Calculator, CCTE):
 				})
 				return _response_dict
 			prop_results = self.get_property_results(prop_response)
+			logging.warning("prop_response: {}".format(prop_response))
 			curated_results = self.add_cts_keys_prop_data(prop_results)
 			final_prop_results = self.group_by_acronym(curated_results, "prop")
 			_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
@@ -408,6 +409,7 @@ class MeasuredCalc(Calculator, CCTE):
 				})
 				return _response_dict
 			fate_results = self.add_cts_keys_fate_data(fate_response)
+			logging.warning("fate_response: {}".format(fate_response))
 			final_fate_results = self.group_by_acronym(fate_results, "fate")
 			_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
 
