@@ -246,6 +246,7 @@ class MeasuredCalc(Calculator, CCTE):
 		data_obj["pka_list"] = pka_list
 		data_obj["smiles"] = smiles
 		data_obj["status"] = True
+		data_obj["ref"] = db_results.get("Reference")
 		
 		return data_obj
 
