@@ -1,6 +1,7 @@
 import logging
 import json
 import requests
+import os
 
 from .calculator_rdkit import RdkitCalc
 
@@ -11,6 +12,10 @@ class Hydrolysis:
     def __init__(self):
 
         self.rdkit = RdkitCalc()
+
+        self.baseUrl = os.environ['CTS_EPI_SERVER']
+
+        self.headers = {'Content-Type': 'application/json'}
 
         self.qsar_request_map = {
             'halogenated aliphatics: elimination': 'hydrolysis/alkylhalide',
@@ -40,6 +45,11 @@ class Hydrolysis:
     def round_half_life(self, value):
         upper_bound = 1e3
         lower_bound = 1e-1
+
+        logging.warning("round_half_life value: {}".format(value))
+
+        if not value:
+            return 0
 
         if type(value) != float:
             value = float(value)
@@ -312,9 +322,9 @@ class Hydrolysis:
         return grouped_products
 
 
-    def get_qsar_for_products(self, parent, grouped_products):
+    def get_qsar_for_products_epi_api(self, parent, grouped_products):
         """
-        Makes request to EPI for QSAR data.
+        Makes request to EPI API for QSAR data.
 
         grouped_products example:
             {
@@ -322,8 +332,11 @@ class Hydrolysis:
                 "B1": [{child_obj}, {child_obj}, ..]
             }
 
-        NOTE: Each key indicating a path (e.g., "A5") should have the same route/scheme.
+        NOTE: Each key indicating a path (e.g., "A5") should have the same route/scheme
+        NOTE 2: Simply need a function to parse EPI API response to be like the original
+        EPI wrapper response.
         """
+
         logging.info("get_qsar_for_products() grouped_products: {}".format(grouped_products))
 
         all_products_list = []
@@ -336,7 +349,10 @@ class Hydrolysis:
             path = path_key[1]
             route = child_obj_list[0]["routes"].lower()  # routes for child_obj_list should all be the same
             route_endpoint = self.qsar_request_map[route]
-            url = self.baseUrl.replace("estimated", "") + route_endpoint
+
+            # url = self.baseUrl.replace("estimated", "") + route_endpoint
+
+            url = self.baseUrl
 
             logging.info("Path key: {}\nRoute: {}\nUrl: {}".format(path_key, route, url))
 
@@ -351,48 +367,360 @@ class Hydrolysis:
                 all_products_list += child_obj_list
                 continue
 
-            try:
+            # try:
 
-                logging.info("Making QSAR request to EPI.")
+            logging.info("Making QSAR request to EPI.")
 
-                response = requests.post(url, data=json.dumps({'structure': parent}), headers=self.headers)
+            # response = requests.post(url, data=json.dumps({'structure': parent}), headers=self.headers)
+            response = requests.get(url, params={"smiles": parent})
 
-                if response.status_code != 200:
-                    logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
-                    for child_obj in child_obj_list:
-                        child_obj["error"] = "Error requesting half-life data from EPI."
-                        child_obj["prop"] = "qsar"
-                        child_obj["valid"] = False
-                    all_products_list += child_obj_list
-                    continue
+            logging.warning("REPONSE: {}".format(response))
 
-                response_obj = json.loads(response.content)
-
-                if not response_obj.get("data") or len(response_obj.get("data")) < 1:
-                    logging.warning("Error parsing half-life data from EPI response.")
-                    for child_obj in child_obj_list:
-                        child_obj["error"] = "Error parsing half-life data from EPI response."
-                        child_obj["prop"] = "qsar"
-                        child_obj["valid"] = False
-                    all_products_list += child_obj_list
-                    continue
-                
-                # Assigns data to products in list based on case and path.
-                child_obj_list = self.handle_hl_response(response_obj, parent, route, case, path, child_obj_list)
-
-                all_products_list += child_obj_list
-
-            except Exception as e:
-                logging.warning("Error making QSAR request: {}".format(e))
+            if response.status_code != 200:
+                logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
                 for child_obj in child_obj_list:
-                    # child_obj["data"] = None
-                    child_obj["error"] = "Error making request to EPI for half-life."
+                    child_obj["error"] = "Error requesting half-life data from EPI."
                     child_obj["prop"] = "qsar"
                     child_obj["valid"] = False
                 all_products_list += child_obj_list
                 continue
 
+            logging.warning("Getting json from response.")
+
+            logging.warning("Response content: {}".format(response.content))
+
+            response_obj = json.loads(response.content)
+
+            logging.warning("\n\n\nresponse_obj: {}\n\n\n".format(response_obj))
+
+            # if not response_obj.get("data") or len(response_obj.get("data")) < 1:
+            #     logging.warning("Error parsing half-life data from EPI response.")
+            #     for child_obj in child_obj_list:
+            #         child_obj["error"] = "Error parsing half-life data from EPI response."
+            #         child_obj["prop"] = "qsar"
+            #         child_obj["valid"] = False
+            #     all_products_list += child_obj_list
+            #     continue
+            
+            # Assigns data to products in list based on case and path.
+            # child_obj_list = self.handle_hl_response(response_obj, parent, route, case, path, child_obj_list)
+            child_obj_list = self.handle_hl_response_epi_api(response_obj, parent, route, case, path, child_obj_list)
+
+            all_products_list += child_obj_list
+
+            # except Exception as e:
+            #     logging.warning("Error making QSAR request: {}".format(e))
+            #     for child_obj in child_obj_list:
+            #         # child_obj["data"] = None
+            #         child_obj["error"] = "Error making request to EPI for half-life."
+            #         child_obj["prop"] = "qsar"
+            #         child_obj["valid"] = False
+            #     all_products_list += child_obj_list
+            #     continue
+
         return all_products_list
+
+
+    # def get_qsar_for_products_epi_api(self, parent, grouped_products):
+    #     """
+    #     Makes request to EPI for QSAR data.
+
+    #     grouped_products example:
+    #         {
+    #             "A5": [{child_obj}, {child_obj}, ..],
+    #             "B1": [{child_obj}, {child_obj}, ..]
+    #         }
+
+    #     NOTE: Each key indicating a path (e.g., "A5") should have the same route/scheme.
+    #     """
+    #     logging.info("get_qsar_for_products_epi_api() grouped_products: {}".format(grouped_products))
+
+    #     all_products_list = []
+
+    #     for path_key, child_obj_list in grouped_products.items():
+
+    #         logging.info("Path key: {}\nchild_obj_list: {}".format(path_key, child_obj_list))
+
+    #         case = path_key[0]
+    #         path = path_key[1]
+    #         route = child_obj_list[0]["routes"].lower()  # routes for child_obj_list should all be the same
+    #         route_endpoint = self.qsar_request_map[route]
+    #         url = self.baseUrl.replace("estimated", "") + route_endpoint
+
+    #         logging.info("Path key: {}\nRoute: {}\nUrl: {}".format(path_key, route, url))
+
+    #         response_obj = {
+    #             "status": False,
+    #             "qsar_response": None
+    #         }
+
+    #         if path_key in ["A2", "C1", "D1"]:
+    #             logging.info("Skipping request for case: {}, path: {}, assigning qualitative values.".format(case, path))
+    #             child_obj_list = self.assign_qualitative_values(child_obj_list)
+    #             all_products_list += child_obj_list
+    #             continue
+
+    #         try:
+
+    #             logging.info("Making QSAR request to EPI.")
+
+    #             response = requests.post(url, data=json.dumps({'structure': parent}), headers=self.headers)
+
+    #             if response.status_code != 200:
+    #                 logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
+    #                 for child_obj in child_obj_list:
+    #                     child_obj["error"] = "Error requesting half-life data from EPI."
+    #                     child_obj["prop"] = "qsar"
+    #                     child_obj["valid"] = False
+    #                 all_products_list += child_obj_list
+    #                 continue
+
+    #             response_obj = json.loads(response.content)
+
+    #             if not response_obj.get("data") or len(response_obj.get("data")) < 1:
+    #                 logging.warning("Error parsing half-life data from EPI response.")
+    #                 for child_obj in child_obj_list:
+    #                     child_obj["error"] = "Error parsing half-life data from EPI response."
+    #                     child_obj["prop"] = "qsar"
+    #                     child_obj["valid"] = False
+    #                 all_products_list += child_obj_list
+    #                 continue
+                
+    #             # Assigns data to products in list based on case and path.
+    #             child_obj_list = self.handle_hl_response(response_obj, parent, route, case, path, child_obj_list)
+
+    #             all_products_list += child_obj_list
+
+    #         except Exception as e:
+    #             logging.warning("Error making QSAR request: {}".format(e))
+    #             for child_obj in child_obj_list:
+    #                 # child_obj["data"] = None
+    #                 child_obj["error"] = "Error making request to EPI for half-life."
+    #                 child_obj["prop"] = "qsar"
+    #                 child_obj["valid"] = False
+    #             all_products_list += child_obj_list
+    #             continue
+
+    #     return all_products_list
+
+
+    def curate_api_response(self, response_obj):
+        """
+        Parses EPI API response to match the original EPI wrapper response.
+
+        Wrapper response example:
+        {
+            "data": [
+                {
+                    "chemical": "CCOC(=O)CCl",
+                    "prop": "Kb",
+                    "calc": "epi",
+                    "method": "Ester",
+                    "data": "9.06337220736724",
+                    "units": "days"
+                }
+            ]
+        }
+        """
+        logging.info("HL Response: {}".format(response_obj))
+
+        response_obj_new = {"data": []}
+        
+        data_obj = {
+            "chemical": None,
+            "prop": None,
+            "calc": "epi",
+            "method": None,
+            "data": None,
+            "units": None
+        }
+
+
+
+        ka = None
+        kb = None
+
+
+        hydrolysis_output_text = response_obj["hydrolysis"]["output"]
+        
+        # Extracting chemical (SMILES)
+        chemical_match = re.search(r"SMILES\s*:\s*(.+)", hydrolysis_output_text)
+        chemical = chemical_match.group(1).strip() if chemical_match else None
+
+        # Extracting property (Kb, Kn, Ka) and its half-life at pH 8
+        prop_match = re.search(r"(K[bnA]) Half-Life at pH 8:\s+([\d\.]+)\s+days", hydrolysis_output_text)
+        if prop_match:
+            prop_type = prop_match.group(1).strip()  # Kb, Kn, or Ka
+            prop_value = prop_match.group(2).strip()  # Numeric value
+        else:
+            prop_type = None
+            prop_value = None
+
+        # Building the output object
+        output_data = {
+            "data": [
+                {
+                    "chemical": chemical,
+                    "prop": prop_type,
+                    "calc": "hydrowin",
+                    "method": "Ester",
+                    "data": prop_value,
+                    "units": "days"
+                }
+            ]
+        }
+
+
+
+        # logging.warning("TEST KEYS: {}".format(response_obj.keys()))
+
+        # hydrolysis_values = response_obj["hydrolysis"]
+
+        # logging.warning("hydrolysis_values: {}".format(hydrolysis_values))
+
+        # for halflife_obj in hydrolysis_values.get("halfLives"):
+            
+        #     if halflife_obj['ph'] != 7.0:
+        #         continue
+
+        #     has_ka = halflife_obj['acidCatalyzed'] 
+        #     has_kb = halflife_obj['baseCatalyzed']
+        #     has_pe = halflife_obj['phosphorusEster']
+        #     units = halflife_obj['unit']
+        #     value = halflife_obj['value']
+
+        #     logging.warning("\nhas_ka: {}\nhas_kb: {}\nhas_pe: {}\nvalue: {}\n".format(has_ka, has_kb, has_pe, value))
+
+        #     if not value or value == 0:
+        #         continue
+
+        #     new_data_obj = dict(data_obj)
+        #     new_data_obj["units"] = units
+        #     new_data_obj["data"] = value
+
+        #     if has_ka and not has_kb:
+        #         # Handles Ka/n values:
+        #         new_data_obj["prop"] = "Ka"
+        #         response_obj_new["data"].append(new_data_obj)
+        #     elif has_kb and not has_ka:
+        #         # Handles Kb values:
+        #         new_data_obj["prop"] = "Kb"
+        #         response_obj_new["data"].append(new_data_obj)
+            
+
+        return response_obj_new
+
+
+    def handle_hl_response_epi_api(self, response_obj, parent, route, case, path, child_obj_list):
+        """
+        "hydrolysis": {
+            "halfLives": [
+              {
+                "ph": 7.0,
+                "value": 61.43024444580078,
+                "unit": "days",
+                "baseCatalyzed": true,
+                "acidCatalyzed": false,
+                "phosphorusEster": false,
+                "isomer": null
+              },
+              {
+                "ph": 7.0,
+                "value": 0.0,
+                "unit": null,
+                "baseCatalyzed": false,
+                "acidCatalyzed": true,
+                "phosphorusEster": false,
+                "isomer": null
+              },
+              {
+                "ph": 7.0,
+                "value": 0.0,
+                "unit": null,
+                "baseCatalyzed": false,
+                "acidCatalyzed": false,
+                "phosphorusEster": false,
+                "isomer": null
+              },
+              {
+                "ph": 7.0,
+                "value": 0.0,
+                "unit": null,
+                "baseCatalyzed": false,
+                "acidCatalyzed": true,
+                "phosphorusEster": true,
+                "isomer": null
+              },
+              {
+                "ph": 7.0,
+                "value": 0.0,
+                "unit": null,
+                "baseCatalyzed": false,
+                "acidCatalyzed": true,
+                "phosphorusEster": false,
+                "isomer": null
+              },
+              {
+                "ph": 8.0,
+                "value": 6.143023490905762,
+                "unit": "days",
+                "baseCatalyzed": true,
+                "acidCatalyzed": false,
+                "phosphorusEster": false,
+                "isomer": null
+              }
+            ],...
+        }
+
+        Wrapper response example:
+        {
+            "data": [
+                {
+                    "chemical": "CCOC(=O)CCl",
+                    "prop": "Kb",
+                    "calc": "epi",
+                    "method": "Ester",
+                    "data": "9.06337220736724",
+                    "units": "days"
+                }
+            ]
+        }
+        """
+
+        response_obj = self.curate_api_response(response_obj)
+
+        logging.warning("\n\nCurated response obj: {}\n\n".format(response_obj))
+
+        site_type = ""
+
+        if case in ["A", "B"]:
+            site_type = "single"
+        elif case in ["C", "D"]:
+            site_type = "multi"
+
+        logging.info("Site type: {}".format(site_type))
+
+        num_hls = len(response_obj["data"])
+
+        logging.info("Number of HLs: {}".format(num_hls))
+            
+        if case == "A":
+            if path == "1":
+                return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
+            elif path == "2":
+                return self.assign_qualitative_values(child_obj_list)
+            elif path == "4":
+                return self.handle_functional_group_case(route, parent, response_obj, child_obj_list)
+            else:
+                return self.hl_result_pattern("Kb", child_obj_list, response_obj)
+        elif case == "B":
+            return self.handle_op_ester_values(response_obj, child_obj_list)
+        elif case == "D":
+            child_obj_list = self.handle_case_d_results(path, response_obj, child_obj_list)
+        elif case == "C":
+            child_obj_list = self.handle_case_c_results(parent, path, route, response_obj, child_obj_list)
+
+        return child_obj_list
 
 
     def handle_hl_response(self, response_obj, parent, route, case, path, child_obj_list):
@@ -565,7 +893,7 @@ class Hydrolysis:
 
         logging.info("GROUPED PRODUCTS: {}".format(grouped_products))
 
-        qsar_responses = self.get_qsar_for_products(parent, grouped_products)
+        qsar_responses = self.get_qsar_for_products_epi_api(parent, grouped_products)
 
         logging.info("UPDATED CHILD NODES TO USE TO DETERMINE HL REQUESTS AND VALUE ASSIGNMENT: {}".format(child_nodes))
 
