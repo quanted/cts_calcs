@@ -118,6 +118,27 @@ class MeasuredCalc(Calculator, CCTE):
 	def getPostData(self):
 		return {"structure": ""}
 
+	
+	def round_value(self, value):
+		"""
+		Performs rounding of float value to two decimal places.
+		"""
+		if not isinstance(value, float):
+			value = float(value)
+		return f"{value:.2f}"
+
+
+	def average_results(self, results):
+		"""
+		Averages comma-delimited prop and fate results.
+		"""
+		for data_obj in results:
+			data_list = data_obj["data"].split(",")
+			logging.warning("data_list: {}".format(data_list))
+			data_obj["data"] = sum(float(datum) for datum in data_list) / len(data_list)
+			data_obj["data"] = self.round_value(data_obj["data"])
+		return results
+
 
 	def add_cts_keys_prop_data(self, results):
 		"""
@@ -126,8 +147,9 @@ class MeasuredCalc(Calculator, CCTE):
 		"""
 		new_results = []
 		for data_obj in results:
-			if not data_obj["propertyId"] in list(self.ccte_prop_map.keys()):
-				continue
+			if not data_obj["propType"] == "experimental" \
+				or not data_obj["propertyId"] in list(self.ccte_prop_map.keys()):
+					continue
 			new_data_obj = dict(data_obj)
 			new_data_obj["prop"] = self.ccte_prop_map[data_obj["propertyId"]]
 			new_data_obj["method"] = self.convert_to_acronym(data_obj["source"])
@@ -413,5 +435,7 @@ class MeasuredCalc(Calculator, CCTE):
 			logging.warning("fate_response: {}".format(fate_response))
 			final_fate_results = self.group_by_acronym(fate_results, "fate")
 			_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
+
+		_response_dict["prop_results"] = self.average_results(_response_dict["prop_results"])
 
 		return _response_dict
