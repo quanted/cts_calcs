@@ -136,7 +136,7 @@ class MeasuredCalc(Calculator, CCTE):
 			data_list = data_obj["data"].split(",")
 			logging.warning("data_list: {}".format(data_list))
 			data_obj["data"] = sum(float(datum) for datum in data_list) / len(data_list)
-			data_obj["data"] = self.round_value(data_obj["data"])
+			data_obj["data"] = data_obj["data"]
 		return results
 
 
@@ -311,8 +311,6 @@ class MeasuredCalc(Calculator, CCTE):
 
 			db_handler.connect_to_db()
 
-			# try:
-			
 			if not db_handler.is_connected:
 				logging.warning("OPERA DB not connected.")
 				return False
