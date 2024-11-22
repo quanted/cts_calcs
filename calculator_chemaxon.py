@@ -235,17 +235,19 @@ class JchemCalc(Calculator):
 
 
             # MS sorting:
-            ms = pkaObj.results["microspecies"]  # orig results, pre <img> wrappers and IDs
-            sorted_ms_list = self.sort_microspecies(ms)  # sorts by FC
-            sorted_keys = [item.get("orig_key") for item in sorted_ms_list]  # list of keys in new order
-            sorted_ms_list = self.update_ms_id(sorted_ms_list)  # renumbers keys
-            pkaObj.results["microspecies"] = sorted_ms_list
+            ms = pkaObj.results.get("microspecies")  # orig results, pre <img> wrappers and IDs
+            if ms:
+                sorted_ms_list = self.sort_microspecies(ms)  # sorts by FC
+                sorted_keys = [item.get("orig_key") for item in sorted_ms_list]  # list of keys in new order
+                sorted_ms_list = self.update_ms_id(sorted_ms_list)  # renumbers keys
+                pkaObj.results["microspecies"] = sorted_ms_list
 
             # Chart data sorting:
-            pka_chartdata = pkaObj.results["chartData"]
-            sorted_pka_chartdata = sorted(pka_chartdata, key=lambda obj: sorted_keys.index(obj["key"]))  # sorts chart data like ms list
-            sorted_pka_chartdata =  self.update_ms_id(sorted_pka_chartdata)  # renumbers keys
-            pkaObj.results["chartData"] = sorted_pka_chartdata
+            pka_chartdata = pkaObj.results.get("chartData")
+            if pka_chartdata:
+                sorted_pka_chartdata = sorted(pka_chartdata, key=lambda obj: sorted_keys.index(obj["key"]))  # sorts chart data like ms list
+                sorted_pka_chartdata =  self.update_ms_id(sorted_pka_chartdata)  # renumbers keys
+                pkaObj.results["chartData"] = sorted_pka_chartdata
 
             # Makes call for majorMS:
             majorMsObj = JchemProperty.getPropObject('majorMicrospecies')

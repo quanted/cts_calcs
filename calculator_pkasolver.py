@@ -79,6 +79,10 @@ class PkaSolverCalc(Calculator):
             response = requests.get(self.pkasolver_api_url, params=post_data, timeout=self.timeout)
             results = json.loads(response.content)
             results = self.validate_response(results)
+
+            if "error" in results:
+                raise Exception(results.get("error"))
+
         except Exception as e:
             logging.warning("calculator_pkasolver exception: {}".format(e))
             _response_obj.update({"valid": False, 'error': "Error getting data from pkasolver"})
