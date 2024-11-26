@@ -85,7 +85,7 @@ class PkaSolverCalc(Calculator):
 
         except Exception as e:
             logging.warning("calculator_pkasolver exception: {}".format(e))
-            _response_obj.update({"valid": False, 'error': "Error getting data from pkasolver"})
+            _response_obj.update({"valid": False, 'error': "No pkasolver values available"})
             return _response_obj
 
         # Get chem info for returned microspecies:

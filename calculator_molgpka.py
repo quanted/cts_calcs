@@ -70,7 +70,7 @@ class MolgpkaCalc(Calculator):
             results = self.validate_response(results)
         except Exception as e:
             logging.warning("calculator_molgpka exception: {}".format(e))
-            _response_obj.update({"valid": False, "error": "Error getting data from molgpka"})
+            _response_obj.update({"valid": False, "error": "No molgpka values available"})
             return _response_obj
 
         _response_obj['data'] = results

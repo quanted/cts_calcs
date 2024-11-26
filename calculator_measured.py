@@ -325,13 +325,12 @@ class MeasuredCalc(Calculator, CCTE):
 				"DTXSID": dtxsid
 			})
 
-			if len(db_results) < 1:
+			if not db_results or len(db_results) < 1:
 				# Checks to see if Standardized_SMILES exists if no results from dtxsid:
 				db_results = db_handler.pka_collection.find_one({
 					"Standardized_SMILES": smiles
 				})
-
-			if len(db_results) > 0:
+			elif db_results and len(db_results) > 0:
 				db_results = self.parse_pka_data(db_results)
 				if db_results and "_id" in db_results:
 					del db_results["_id"]
@@ -369,6 +368,8 @@ class MeasuredCalc(Calculator, CCTE):
 			try:
 				# Gets pka from measured DB
 				db_results = self.handle_pka_request(request_dict)
+				if not db_results:
+					return {"valid": False, 'error': "No measured values available"}
 				_response_obj['data'] = db_results
 				_response_obj['chemical'] = request_dict.get('chemical')
 				_response_obj['request_post'] = request_dict
