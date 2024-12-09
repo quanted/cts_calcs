@@ -135,8 +135,19 @@ class MeasuredCalc(Calculator, CCTE):
 		for data_obj in results:
 			data_list = data_obj["data"].split(",")
 			logging.warning("data_list: {}".format(data_list))
-			data_obj["data"] = sum(float(datum) for datum in data_list) / len(data_list)
-			data_obj["data"] = data_obj["data"]
+			valid_data = []
+			for datum in data_list:
+				try:
+					valid_data.append(float(datum))
+				except ValueError as e:
+					logging.warning("calculator_measured - can't convert value, {}, to float.")
+					pass
+
+			if valid_data:
+				data_obj["data"] = sum(valid_data) / len(valid_data)
+
+			# data_obj["data"] = sum(float(datum) for datum in data_list) / len(data_list)
+			# data_obj["data"] = data_obj["data"]
 		return results
 
 
