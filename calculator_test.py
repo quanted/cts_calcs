@@ -10,6 +10,7 @@ from .calculator import Calculator
 from .chemical_information import SMILESFilter
 
 
+
 headers = {'Content-Type': 'application/json'}
 
 
@@ -30,6 +31,8 @@ class TestWSCalc(Calculator):
 		self.baseUrl = os.environ.get('CTS_TEST_SERVER')
 		if not self.baseUrl:
 			self.baseUrl = "https://comptox.epa.gov/dashboard/web-test"
+
+		self.post_url = "https://comptox.epa.gov/dashboard-api/ccdapp1/webtest/predict"
 
 		self.methods = ['hc', 'nn', 'gc']  # general property methods
 		self.method = None
@@ -55,6 +58,41 @@ class TestWSCalc(Calculator):
 			}
 			# 'henrys_law_con': ,
 			# 'kow_no_ph': 
+		}
+
+		self.test_prop_map = {
+			"MP": "melting_point",
+			"BP": "boiling_point",
+			"WS": "water_sol",
+			"VP": "vapor_press",
+			"BCF": "log_bcf"
+		}
+
+		self.request_post = {
+		    "query": "CCO",
+		    "queryType": "SMILES",
+		    "endpoints": [
+		        {
+		            "endpointCode": "BCF",
+		            "providerCode": "TEST"
+		        },
+		        {
+		            "endpointCode": "BP",
+		            "providerCode": "TEST"
+		        },
+		        {
+		            "endpointCode": "MP",
+		            "providerCode": "TEST"
+		        },
+		        {
+		            "endpointCode": "VP",
+		            "providerCode": "TEST"
+		        },
+		        {
+		            "endpointCode": "WS",
+		            "providerCode": "TEST"
+		        }
+		    ]
 		}
 
 		self.result_keys = ['id', 'smiles', 'expValMass', 'expValMolarLog', 'predValMass',
@@ -108,7 +146,25 @@ class TestWSCalc(Calculator):
 		url = "{}/{}?{}".format(self.baseUrl, test_prop, urllib.parse.urlencode(_payload))
 		try:
 			response = self.ssl_legacy_request(url)
-		except urllib3.exceptions.TimeoutError:
+			logging.warning("testws post response: {}".format(response))
+		except urllib3.exceptions.TimeoutError as te:
+			logging.warning("timeout exception: {}".format(te))
+			return {'error': 'timeout error'}
+		except urllib3.exceptions.HTTPError:
+			logging.warning("connection exception: {}".format(ce))
+			return {'error': 'connection error'}
+		except Exception as e:
+			logging.warning("exception: {}".format(e))
+			return {'error': 'general error'}
+		self.results = response
+		return response
+
+
+
+	def makeDataPostRequest(self, structure):
+		try:
+			response = self.ssl_legacy_post_request(structure)
+		except urllib3.exceptions.TimeoutError as te:
 			logging.warning("timeout exception: {}".format(te))
 			return {'error': 'timeout error'}
 		except urllib3.exceptions.HTTPError:
@@ -147,7 +203,33 @@ class TestWSCalc(Calculator):
 		return response_obj
 
 
-	
+	def ssl_legacy_post_request(self, structure):
+		"""
+		Bypassing SSL legacy error being thrown when making requests to comptox.
+		https://github.com/urllib3/urllib3/issues/2653
+		"""
+		response = None
+		request_post = dict(self.request_post)
+		request_post["query"] = structure
+		ctx = create_urllib3_context()
+		ctx.load_default_certs()
+		ctx.options |= 0x4  # ssl.OP_LEGACY_SERVER_CONNECT
+		with urllib3.PoolManager(ssl_context=ctx) as http:
+			try:
+				response = http.request("POST", self.post_url, body=json.dumps(request_post), headers=headers)
+			except urllib3.exceptions.TimeoutError:
+				logging.warning("timeout exception: {}".format(te))
+				return {'error': 'timeout error'}
+			except urllib3.exceptions.HTTPError:
+				logging.warning("connection exception: {}".format(ce))
+				return {'error': 'connection error'}
+		response_obj = requests.Response()
+		response_obj.status_code = response.status
+		response_obj._content = response.data.decode("utf-8")
+		response_obj.content
+		return response_obj
+
+
 	def data_request_handler(self, request_dict):	
 
 		_filtered_smiles = ''
@@ -180,7 +262,8 @@ class TestWSCalc(Calculator):
 			# Make sure method name is all caps (it's an acronym):
 			_response_dict['method'] = _response_dict.get('method').upper()
 
-		_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
+		# _response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
+		_response = self.makeDataPostRequest(_filtered_smiles)
 
 		if 'error' in _response:
 			_response_dict.update({'data': _response['error']})
@@ -191,29 +274,82 @@ class TestWSCalc(Calculator):
 			return _response_dict
 
 		_response_obj = json.loads(_response.content)
-		_test_data = _response_obj['predictions'][0]  # list of predictions (getting first because only one chemical comes back for GET requests)
 
-		if 'error' in _test_data:
-			_response_dict.update({'data': "Cannot parse SMILES"})
-			return _response_dict
-
-		# Gets response key for property:
-		data_type = self.response_map[request_dict['prop']]['data_type']
-
-		# Sets response data to property's data key (based on desired units)
-		if _test_data.get(data_type):
-			_response_dict['data'] = _test_data[data_type]
-	
-		# Returns "N/A" for data if there isn't any TESTWS data found:
-		if not 'data' in _response_dict or not _response_dict.get('data'):
-			_response_dict['data'] = "N/A"
-			return _response_dict
-
-		# Reformats TESTWS VP result, e.g., "3.14*10^-15" -> "3.14e-15":
-		if request_dict['prop'] == 'vapor_press':
-			_response_dict['data'] = self.convert_testws_scinot(_response_dict['data'])
+		_response_dict.update({"prop_results": []})
+		_response_dict["prop_results"] = _response_obj["results"][0]["results"]
 
 		return _response_dict
+
+	
+	# def data_request_handler(self, request_dict):	
+
+	# 	_filtered_smiles = ''
+	# 	_response_dict = {}
+
+	# 	# fill any overlapping keys from request:
+	# 	for key in request_dict.keys():
+	# 		if not key == 'nodes':
+	# 			_response_dict[key] = request_dict.get(key)
+	# 	_response_dict.update({'request_post': request_dict})
+	# 	# _response_dict.update({'request_post': {'service': "pchemprops"}})  # TODO: get rid of 'request_post' and double data
+
+
+	# 	# filter smiles before sending to TEST:
+	# 	# ++++++++++++++++++++++++ smiles filtering!!! ++++++++++++++++++++
+	# 	try:
+	# 		_filtered_smiles = SMILESFilter().parseSmilesByCalculator(request_dict.get('chemical'), self.name) # call smilesfilter
+	# 	except Exception as err:
+	# 		logging.warning("Error filtering SMILES: {}".format(err))
+	# 		_response_dict.update({'data': "Cannot filter SMILES for TEST WS data"})
+	# 		return _response_dict
+	# 	# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+	# 	# logging.info("TEST WS Filtered SMILES: {}".format(_filtered_smiles))
+	# 	# logging.info("Calling TEST WS for {} data...".format(request_dict['prop']))
+
+	# 	if request_dict.get('method') and request_dict['method'] in self.methods + [self.bcf_method]:
+	# 		# Uses method provided in request to get data from TESTWS, otherwise uses default
+	# 		self.method = request_dict.get('method')
+	# 		# Make sure method name is all caps (it's an acronym):
+	# 		_response_dict['method'] = _response_dict.get('method').upper()
+
+	# 	_response = self.makeDataRequest(_filtered_smiles, self.name, request_dict.get('prop'), self.method)
+
+	# 	if 'error' in _response:
+	# 		_response_dict.update({'data': _response['error']})
+	# 		return _response_dict
+
+	# 	if _response.status_code != 200:
+	# 		_response_dict.update({'data': "Cannot reach TESTWS"})
+	# 		return _response_dict
+
+	# 	_response_obj = json.loads(_response.content)
+
+	# 	logging.warning("response_obj: {}".format(_response_obj))
+
+	# 	_test_data = _response_obj['predictions'][0]  # list of predictions (getting first because only one chemical comes back for GET requests)
+
+	# 	if 'error' in _test_data:
+	# 		_response_dict.update({'data': "Cannot parse SMILES"})
+	# 		return _response_dict
+
+	# 	# Gets response key for property:
+	# 	data_type = self.response_map[request_dict['prop']]['data_type']
+
+	# 	# Sets response data to property's data key (based on desired units)
+	# 	if _test_data.get(data_type):
+	# 		_response_dict['data'] = _test_data[data_type]
+	
+	# 	# Returns "N/A" for data if there isn't any TESTWS data found:
+	# 	if not 'data' in _response_dict or not _response_dict.get('data'):
+	# 		_response_dict['data'] = "N/A"
+	# 		return _response_dict
+
+	# 	# Reformats TESTWS VP result, e.g., "3.14*10^-15" -> "3.14e-15":
+	# 	if request_dict['prop'] == 'vapor_press':
+	# 		_response_dict['data'] = self.convert_testws_scinot(_response_dict['data'])
+
+	# 	return _response_dict
 
 
 
