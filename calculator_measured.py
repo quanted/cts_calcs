@@ -402,14 +402,27 @@ class MeasuredCalc(Calculator, CCTE):
 			return _response_dict
 
 		chem_info = request_dict.get("chem_info", {})
+
+		if not chem_info and "node" in request_dict:
+			chem_info = request_dict.get("node")
+
 		dtxsid = chem_info.get("dtxsid")
 		pchem_request = request_dict.get("pchem_request")
 		request_props = pchem_request.get("measured", {})
 
+
 		if not request_props:
 			logging.warning("calculator_measured no request props: {}".format(pchem_request))
 			_response_dict.update({
-				'data': "Cannot get properties from CCTE",
+				'data': "Cannot retrieve properties",
+				'valid': False
+			})
+			return _response_dict
+
+		if not dtxsid or dtxsid == "N/A":
+			logging.warning("calculator_measured no dtxsid: {}".format(chem_info))
+			_response_dict.update({
+				'data': "N/A",
 				'valid': False
 			})
 			return _response_dict
@@ -418,11 +431,12 @@ class MeasuredCalc(Calculator, CCTE):
 		_response_dict.update({"prop_results": []})
 
 		if any(prop in request_props for prop in self.props):
-			# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW.
+			# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW using DTXSID:
 			prop_response = self.make_propery_request(dtxsid)
 			if not prop_response:
+				logging.warning("Cannot retrieve properties from CCTE.")
 				_response_dict.update({
-					'data': "Cannot get prop from CCTE",
+					'data': "N/A",
 					'valid': False
 				})
 				return _response_dict
@@ -435,11 +449,12 @@ class MeasuredCalc(Calculator, CCTE):
 			# Makes fate request to CCTE for KOC, BCF, and BAF.
 			fate_response = self.make_fate_request(dtxsid)
 			if not fate_response:
+				logging.warning("Cannot retrieve fate data from CCTE.")
 				_response_dict.update({
-					'data': "Cannot get fate data from CCTE",
+					'data': "N/A",
 					'valid': False
 				})
-				return _response_dict
+				return _response_dict		
 			fate_results = self.add_cts_keys_fate_data(fate_response)
 			final_fate_results = self.group_by_acronym(fate_results, "fate")
 			_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
