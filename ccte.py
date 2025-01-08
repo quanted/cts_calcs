@@ -117,7 +117,7 @@ class CCTE:
 		cts_results["data"] = results
 		return cts_results
 
-	def validate_response(self, response):
+	def validate_search_response(self, response):
 		"""
 		Validates response from CCTE endpoints.
 		Returns resonse content as object.
@@ -145,7 +145,7 @@ class CCTE:
 		except Exception as e:
 			logging.warning("ccte make_search_request exception, url: {}: {}".format(url, e))
 			return False
-		response_obj = self.validate_response(response)
+		response_obj = self.validate_search_response(response)
 		if not isinstance(response_obj, list) and response_obj.get("status") != True:
 			# TODO: More exception handling?
 			return response_obj
