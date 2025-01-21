@@ -4,16 +4,18 @@ import logging
 import os
 from .calculator import Calculator
 from .jchem_properties import Tautomerization, ElementalAnalysis
+from .calculator_rdkit import RdkitCalc
 
 
 
-class SMILESFilter(object):
+class SMILESFilter(Calculator):
 	"""
 	This is the smilesfilter.py module as a class and
 	clumped in with other classes related to chem info.
 	"""
 
 	def __init__(self):
+		self.rdkit = RdkitCalc()
 		self.max_weight = 1500  # max weight [g/mol] for epi, test, and sparc
 		self.excludestring = [".","[Ag]","[Al]","[As","[As+","[Au]","[B]","[B-]","[Br-]","[Ca]",
 						"[Ca+","[Cl-]","[Co]","[Co+","[Fe]","[Fe+","[Hg]","[K]","[K+","[Li]",
@@ -122,6 +124,10 @@ class SMILESFilter(object):
 		# Checks SMILES for invalid characters:
 		if not self.check_smiles_against_exludestring(smiles):
 			return {'error': "Chemical cannot be a salt or mixture"}
+
+		# Checks if smiles has radicals using rdkit:
+		if self.rdkit.is_radical(smiles):
+			return {"error": "Entered chemical has a radical and cannot be processed"}
 
 		# Calls CTSWS /isvalidchemical endpoint:
 		if not self.is_valid_smiles(smiles):

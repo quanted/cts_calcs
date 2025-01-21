@@ -4,6 +4,8 @@ from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem import rdDepictor
 from rdkit.Chem import AllChem
 from rdkit.Chem import Descriptors
+import rdkit.Chem.rdMolDescriptors
+from rdkit.Chem.MolStandardize import rdMolStandardize
 
 from .calculator import Calculator
 
@@ -118,3 +120,15 @@ class RdkitCalc(Calculator):
         response_obj["data"] = diff_vals
         
         return response_obj
+
+
+    def is_radical(self, smiles):
+        """
+        Chemicals with 1 or more radical cannot be processed.
+        """
+        mol = Chem.MolFromSmiles(smiles) 
+        radical = rdkit.Chem.Descriptors.NumRadicalElectrons(mol)  # gets number of radical electrons
+        if radical < 1:
+            return False
+        else:
+            return True
