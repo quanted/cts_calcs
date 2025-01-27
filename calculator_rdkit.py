@@ -6,6 +6,7 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import Descriptors
 import rdkit.Chem.rdMolDescriptors
 from rdkit.Chem.MolStandardize import rdMolStandardize
+import logging
 
 from .calculator import Calculator
 
