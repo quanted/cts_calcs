@@ -271,6 +271,7 @@ class MeasuredCalc(Calculator, CCTE):
 			if val == "":
 				break
 			pka_list.append(val)
+			data_obj[key] = val
 		
 		smiles = db_results.get("Standardized_SMILES")
 		if not smiles:
@@ -279,7 +280,10 @@ class MeasuredCalc(Calculator, CCTE):
 		data_obj["pka_list"] = pka_list
 		data_obj["smiles"] = smiles
 		data_obj["status"] = True
-		data_obj["ref"] = db_results.get("Reference")
+		# data_obj["ref"] = db_results.get("Reference")
+		data_obj["InText"] = db_results.get("InText")
+		data_obj["DOI"] = db_results.get("DOI")
+		data_obj["Full_Reference"] = db_results.get("Full_Reference")
 		
 		return data_obj
 
@@ -336,6 +340,8 @@ class MeasuredCalc(Calculator, CCTE):
 				"DTXSID": dtxsid
 			})
 
+			
+
 			if not db_results or len(db_results) < 1:
 				# Checks to see if Standardized_SMILES exists if no results from dtxsid:
 				db_results = db_handler.pka_collection.find_one({
@@ -360,8 +366,6 @@ class MeasuredCalc(Calculator, CCTE):
 
 
 	def data_request_handler(self, request_dict):
-
-		# logging.warning("calculator_measured request_dict: {}".format(request_dict))
 
 		_filtered_smiles = ''
 		_response_dict = {}
