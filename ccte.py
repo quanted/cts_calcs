@@ -3,6 +3,8 @@ import logging
 import os
 import html
 import json
+from .mongodb_handler import MongoDBHandler
+
 
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -15,6 +17,8 @@ class CCTE:
 	"""
 
 	def __init__(self):
+
+		self.db_handler = MongoDBHandler()
 
 		# Base URL and endpoints for public CCTE:
 		self.ccte_base_url = "https://api-ccte.epa.gov/"
@@ -150,9 +154,12 @@ class CCTE:
 			# TODO: More exception handling?
 			return response_obj
 		if len(response_obj) != 1:
-			logging.warning("More than one chemical returned in chemical search: {}".format(response_obj))
+			logging.warning("More than one chemical returned in chemical search for {}: {}".format(chemical, response_obj))
 			# TODO: idk, gonna pick the first one for now.
+			results = self.check_measured_db(response_obj)
+
 		results = self.get_search_results(response_obj)
+
 		return self.wrap_results(results)
 
 	def get_search_results(self, response_obj):
@@ -246,3 +253,72 @@ class CCTE:
 		Gets chemical fate results.
 		"""
 		pass
+
+	def get_measured_db_data(self, db_results):
+		"""
+		Returns dict with CASRN, DTXSID, Standardized_SMILES, and SMILES.
+		"""
+		chem_info = {}
+		chem_info["CASRN"] = db_results["CASRN"]
+		chem_info["DTXSID"] = db_results["DTXSID"]
+		chem_info["Standardized_SMILES"] = db_results["Standardized_SMILES"]
+		chem_info["SMILES"] = db_results["SMILES"]
+		return chem_info
+
+	def check_measured_db(self, response_obj):
+		"""
+		Checks for match in Measured pKa dataset if CCTE API
+		returns more than one result.
+		"""
+
+		not_found = []
+		found = []
+
+		try:
+
+			self.db_handler.connect_to_db()
+
+			if not self.db_handler.is_connected:
+
+				logging.warning("Measured DB not connected.")
+				return False
+
+			# TODO: Check that dtxsid value already in request_dict.
+			# NOTE: Use standardized smiles if dtxsid not available in DB.
+
+
+			for chem_info in response_obj:
+
+				dtxsid = chem_info.get("dtxsid")
+				smiles = chem_info.get("smiles")  # TODO: Determine best key to use, may be "smiles"
+
+				db_results = None
+
+				# db_results = self.db_handler.find_pka_document
+				db_results = self.db_handler.pka_collection.find_one({
+					"DTXSID": dtxsid
+				})
+				
+				if not db_results or len(db_results) < 1:
+					# Checks to see if Standardized_SMILES exists if no results from dtxsid:
+					db_results = self.db_handler.pka_collection.find_one({
+						"Standardized_SMILES": smiles
+					})
+				elif db_results and len(db_results) > 0:
+					# db_results = self.parse_pka_data(db_results)
+					db_results = self.get_measured_db_data(db_results)
+					if db_results and "_id" in db_results:
+						del db_results["_id"]
+					# found.append(dtxsid)
+					found.append(chem_info)
+				else:
+					not_found.append(chem_info)
+
+		except Exception as e:
+			logging.error("calculator_measured handle_pka_request error: {}".format(e))
+			return False
+
+		finally:
+			self.db_handler.mongodb_conn.close()
+
+		return found

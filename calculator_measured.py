@@ -319,15 +319,14 @@ class MeasuredCalc(Calculator, CCTE):
 		"""
 
 		dtxsid = request_dict.get("dtxsid")
-
-		smiles = request_dict.get("chemical")  # TODO: Determine best key to use, may be "smiles"
+		smiles = request_dict.get("smiles")  # TODO: Determine best key to use, may be "smiles"
 
 		try:
 
 			db_handler.connect_to_db()
 
 			if not db_handler.is_connected:
-				logging.warning("OPERA DB not connected.")
+				logging.warning("Measured DB not connected.")
 				return False
 
 			# TODO: Check that dtxsid value already in request_dict.
@@ -339,8 +338,6 @@ class MeasuredCalc(Calculator, CCTE):
 			db_results = db_handler.pka_collection.find_one({
 				"DTXSID": dtxsid
 			})
-
-			
 
 			if not db_results or len(db_results) < 1:
 				# Checks to see if Standardized_SMILES exists if no results from dtxsid:
