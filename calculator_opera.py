@@ -250,9 +250,32 @@ class OperaCalc(Calculator):
             del db_results[vp_indices[0]]  # removes a vp duplicate entry
         return db_results
 
-    def curate_logd(self, db_results, requested_dict, ph):
-        if not 'kow_wph' in requested_dict.get('props'):
+    def wrap_db_results(self, chem_data, db_results, requested_props):
+        """
+        Wraps a chemical's OPERA p-chem DB results with the key:vals
+        needed for the frontend.    
+        """
+        chem_data_list = []
+        for result in db_results:
+            if not result.get('prop') in requested_props:
+                continue
+            if result.get('prop') == 'ion_con':
+                # Converts pka/pkb dict to string:
+                result['data'] = 'pKa: ' + result['data'].get('pKa') + '\npKb: ' + result['data'].get('pKb')
+            result.update(chem_data)
+            result['data'] = self.convert_units_for_cts(result['prop'], result)
+            del result['_id']
+            chem_data_list.append(result)
+        return chem_data_list
+
+    def curate_logd(self, db_results, request_dict, ph):
+
+        if request_dict.get("props") and not "kow_wph" in request_dict["props"]:
             return db_results
+
+        elif request_dict.get("prop") and not "kow_wph" in request_dict["prop"]:
+            return db_results
+
         new_results = []
         for result in db_results:
             if result.get('prop') == 'kow_wph' and result.get('ph') == float(ph):
@@ -337,7 +360,7 @@ class OperaCalc(Calculator):
         #     logging.warning("calculator_opera check_opera_db: {}".format(e))
         #     db_handler.mongodb_conn.close()
         # db_handler.mongodb_conn.close()
-        return db_results
+        return list(db_results)
 
     def data_request_handler(self, request_dict):
         """
