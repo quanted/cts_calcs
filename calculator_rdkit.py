@@ -7,6 +7,8 @@ from rdkit.Chem import Descriptors
 import rdkit.Chem.rdMolDescriptors
 from rdkit.Chem.MolStandardize import rdMolStandardize
 import logging
+import io
+import base64
 
 from .calculator import Calculator
 
@@ -14,122 +16,168 @@ from .calculator import Calculator
 
 class RdkitCalc(Calculator):
 
-    def __init__(self):
-        # Establish smarts objects, NOTE these strings will not change!
-        self.CAE_smarts = '[CX3;$([R0][#6]),$([H1R0])](=[OX1])[OX2][#6;!$(C=[O,N,S])]'
-        self.CAE = Chem.MolFromSmarts(self.CAE_smarts)
-        self.CarbAnhydride_smarts = '[CX3;$([H0][#6]),$([H1])](=[OX1])[#8X2][CX3;$([H0][#6]),$([H1])](=[OX1])'
-        self.CarbAnhydride = Chem.MolFromSmarts(self.CarbAnhydride_smarts)
+	def __init__(self):
+		# Establish smarts objects, NOTE these strings will not change!
+		self.CAE_smarts = '[CX3;$([R0][#6]),$([H1R0])](=[OX1])[OX2][#6;!$(C=[O,N,S])]'
+		self.CAE = Chem.MolFromSmarts(self.CAE_smarts)
+		self.CarbAnhydride_smarts = '[CX3;$([H0][#6]),$([H1])](=[OX1])[#8X2][CX3;$([H0][#6]),$([H1])](=[OX1])'
+		self.CarbAnhydride = Chem.MolFromSmarts(self.CarbAnhydride_smarts)
 
-        self.meta_info = {
-            'metaInfo': {
-                'model': "rdkit",
-                'collection': "qed",
-                'modelVersion': "2024.3.5",
-                'description': "A collection of chemoinformatics and machine-learning software written in C++ and Python.",
-                'status': '',
-                'timestamp': self.gen_jid(),
-                'url': "https://www.rdkit.org/",
-                'props': []
-            }
-        }
+		self.meta_info = {
+			'metaInfo': {
+				'model': "rdkit",
+				'collection': "qed",
+				'modelVersion': "2024.3.5",
+				'description': "A collection of chemoinformatics and machine-learning software written in C++ and Python.",
+				'status': '',
+				'timestamp': self.gen_jid(),
+				'url': "https://www.rdkit.org/",
+				'props': []
+			}
+		}
 
-    def increment_atom_number(self, atom_list):
-        atoms = []
-        for site in atom_list:
-            new=[i+1 for i in site]
-            atoms.append(new)
-        logging.warning("Incremented atoms: {}".format(atoms))
-        return(atoms)
+	def increment_atom_number(self, atom_list):
+		atoms = []
+		for site in atom_list:
+			new=[i+1 for i in site]
+			atoms.append(new)
+		logging.warning("Incremented atoms: {}".format(atoms))
+		return(atoms)
 
-    def get_functional_groups_anhydride(self, smiles):
-        """
-        List of atoms in anhydride functional group.
-        """
-        mol = Chem.MolFromSmiles(smiles)
-        anhydride_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True))
-        logging.info("Anhydride group: {}".format(anhydride_atom))
-        # anhydride_atom = self.increment_atom_number(anhydride_atom)
-        # logging.info("Updated Anhydride group: {}".format(anhydride_atom))
-        return anhydride_atom
+	def get_functional_groups_anhydride(self, smiles):
+		"""
+		List of atoms in anhydride functional group.
+		"""
+		mol = Chem.MolFromSmiles(smiles)
+		anhydride_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CarbAnhydride, uniquify=True))
+		logging.info("Anhydride group: {}".format(anhydride_atom))
+		# anhydride_atom = self.increment_atom_number(anhydride_atom)
+		# logging.info("Updated Anhydride group: {}".format(anhydride_atom))
+		return anhydride_atom
 
-    def get_functional_groups_cae(self, smiles):
-        """
-        List of atoms in carboxylic acid ester functional group.
-        """
-        mol = Chem.MolFromSmiles(smiles)
-        CAE_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True))
-        logging.info("CAE group: {}".format(CAE_atom))
-        # CAE_atom = self.increment_atom_number(CAE_atom)
-        # logging.info("Updated CAE group: {}".format(CAE_atom))
-        return CAE_atom
+	def get_functional_groups_cae(self, smiles):
+		"""
+		List of atoms in carboxylic acid ester functional group.
+		"""
+		mol = Chem.MolFromSmiles(smiles)
+		CAE_atom = list(Chem.Mol.GetSubstructMatches(mol, self.CAE, uniquify=True))
+		logging.info("CAE group: {}".format(CAE_atom))
+		# CAE_atom = self.increment_atom_number(CAE_atom)
+		# logging.info("Updated CAE group: {}".format(CAE_atom))
+		return CAE_atom
 
-    def get_functional_groups(self, route, smiles):
-        """
-        Calls rdkit to get functional groups.
-        """
-        func_group = []
-        if "anhydride" in route.lower():
-            func_group = self.get_functional_groups_anhydride(smiles)
-        elif route.lower() == "carboxylic acid ester hydrolysis":
-            func_group = self.get_functional_groups_cae(smiles)
+	def get_functional_groups(self, route, smiles):
+		"""
+		Calls rdkit to get functional groups.
+		"""
+		func_group = []
+		if "anhydride" in route.lower():
+			func_group = self.get_functional_groups_anhydride(smiles)
+		elif route.lower() == "carboxylic acid ester hydrolysis":
+			func_group = self.get_functional_groups_cae(smiles)
 
-        # increments atom numbers:
-        func_group = self.increment_atom_number(func_group)
+		# increments atom numbers:
+		func_group = self.increment_atom_number(func_group)
 
-        logging.warning("Incremented groups: {}".format(func_group))
+		logging.warning("Incremented groups: {}".format(func_group))
 
-        return func_group
+		return func_group
 
-    def get_diffusivity(self, request_dict):
+	def get_diffusivity(self, request_dict):
 
-        smiles = request_dict.get("chemical")
+		smiles = request_dict.get("chemical")
 
-        #get molecular weight
-        mw=Chem.Descriptors.ExactMolWt(Chem.MolFromSmiles(smiles))
-      
-        #get van der waal volume (molecular volume)    
-        mol=Chem.AddHs(Chem.MolFromSmiles(smiles))
-        AllChem.EmbedMolecule(mol)
-        vol=Chem.AllChem.ComputeMolVolume(mol)
+		#get molecular weight
+		mw=Chem.Descriptors.ExactMolWt(Chem.MolFromSmiles(smiles))
+	  
+		#get van der waal volume (molecular volume)    
+		mol=Chem.AddHs(Chem.MolFromSmiles(smiles))
+		AllChem.EmbedMolecule(mol)
+		vol=Chem.AllChem.ComputeMolVolume(mol)
 
-        #constants
-        #n=8.90E-04 #dynamic viscosity of water, 25C Pa*s units
-        n=0.890 #dynamic visocity of water ,25C cP units
-        w_mass=18.015 #molar mass of water
-        T=298 #temp in K
-        k=1.38E-23 #boltzman constant in kg-m2/s2-K
-        pi=3.1415926
-        X=2.6 #constant that depends on solvent, this is the constant for water
-        
-         #calculate FSG (air) diffusivity coefficinent
-        FSG=10**-3*((T**1.75*((1/28.97)+(1/mw))**0.5)/(20.1**(1/3)+(vol**(1/3)))**2)
-        
-        #calculate Wilke-Chang (water) diffusivity coefficinent
-        WC=(7.4E-8)*((((X*w_mass)**0.5)*T)/(n*((vol)**0.6)))
-        
-         #calculate Hayduk-Laudie (water) diffusivity coefficinent
-        HL=13.26E-5/((n**1.4)*((vol)**0.589))
+		#constants
+		#n=8.90E-04 #dynamic viscosity of water, 25C Pa*s units
+		n=0.890 #dynamic visocity of water ,25C cP units
+		w_mass=18.015 #molar mass of water
+		T=298 #temp in K
+		k=1.38E-23 #boltzman constant in kg-m2/s2-K
+		pi=3.1415926
+		X=2.6 #constant that depends on solvent, this is the constant for water
+		
+		 #calculate FSG (air) diffusivity coefficinent
+		FSG=10**-3*((T**1.75*((1/28.97)+(1/mw))**0.5)/(20.1**(1/3)+(vol**(1/3)))**2)
+		
+		#calculate Wilke-Chang (water) diffusivity coefficinent
+		WC=(7.4E-8)*((((X*w_mass)**0.5)*T)/(n*((vol)**0.6)))
+		
+		 #calculate Hayduk-Laudie (water) diffusivity coefficinent
+		HL=13.26E-5/((n**1.4)*((vol)**0.589))
 
-        diff_vals = {
-            'FSG': FSG,
-            'W-C': WC,
-            'H-L': HL
-        }
+		diff_vals = {
+			'FSG': FSG,
+			'W-C': WC,
+			'H-L': HL
+		}
 
-        response_obj = dict(request_dict)
-        response_obj["data"] = diff_vals
-        
-        return response_obj
+		response_obj = dict(request_dict)
+		response_obj["data"] = diff_vals
+		
+		return response_obj
 
 
-    def is_radical(self, smiles):
-        """
-        Chemicals with 1 or more radical cannot be processed.
-        """
-        mol = Chem.MolFromSmiles(smiles) 
-        radical = rdkit.Chem.Descriptors.NumRadicalElectrons(mol)  # gets number of radical electrons
-        if radical < 1:
-            return False
-        else:
-            return True
+	def is_radical(self, smiles):
+		"""
+		Chemicals with 1 or more radical cannot be processed.
+		"""
+		mol = Chem.MolFromSmiles(smiles) 
+		radical = rdkit.Chem.Descriptors.NumRadicalElectrons(mol)  # gets number of radical electrons
+		if radical < 1:
+			return False
+		else:
+			return True
+		
+	def image_from_smiles(self, smiles):
+		"""
+		Returns image byte string from smiles.
+		"""
+
+		mol = Chem.MolFromSmiles(smiles)
+		if mol is None:
+			raise ValueError("Invalid SMILES string")
+
+		# Generate 2D coordinates for the molecule
+		AllChem.Compute2DCoords(mol)
+
+		# Draw the molecule
+		img = Draw.MolToImage(mol)
+
+		# Convert PIL image to base64
+		img_byte_arr = io.BytesIO()
+		img.save(img_byte_arr, format='PNG')
+		img_byte_arr = img_byte_arr.getvalue()
+		img_base64 = base64.b64encode(img_byte_arr).decode()
+
+		return img_base64
+
+	def get_molecular_info(self, smiles):
+
+		mol = Chem.MolFromSmiles(smiles)
+
+		if not mol:
+			return "Invalid SMILES string"
+		
+		# Calculate molecular weight
+		molecular_weight = Descriptors.MolWt(mol)
+		
+		# Get molecular formula
+		molecular_formula = rdMolDescriptors.CalcMolFormula(mol)
+
+		# Optional: Get exact mass (monoisotopic mass)
+		exact_mass = Descriptors.ExactMolWt(mol)
+		
+		return {
+			"formula": molecular_formula,
+			"mass": molecular_weight,  # Average molecular weight
+			"exact_mass": exact_mass  # Monoisotopic mass
+		}
+

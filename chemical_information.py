@@ -302,6 +302,7 @@ class ChemInfo(object):
 
 		# Sets 'smiles' (main chemical key for pchem requests, etc.) to CTS standardized smiles:
 		molecule_obj['smiles'] = filtered_smiles
+		molecule_obj['filtered_smiles'] = filtered_smiles  # NOTE: Switch var name to filtered_smiles
 
 
 		# # ACTORWS requests handling for getting DSSTOX data

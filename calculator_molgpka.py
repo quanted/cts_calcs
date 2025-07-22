@@ -54,6 +54,8 @@ class MolgpkaCalc(Calculator):
 
         chemical = request_dict["chemical"]
 
+        print("calculator_molgpka data_request_handler chemical: {}".format(chemical))
+
         # TODO: Any sort of SMILES validation??s
 
         _response_obj = dict(self.response_obj)

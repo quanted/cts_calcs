@@ -44,15 +44,15 @@ class JchemCalc(Calculator):
             'get_pka': None,
             'get_taut': None,
             'get_stereo': None,
-            'pKa_decimals': None,
-            'pKa_pH_lower': None,
-            'pKa_pH_upper': None,
-            'pKa_pH_increment': None,
-            'pH_microspecies': None,
-            'isoelectricPoint_pH_increment': None,
-            'tautomer_maxNoOfStructures': None,
-            'tautomer_pH': None,
-            'stereoisomers_maxNoOfStructures': None,
+            'pka_decimals': None,
+            'pka_ph_lower_limit': None,
+            'pka_ph_upper_limit': None,
+            'pka_ph_step_size': None,
+            'pka_major_microspecies_ph': None,
+            'pka_isoelectric_point_step_size': None,
+            'tautomer_max_num_structures': None,
+            'tautomer_ph': None,
+            'stereoisomers_max_num_structures': None,
         }
 
 
@@ -158,16 +158,22 @@ class JchemCalc(Calculator):
 
         if request_dict['service'] == 'getSpeciationData':
 
+            print("calculator_chemaxon getSpeciationData called!!!!")
+
             data_obj = {
                 'calc': "chemaxon", 
                 'prop': "speciation_results",
-                'node': request_dict['node'],
+                'node': request_dict.get('node'),
                 'chemical': _filtered_smiles,
                 'workflow': 'chemaxon',
                 'run_type': "single",
                 'request_post': request_dict
             }
             speciation_data = self.get_speciation_results(request_dict)
+
+
+            print("speciation_data: {}".format(speciation_data))
+
             data_obj['request_post'] = {'service': "speciation"}
             data_obj['data'] = speciation_data
 
@@ -209,6 +215,9 @@ class JchemCalc(Calculator):
         """
         Gets speciation results from jchem_properties.
         """
+
+        print("getSpeciationResults request: {}".format(request))
+
         jchemPropObjects = {}
         if 'speciation_inputs' in request:
             request.update(request['speciation_inputs'])
@@ -218,9 +227,9 @@ class JchemCalc(Calculator):
             # Makes call for pKa:
             pkaObj = JchemProperty.getPropObject('pKa')
             pkaObj.postData.update({
-                "pHLower": request['pKa_pH_lower'],
-                "pHUpper": request['pKa_pH_upper'],
-                "pHStep": request['pKa_pH_increment'],
+                "pHLower": request['pka_ph_lower_limit'],
+                "pHUpper": request['pka_ph_upper_limit'],
+                "pHStep": request['pka_ph_step_size'],
             })
             self.jchem_prop_obj.make_data_request(request['chemical'], pkaObj)
             jchemPropObjects['pKa'] = pkaObj
@@ -251,13 +260,13 @@ class JchemCalc(Calculator):
 
             # Makes call for majorMS:
             majorMsObj = JchemProperty.getPropObject('majorMicrospecies')
-            majorMsObj.postData.update({'pH': request['pH_microspecies']})
+            majorMsObj.postData.update({'pH': request['pka_major_microspecies_ph']})
             self.jchem_prop_obj.make_data_request(request['chemical'], majorMsObj)
             jchemPropObjects['majorMicrospecies'] = majorMsObj
 
             # Makes call for isoPt:
             isoPtObj = JchemProperty.getPropObject('isoelectricPoint')
-            isoPtObj.postData.update({'pHStep': request['isoelectricPoint_pH_increment']})
+            isoPtObj.postData.update({'pHStep': request['pka_isoelectric_point_step_size']})
             self.jchem_prop_obj.make_data_request(request['chemical'], isoPtObj)
             jchemPropObjects['isoelectricPoint'] = isoPtObj
 
@@ -265,8 +274,8 @@ class JchemCalc(Calculator):
             # Makes tautomer request:
             tautObj = JchemProperty.getPropObject('tautomerization')
             tautObj.postData.update({
-                "maxStructureCount": request['tautomer_maxNoOfStructures'],
-                "pH": request['tautomer_pH']
+                "maxStructureCount": request['tautomer_max_num_structures'],
+                "pH": request['tautomer_ph']
             })
             self.jchem_prop_obj.make_data_request(request['chemical'], tautObj)
             jchemPropObjects['tautomerization'] = tautObj
@@ -274,7 +283,7 @@ class JchemCalc(Calculator):
         if request.get('get_stereo'):
             # Makes stereoisomer request:
             stereoObj = JchemProperty.getPropObject('stereoisomer')
-            stereoObj.postData.update({'maxStructureCount': request['stereoisomers_maxNoOfStructures']})
+            stereoObj.postData.update({'maxStructureCount': request['stereoisomers_max_num_structures']})
             self.jchem_prop_obj.make_data_request(request['smiles'], stereoObj)
             jchemPropObjects['stereoisomers'] = stereoObj
 
