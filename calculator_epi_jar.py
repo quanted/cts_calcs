@@ -5,65 +5,27 @@ import os
 
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
-from .calculator_rdkit import RdkitCalc
+# from .calculator_rdkit import RdkitCalc
 from .hydrolysis import Hydrolysis
 
 
 
-class EpiCalc(Calculator):
+class EpiCalcJar(Calculator):
 	"""
 	EPI Suite Calculator
 	"""
 	def __init__(self):
 		Calculator.__init__(self)
-		self.rdkit = RdkitCalc()
+		self.hydrolysis = Hydrolysis()
 		self.method = None
 		self.postData = {"smiles" : ""}
 		self.name = "epi"
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
-		# self.urlStruct = "/episuiteapi/rest/episuite/estimated"  # newest way - server
-		# self.urlStruct = "/rest/episuite/estimated"  # newest way - local
 		self.methods = None
 		self.melting_point = None
-		self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'log_koc', 'log_bcf', 'log_baf']
+		self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'koc', 'log_bcf', 'log_baf']
 		self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc', 'log_bcf', 'log_baf']
 		self.propMap = {
-			'melting_point': {
-			   'result_key': 'melting_point'
-			},
-			'boiling_point': {
-			   'result_key': 'boiling_point'
-			},
-			'water_sol': {
-			   'result_key': 'water_solubility',
-			   'methods': {'WSKOW': "WSKOW", 'WATERNT': "WATERNT"}
-			},
-			'vapor_press': {
-			   'result_key': 'vapor_pressure'
-			},
-			'henrys_law_con': {
-				'result_key': 'henrys_law_constant'
-			},
-			'kow_no_ph': {
-				'result_key': 'log_kow'
-			},
-			'koc': {
-				'result_key': 'log_koc',
-				'methods': {'MCI': "MCI", 'Kow': "KOW"}
-			},
-			'log_bcf': {
-				'result_key': 'log_bcf',
-				'methods': {'regression': "REG", 'Arnot-Gobas': "A-G"}
-			},
-			'log_baf': {
-				'result_key': 'log_baf',
-				'methods': {'Arnot-Gobas': "A-G"}
-			},
-			'qsar': {
-				'result_key': 'qsar',
-			}
-		}
-		self.propMapEpiJar = {
 			'melting_point': {
 			   'result_key': 'meltingPoint'
 			},
@@ -102,7 +64,7 @@ class EpiCalc(Calculator):
 
 	
 	def makeDataRequest(self, url, structure, calc=None):
-		_post = {'structure': structure}
+		_post = {"smiles": structure}
 		if self.melting_point != None:
 			_post['melting_point'] = self.melting_point
 		return self.request_logic(url, _post)
@@ -112,19 +74,12 @@ class EpiCalc(Calculator):
 		"""
 		Handles retries and validation of responses
 		"""
-
 		_valid_result = False  # for retry logic
 		_retries = 0
 		while not _valid_result and _retries < self.max_retries:
 			# retry data request to chemaxon server until max retries or a valid result is returned
 			try:
-				logging.warning("epi url: {}".format(url))
-				logging.warning("epi post data: {}".format(post_data))
-
-				response = requests.post(url, data=json.dumps(post_data), headers=self.headers, timeout=self.request_timeout)
-
-				
-
+				response = requests.get(url, params=post_data)
 				_valid_result = self.validate_response(response)
 				if _valid_result:
 					self.results = json.loads(response.content)
@@ -153,6 +108,7 @@ class EpiCalc(Calculator):
 
 
 	def get_mp_from_results(self, results):
+		logging.warning("get_mp_from_results results: {}".format(results))
 		for data_obj in results['data']:
 				if data_obj.get('prop') == 'melting_point':
 					logging.info("Found MP in EPI results..")
@@ -160,21 +116,79 @@ class EpiCalc(Calculator):
 		return None
 
 
-	def make_qsar_request(self, request_dict):
+	def parse_api_results(self, results, _filtered_smiles):
 		"""
-		Makes requests to epi suite for half-lives.
+		Parses pchem results from EPI API into format used
+		by the CTS backend.
 		"""
-		parent = request_dict.get("filtered_smiles")
-		unique_schemes_count = int(request_dict.get("uniqueSchemesCount"))  
-		product_count = int(request_dict.get("productCount"))
-		child_nodes = request_dict.get("childNodes")  # children of a single/given parent
-		qsar_responses = []
 
-		child_nodes = self.rdkit.sort_products_by_case(parent, unique_schemes_count, product_count, child_nodes)
-		grouped_products = self.rdkit.group_products(child_nodes)
-		qsar_responses = self.rdkit.get_qsar_for_products(parent, grouped_products)
+		parsed_data = {"data": []}
 
-		return qsar_responses
+		# Extract data and convert keys
+		for cts_prop, api_info in self.propMap.items():
+
+			api_key = api_info["result_key"]
+			methods = api_info.get("methods")
+
+			if api_key == "qsar":
+				continue
+
+			data_obj = {
+				"chemical": _filtered_smiles,
+				"calc": "epi",
+				"prop": cts_prop,
+				"method": None,
+				"data": None
+			}
+
+			# logging.warning("data_obj: {}".format(data_obj))
+
+			if cts_prop == "water_sol":
+				# Multiple props for some cts methods (e.g., water_sol)
+				method_vals = list(methods.values())
+				i = 0
+				for api_prop in api_key:
+					estimated_value = results[api_prop].get("estimatedValue", {}).get("value", None)
+					logging.warning("estimated_value: {}".format(estimated_value))
+					new_item = dict(data_obj)
+					new_item["method"] = method_vals[i]
+					new_item["data"] = str(estimated_value)
+					parsed_data["data"].append(new_item)
+					i += 1
+			elif cts_prop == "log_bcf":
+				estimated_value =  results.get("bioconcentration", {}).get("logBioconcentrationFactor", None)
+				logging.warning("estimated_value: {}".format(estimated_value))
+				data1 = dict(data_obj)
+				data1["method"] = methods["regression"]
+				data1["data"] = str(estimated_value)
+				parsed_data["data"].append(data1)
+				
+				estimated_value =  results.get("bioconcentration", {}).get("arnotGobasBcfBafEstimates", {})[0].get("logBioconcentrationFactor", None)
+				logging.warning("estimated_value: {}".format(estimated_value))
+				data2 = dict(data_obj)
+				data2["method"] = methods["Arnot-Gobas"]
+				data2["data"] = str(estimated_value)
+				parsed_data["data"].append(data2)
+				
+			elif cts_prop == "log_baf":
+				estimated_value =  results.get("bioconcentration", {}).get("logBioaccumulationFactor", None)
+				logging.warning("estimated_value: {}".format(estimated_value))
+				new_item = dict(data_obj)
+				new_item["method"] = methods["Arnot-Gobas"]
+				new_item["data"] = str(estimated_value)
+				parsed_data["data"].append(new_item)
+			else:
+				estimated_value = results[api_key].get("estimatedValue", {}).get("value", None)
+				logging.warning("estimated_value: {}".format(estimated_value))
+				new_item = dict(data_obj)
+				if "methods" in api_info:
+					new_item["method"] = list(methods.values())[0]
+				new_item["data"] = str(estimated_value)
+				parsed_data["data"].append(new_item)
+
+			# logging.warning("PARSED RESPONSE: {}".format(parsed_data))
+
+		return parsed_data
 
 
 	def data_request_handler(self, request_dict):
@@ -206,7 +220,7 @@ class EpiCalc(Calculator):
 			
 			request_dict['filtered_smiles'] = _filtered_smiles
 
-			_result_obj = self.make_qsar_request(request_dict)
+			_result_obj = self.hydrolysis.make_qsar_request(request_dict)
 
 			# TODO: Account for not valid result_obj
 
@@ -226,12 +240,22 @@ class EpiCalc(Calculator):
 				self.melting_point = None
 
 			_result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc']) # make call for data!
+			_result_obj = self.parse_api_results(_result_obj, _filtered_smiles)
 
-			if _get_mp and not self.melting_point:
-				# MP not found from measured or test, getting from results,
-				# and requesting data again with set MP..
-				self.melting_point = self.get_mp_from_results(_result_obj)
-				_result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc'])  # Make request using MP
+
+
+
+			################################################
+			# # TODO: Update MP request for new EPI API.
+			################################################
+			# if _get_mp and not self.melting_point:
+			#     # MP not found from measured or test, getting from results,
+			#     # and requesting data again with set MP..
+			#     self.melting_point = self.get_mp_from_results(_result_obj)
+			#     _result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc'])  # Make request using MP
+
+
+
 
 			_response_dict.update(_result_obj)
 			_response_dict['valid'] = True
