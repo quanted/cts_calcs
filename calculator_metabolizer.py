@@ -214,6 +214,8 @@ class MetabolizerCalc(Calculator):
 
         response = self.getTransProducts(_data_dict)
 
+        logging.warning("Response: {}".format(response))
+
         if "error" in response:
             _response_obj["error"] = response["error"]
             return _response_obj
@@ -222,6 +224,8 @@ class MetabolizerCalc(Calculator):
             return _response_obj
 
         _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
+
+        logging.warning("Curated results: {}".format(_results))
 
         _products_data = json.loads(_results)
 
@@ -271,6 +275,10 @@ class MetabolizerCalc(Calculator):
 
         url = self.efs_server_url + self.efs_metabolizer_endpoint
         self.request_timeout = 120
+
+        logging.warning("URL: {}".format(url))
+        logging.warning("POST: {}".format(response_obj))
+
         return self.web_call(url, request_obj)
 
 
