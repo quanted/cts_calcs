@@ -199,6 +199,8 @@ class MetabolizerCalc(Calculator):
 
     def data_request_handler(self, request_dict):
 
+        logging.warning("calculator_metabolizer called, request_dict: {}".format(request_dict))
+
         _data_dict = request_dict.get('metabolizer_post')
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
@@ -277,7 +279,7 @@ class MetabolizerCalc(Calculator):
         self.request_timeout = 120
 
         logging.warning("URL: {}".format(url))
-        logging.warning("POST: {}".format(response_obj))
+        logging.warning("POST: {}".format(request_obj))
 
         return self.web_call(url, request_obj)
 
