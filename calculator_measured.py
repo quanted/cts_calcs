@@ -434,6 +434,7 @@ class MeasuredCalc(Calculator, CCTE):
 
 		if any(prop in request_props for prop in self.props):
 			# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW using DTXSID:
+			logging.warning("calculator_measured CCTE make_propery_request, dtxsid: {}".format(dtxsid))
 			prop_response = self.make_propery_request(dtxsid)
 			if not prop_response:
 				logging.warning("Cannot retrieve properties from CCTE.")
