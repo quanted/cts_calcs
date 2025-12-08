@@ -239,10 +239,15 @@ class EpiCalcJar(Calculator):
 			else:
 				self.melting_point = None
 
+			logging.warning("Making data request\nURL: {}\nSMILES: {}\n".format(self.baseUrl, _filtered_smiles))
+
 			_result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc']) # make call for data!
+
+			logging.warning("makeDataRequest result: {}".format(_result_obj))
+
 			_result_obj = self.parse_api_results(_result_obj, _filtered_smiles)
 
-
+			logging.warning("parsed result: {}".format(_result_obj))
 
 
 			################################################

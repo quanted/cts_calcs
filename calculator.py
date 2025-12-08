@@ -177,8 +177,12 @@ class Calculator(object):
 
 			logging.info("Requesting melting point from {}..".format(calc))
 
+			logging.warning("melting_point_request: {}".format(melting_point_request))
+
 			# Calls calculator's data_request_handler which makes request to calc server:
 			response_obj = calc_obj.data_request_handler(melting_point_request)
+
+			logging.warning("melting_point response: {}".format(response_obj))
 
 			if calc == 'test':
 				melting_point = response_obj['data']
