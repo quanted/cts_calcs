@@ -23,7 +23,8 @@ class EpiCalcJar(Calculator):
 		self.baseUrl = os.environ['CTS_EPI_SERVER']
 		self.methods = None
 		self.melting_point = None
-		self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'koc', 'log_bcf', 'log_baf']
+		# self.epi_props = ['melting_point', 'boiling_point', 'water_solubility', 'vapor_pressure', 'henrys_law_constant', 'log_kow', 'koc', 'log_bcf', 'log_baf']
+		self.epi_props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc', 'log_bcf', 'log_baf']
 		self.props = ['melting_point', 'boiling_point', 'water_sol', 'vapor_press', 'henrys_law_con', 'kow_no_ph', 'koc', 'log_bcf', 'log_baf']
 		self.propMap = {
 			'melting_point': {
@@ -34,7 +35,7 @@ class EpiCalcJar(Calculator):
 			},
 			'water_sol': {
 			   'result_key': ['waterSolubilityFromLogKow', 'waterSolubilityFromWaterNt'],
-			   'methods': {'WSKOW': "WSKOW", 'WATERNT': "WATERNT"}
+			   'methods': {'WSKOW': "WSKOW", 'WATERNT': "WATERNT"}  # Maintains similar pattern as calculator_epi
 			},
 			'vapor_press': {
 			   'result_key': 'vaporPressure'
@@ -47,15 +48,15 @@ class EpiCalcJar(Calculator):
 			},
 			'koc': {
 				'result_key': 'logKoc',
-				'methods': {'KOW': "KOW"}
+				'methods': {'KOW': "KOW", "MCI": "MCI"}
 			},
 			'log_bcf': {
 				'result_key': 'logBioconcentrationFactor',
-				'methods': {'regression': "REG", 'Arnot-Gobas': "A-G"}
+				'methods': {'REG': "REG", 'A-G': "A-G"}  # Maintains similar pattern as calculator_epi
 			},
 			'log_baf': {
 				'result_key': 'logBioaccumulationFactor',
-				'methods': {'Arnot-Gobas': "A-G"}
+				'methods': {'A-G': "A-G"}  # Maintains similar pattern as calculator_epi
 			},
 			'qsar': {
 				'result_key': 'qsar',
@@ -141,15 +142,12 @@ class EpiCalcJar(Calculator):
 				"data": None
 			}
 
-			# logging.warning("data_obj: {}".format(data_obj))
-
 			if cts_prop == "water_sol":
 				# Multiple props for some cts methods (e.g., water_sol)
 				method_vals = list(methods.values())
 				i = 0
 				for api_prop in api_key:
 					estimated_value = results[api_prop].get("estimatedValue", {}).get("value", None)
-					logging.warning("estimated_value: {}".format(estimated_value))
 					new_item = dict(data_obj)
 					new_item["method"] = method_vals[i]
 					new_item["data"] = str(estimated_value)
@@ -157,26 +155,36 @@ class EpiCalcJar(Calculator):
 					i += 1
 			elif cts_prop == "log_bcf":
 				estimated_value =  results.get("bioconcentration", {}).get("logBioconcentrationFactor", None)
-				logging.warning("estimated_value: {}".format(estimated_value))
 				data1 = dict(data_obj)
-				data1["method"] = methods["regression"]
+				data1["method"] = methods["REG"]
 				data1["data"] = str(estimated_value)
 				parsed_data["data"].append(data1)
 				
 				estimated_value =  results.get("bioconcentration", {}).get("arnotGobasBcfBafEstimates", {})[0].get("logBioconcentrationFactor", None)
-				logging.warning("estimated_value: {}".format(estimated_value))
 				data2 = dict(data_obj)
-				data2["method"] = methods["Arnot-Gobas"]
+				data2["method"] = methods["A-G"]
 				data2["data"] = str(estimated_value)
 				parsed_data["data"].append(data2)
 				
 			elif cts_prop == "log_baf":
 				estimated_value =  results.get("bioconcentration", {}).get("logBioaccumulationFactor", None)
-				logging.warning("estimated_value: {}".format(estimated_value))
 				new_item = dict(data_obj)
-				new_item["method"] = methods["Arnot-Gobas"]
+				new_item["method"] = methods["A-G"]
 				new_item["data"] = str(estimated_value)
 				parsed_data["data"].append(new_item)
+			elif cts_prop == "koc":
+				log_koc_data = results.get("logKoc", {}).get("estimatedValue", {}).get("model", {}).get("models")
+				log_koc_vals = {model["name"]: model["correctedLogKoc"] for model in log_koc_data}
+
+				data1 = dict(data_obj)
+				data1["method"] = methods["MCI"]
+				data1["data"] = log_koc_vals["MCI"]
+				parsed_data["data"].append(data1)
+
+				data2 = dict(data_obj)
+				data2["method"] = methods["KOW"]
+				data2["data"] = log_koc_vals["Kow"]
+				parsed_data["data"].append(data2)
 			else:
 				estimated_value = results[api_key].get("estimatedValue", {}).get("value", None)
 				logging.warning("estimated_value: {}".format(estimated_value))
@@ -185,8 +193,6 @@ class EpiCalcJar(Calculator):
 					new_item["method"] = list(methods.values())[0]
 				new_item["data"] = str(estimated_value)
 				parsed_data["data"].append(new_item)
-
-			# logging.warning("PARSED RESPONSE: {}".format(parsed_data))
 
 		return parsed_data
 
