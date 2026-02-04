@@ -47,8 +47,6 @@ class Hydrolysis:
         upper_bound = 1e3
         lower_bound = 1e-1
 
-        logging.warning("round_half_life value: {}".format(value))
-
         if not value:
             return 0
 
@@ -197,8 +195,6 @@ class Hydrolysis:
         }
         for child_obj in child_nodes:
 
-            logging.info("ORIGINAL CHILD OBJ: {}".format(child_obj))
-
             route = child_obj.get("routes").lower()
             is_one = self.is_num_sites_1(child_obj, product_count, route)
             op_ester = self.is_op_ester(route)
@@ -221,21 +217,20 @@ class Hydrolysis:
                 if unique_schemes_count > 1:
                     # case C
                     child_obj["case"] = "C"
-                    child_obj["path"] = self.determine_path(child_obj, route, child_nodes)
+                    child_obj["path"] = self.determine_path(child_obj, route, child_nodes, parent)
                 else:
                     # case D
                     child_obj["case"] = "D"
                     child_obj["path"] = self.determine_path(child_obj, route, child_nodes)
 
-            logging.info("UPDATED CHILD OBJ: {}".format(child_obj))
-
         return child_nodes
 
 
-    def determine_path(self, child_obj, route, child_nodes):
+    def determine_path(self, child_obj, route, child_nodes, parent=None):
         """
-        Determine path for a product's case.
+        Determine path for a product's case. 
         """
+
         if not child_obj.get("case"):
             logging.warning("determine_path() - 'case' not in child_obj.")
             return False
@@ -247,7 +242,7 @@ class Hydrolysis:
         elif child_obj["case"] == "B":
             path = "1"  # NOTE: only one path for case B
         elif child_obj["case"] == "C":
-            path = self.handle_case_c_path(route, child_nodes)
+            path = self.handle_case_c_path(route, child_nodes, parent)
         elif child_obj["case"] == "D":
             path = self.handle_case_d_path(route)
 
@@ -273,7 +268,7 @@ class Hydrolysis:
         return path
 
 
-    def handle_case_c_path(self, route, child_nodes):
+    def handle_case_c_path(self, route, child_nodes, parent):
         """
         Case C - for multi-site with unique schemes.
         """
@@ -288,6 +283,11 @@ class Hydrolysis:
             path = "3"
         elif route in self.cleaved_list:
             path = "5"
+        # elif "halogenated aliphatics" in route:
+        #     path = "6"
+        elif parent != None and any(mol in parent for mol in ["N", "P", "S", "O"]):
+            logging.warning("SMILES contains N, S, P, or O. Returning qualitative value.")
+            path = "6"
         else:
             path = "4"
         return path
@@ -338,8 +338,6 @@ class Hydrolysis:
         EPI wrapper response.
         """
 
-        logging.info("get_qsar_for_products() grouped_products: {}".format(grouped_products))
-
         all_products_list = []
 
         for path_key, child_obj_list in grouped_products.items():
@@ -350,8 +348,6 @@ class Hydrolysis:
             path = path_key[1]
             route = child_obj_list[0]["routes"].lower()  # routes for child_obj_list should all be the same
             route_endpoint = self.qsar_request_map[route]
-
-            # url = self.baseUrl.replace("estimated", "") + route_endpoint
 
             url = self.baseUrl
 
@@ -372,8 +368,6 @@ class Hydrolysis:
 
             response = requests.get(url, params={"smiles": parent})
 
-            # logging.warning("REPONSE: {}".format(response))
-
             if response.status_code != 200:
                 logging.warning("Error requesting half-life data from EPI Suite.\nStatus code: {}\nContent: {}".format(response.status_code, response.content))
                 for child_obj in child_obj_list:
@@ -382,8 +376,6 @@ class Hydrolysis:
                     child_obj["valid"] = False
                 all_products_list += child_obj_list
                 continue
-
-            logging.warning("Getting json from response.")
 
             response_obj = json.loads(response.content)
 
@@ -432,12 +424,7 @@ class Hydrolysis:
         ka = None
         kb = None
 
-        logging.warning("curate_api_response called!!")
-
-
         hydrolysis_output_text = response_obj["hydrolysis"]["output"]
-
-        logging.warning("hydrolysis_output_text: {}".format(hydrolysis_output_text))
         
         # Extracting chemical (SMILES)
         chemical_match = re.search(r"SMILES\s*:\s*(.+)", hydrolysis_output_text)
@@ -470,12 +457,7 @@ class Hydrolysis:
         # return output_data
 
 
-
-        logging.warning("TEST KEYS: {}".format(response_obj.keys()))
-
         hydrolysis_values = response_obj["hydrolysis"]
-
-        logging.warning("hydrolysis_values: {}".format(hydrolysis_values))
 
         for halflife_obj in hydrolysis_values.get("halfLives"):
             
@@ -669,7 +651,8 @@ class Hydrolysis:
             return self.hl_result_pattern("Ka/n", child_obj_list, response_obj)
         elif path == "4" or path == "5":
             return self.hl_result_pattern("Kb", child_obj_list, response_obj)
-
+        elif path == "6":
+            return self.assign_qualitative_values(child_obj_list)
 
     def hl_result_pattern(self, sort_prop, child_obj_list, response_obj):
         """

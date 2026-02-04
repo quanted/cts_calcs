@@ -6,7 +6,7 @@ import os
 from .calculator import Calculator
 from .chemical_information import SMILESFilter
 # from .calculator_rdkit import RdkitCalc
-from .hydrolysis import Hydrolysis
+from .hydrolysis_jar import Hydrolysis
 
 
 
