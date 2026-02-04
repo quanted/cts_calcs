@@ -1,14 +1,11 @@
 __author__ = 'np'
 
-# from django.template import Template
-# from django.template import Context
 import requests
 import json
 import logging
 import os
-# import redis
-import datetime
-import pytz
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 class Calculator(object):
@@ -139,8 +136,8 @@ class Calculator(object):
 			return "Error: result key not found"
 
 	def gen_jid(self):
-		ts = datetime.datetime.now(pytz.UTC)
-		localDatetime = ts.astimezone(pytz.timezone('US/Eastern'))
+		ts = datetime.now(timezone.UTC)
+		localDatetime = ts.astimezone(ZoneInfo.timezone('US/Eastern'))
 		jid = localDatetime.strftime('%Y%m%d%H%M%S%f')
 		return jid
 
