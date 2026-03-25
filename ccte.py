@@ -97,7 +97,7 @@ class CCTE:
 		# TODO: Add a "search" model for results as well.
 		for key, result_obj in self.chem_result_map.items():
 			filename = result_obj.get("filename")
-			with open(os.path.join(self.models_path, filename)) as f:
+			with open(os.path.join(self.models_path, filename), encoding="utf-8") as f:
 				result_obj["data"] = json.load(f)
 
 	def set_api_key(self):
