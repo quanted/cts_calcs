@@ -367,8 +367,10 @@ class Hydrolysis:
         elif route in self.cleaved_list:
             return "4" if "anhydride" in route else "5"
         elif "halogenated aliphatics" in route:
-            return "2"
-        return "3"
+            # return "2"
+            return "3"
+        # return "3"
+        return 2
 
     def handle_case_c_path(self, route, child_nodes, parent):
         if route in self.op_esters:
