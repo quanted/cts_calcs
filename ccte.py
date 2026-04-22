@@ -21,7 +21,7 @@ class CCTE:
 		self.db_handler = MongoDBHandler()
 
 		# Base URL and endpoints for public CCTE:
-		self.ccte_base_url = "https://api-ccte.epa.gov/"
+		self.ccte_base_url = "https://comptox.epa.gov/ctx-api/"
 		self.chem_search_equal_url = "chemical/search/equal/{}"
 		self.chem_search_substring_url = "chemical/search/contain/{}"
 		self.chem_search_starting_url = "chemical/search/start-with/{}"
