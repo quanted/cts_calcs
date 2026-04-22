@@ -25,9 +25,8 @@ class CCTE:
 		self.chem_search_equal_url = "chemical/search/equal/{}"
 		self.chem_search_substring_url = "chemical/search/contain/{}"
 		self.chem_search_starting_url = "chemical/search/start-with/{}"
-		self.chem_prop_dtxsid_url = "chemical/property/search/by-dtxsid/{}"
+		self.chem_prop_dtxsid_url = "chemical/property/experimental/search/by-dtxsid/{}"
 		self.chem_details_dtxsid_url = "chemical/detail/search/by-dtxsid/{}"
-		self.chem_details_dtxcid_url = "chemical/detail/search/by-dtxcid/{}"
 		self.chem_fate_url = "chemical/fate/search/by-dtxsid/{}"
 
 		# Required headers for their API:
@@ -192,7 +191,7 @@ class CCTE:
 
 	def make_propery_request(self, dtxsid):
 		"""
-		Makes a chemical property request using DTXSID
+		Makes a chemical experimental property request using DTXSID
 		as the input type.
 		"""
 		try:
