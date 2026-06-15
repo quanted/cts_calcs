@@ -28,6 +28,7 @@ class CCTE:
 		self.chem_prop_dtxsid_url = "chemical/property/experimental/search/by-dtxsid/{}"
 		self.chem_details_dtxsid_url = "chemical/detail/search/by-dtxsid/{}"
 		self.chem_fate_url = "chemical/fate/search/by-dtxsid/{}"
+		self.chem_details_smiles = "chemical/detail/search/by-smiles/"
 
 		# Required headers for their API:
 		self.headers = {
@@ -45,7 +46,7 @@ class CCTE:
 			'casrn': 'casrn',
 			'preferredName': 'preferredName',
 			'synGsid': 'gsid',
-			'dtxsid': 'dsstoxSubstanceId',
+			'dtxsid': 'dtxsid',
 			'dtxcid': 'dtxcid',
 			'smiles': 'smiles',
 			'molFormula': 'formula',
@@ -61,7 +62,7 @@ class CCTE:
 			"search": {
 				"filename": "ccte_public_chemical_search_results_example.json",
 				"data": None,
-				"keys": ["dtxsid", "casrn", "preferredName", "smiles"]  # keys for cts
+				"keys": ["dtxsid", "casrn", "preferredName", "smiles", "averageMass", "monoisotopicMass", "molFormula", "iupacName"]  # keys for cts
 			},
 			"details": {
 				"filename": "ccte_public_chemical_details_results_example.json",
@@ -177,11 +178,45 @@ class CCTE:
 		try:
 			url = self.ccte_base_url + self.chem_details_dtxsid_url.format(html.escape(dtxsid))
 			response = requests.get(url, headers=self.headers)
-			logging.info("Details response for {}: {}".format())
-			return json.loads(response.content)
 		except Exception as e:
 			logging.warning("CCTE make_details_request exception, url: {}: {}".format(url, e))
 			return False
+		response_obj = self.validate_search_response(response)
+		if not isinstance(response_obj, list) and response_obj.get("status") != True:
+			# TODO: More exception handling?
+			return response_obj
+		if len(response_obj) != 1:
+			logging.warning("More than one chemical returned in chemical search for {}: {}".format(chemical, response_obj))
+			# TODO: idk, gonna pick the first one for now.
+			results = self.check_measured_db(response_obj)
+
+		results = self.get_search_results(response_obj)
+
+		return self.wrap_results(results)
+
+	def make_smiles_request(self, smiles):
+		"""
+		GET /chemical/detail/search/by-smiles
+		"""
+		try:
+			url = self.ccte_base_url + self.chem_details_smiles
+			response = requests.get(url, params={"smiles": smiles}, headers=self.headers)
+			# return json.loads(response.content)
+		except Exception as e:
+			logging.warning("CCTE make_smiles_request exception, url: {}: {}".format(url, e))
+			return False
+		response_obj = self.validate_search_response(response)
+		if not isinstance(response_obj, list) and response_obj.get("status") != True:
+			# TODO: More exception handling?
+			return response_obj
+		if len(response_obj) != 1:
+			logging.warning("More than one chemical returned in chemical search for {}: {}".format(chemical, response_obj))
+			# TODO: idk, gonna pick the first one for now.
+			results = self.check_measured_db(response_obj)
+
+		results = self.get_search_results(response_obj)
+
+		return self.wrap_results(results)
 
 	def get_details_results(self, response):
 		"""
@@ -196,11 +231,7 @@ class CCTE:
 		"""
 		try:
 			url = self.ccte_base_url + self.chem_prop_dtxsid_url.format(html.escape(dtxsid))
-
-			logging.warning("CCTE make_propery_request url: {}".format(url))
-
 			response = requests.get(url, headers=self.headers)
-			# logging.info("Property response for {}: {}".format(url, response.content))
 			return json.loads(response.content)
 		except Exception as e:
 			logging.warning("ccte make_propery_request exception, url: {}: {}".format(url, e))
@@ -239,9 +270,7 @@ class CCTE:
 		input type.
 		"""
 		# try:
-		logging.warning("dtxsid: {}".format(dtxsid))
 		esp_dtxsid = html.escape(dtxsid)
-		logging.warning("esp_dtxsid: {}".format(esp_dtxsid))
 		# url = self.ccte_base_url + self.chem_fate_url.format(html.escape(dtxsid))
 		url = self.ccte_base_url + self.chem_fate_url.format(dtxsid)
 		response = requests.get(url, headers=self.headers)
