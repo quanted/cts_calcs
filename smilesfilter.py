@@ -2,6 +2,8 @@ import requests
 import json
 import logging
 import os
+from rdkit import Chem
+
 from .calculator import Calculator
 from .jchem_properties import Tautomerization, ElementalAnalysis
 from .calculator_rdkit import RdkitCalc
@@ -59,7 +61,7 @@ class SMILESFilter(Calculator):
 		mol = Chem.MolFromSmiles(smiles)
 		if mol is None:
 			return False
-		carbon_pattern = Chem.MolFromMarts("[#6]")
+		carbon_pattern = Chem.MolFromSmarts("[#6]")
 		return mol.HasSubstructMatch(carbon_pattern)
 
 
