@@ -52,27 +52,15 @@ class SMILESFilter(Calculator):
 			return False
 
 
-
 	def check_for_carbon(self, smiles):
 		"""
-		Makes request to jchem_properties's ElementalAnalysis class,
-		which returns the composition of a chemical from JchemWS
-		elemental analysis endpoint.
+		Carbon check using rdkit.
 		"""
-
-		# Makes request to get chemical composition:
-		analysis_class = ElementalAnalysis()
-		analysis_class.make_data_request(smiles, analysis_class)  # sets 'results' attr to json object of response
-		chemical_composition = analysis_class.get_elemental_analysis()  # returns list of chemical components
-
-		# Looks through composition data until carbon is found:
-		for composite_data in chemical_composition:
-			# Gets element out of composite result (e.g., "C (44.34%)"):
-			element = composite_data.split("(")[0].replace(" ", "")
-			if element == "C":
-				return True
-
-		return False
+		mol = Chem.MolFromSmiles(smiles)
+		if mol is None:
+			return False
+		carbon_pattern = Chem.MolFromMarts("[#6]")
+		return mol.HasSubstructMatch(carbon_pattern)
 
 
 
