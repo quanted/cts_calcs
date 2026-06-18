@@ -119,132 +119,71 @@ class ChemInfo(object):
 
 	def get_cheminfo(self, request_post, only_dsstox=False):
 		"""
-		Makes call to Calculator for chemaxon
-		data. Converts incoming structure to smiles,
-		then filters smiles, and then retrieves data
-		:param request:
-		:return: chemical details response json
-
-		Note: Due to marvin sketch image data (<cml> image) being
-		so large, a bool, "structureData", is used to determine
-		whether or not to grab it. It's only needed in chem edit tab.
+		Main function for Chemical Editor. Return chemical info from CCTE/Comptox and
+		uses rdkit as well.
 		"""
 
 		chemical = request_post.get('chemical')
 		get_sd = request_post.get('get_structure_data')  # bool for getting <cml> format image for marvin sketch
 		is_node = request_post.get('is_node')  # bool for tree node or not
-		_actor_results = {}  # dict for actorws results
-		_gsid = None
 		orig_smiles = None  # initial SMILES pre CTS filter
-		is_name = False  # bool for whether smiles was actually acronym
 
-		# # Checks chemical against chem_name_smiles_map:
+		# Checks chemical against chem_name_smiles_map:
 		chemical = self.check_name_smiles_map(chemical)
 
-		is_cas = self.is_cas(chemical)
-		logging.info("is_cas: {}".format(is_cas))
+		chem_type = self.determine_chem_type(chemical)
 
-		is_dtxsid = self.is_dtxsid(chemical)
-		logging.info("is_dtxsid: {}".format(is_dtxsid))
-
-		is_smiles = self.is_valid_smiles(chemical)
-		logging.info("is_smiles: {}".format(is_smiles))
-
-		is_name = False
-		if not (is_cas or is_dtxsid or is_smiles):
-			is_name = True
-
-
-		ccte_results = None
-
-		# If not cas, dtxsid, or smiles, assuming name and will try to get SMILES (error assumes invalid structure)
-		if is_cas or is_dtxsid or is_name:
-			logging.warning("Calling make_search_request")
-			# ccte_results = self.ccte_obj.make_search_request(molecule_obj["preferredName"])
-			ccte_results = self.ccte_obj.make_search_request(chemical)
-			logging.warning("ccte_results: {}".format(ccte_results))
-
-			orig_smiles = ccte_results["data"]["smiles"]
-
-		elif is_smiles:
-			logging.warning("Calling make_smiles_request")
-			ccte_results = self.ccte_obj.make_smiles_request(chemical)
-			ccte_results["data"]["smiles"] = chemical
-			orig_smiles = chemical
-
-			logging.warning("ccte_results: {}".format(ccte_results))
-
-		else:
-			logging.error("Chemical type not recognized: {}".format(e))
-			response_obj = {}
-			response_obj['status'] = False
-			response_obj['error'] = "Cannot process chemical"
-			response_obj['request_post'] = request_post
-			return response_obj
-
+		# Gets initial chem info data from CCTE as well as sets orig_smiles:
+		ccte_results = self.get_initial_ccte_data(chemical, chem_type, request_post)
+		if "error" in ccte_results:
+			return ccte_results
 
 		# Uses name form of C, CC, and CCC SMILES:
 		if chemical in list(self.carbon_anomolies.keys()):
 			chemical = self.carbon_anomolies[chemical]
 
-
-		logging.info("Original SMILES: {}".format(orig_smiles))
-
+		logging.info("Original SMILES: {}".format(ccte_results["data"]["orig_smiles"]))
 
 		# Gets filtered SMILES:
-		try:
-			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
-			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
-				response_obj = {}
-				response_obj['status'] = False
-				response_obj['request_post'] = request_post
-				response_obj['error'] = filtered_smiles['error']
-				return response_obj
-		except Exception as e:
-			logging.warning("Error filtering SMILES: {}".format(e))
-			response_obj = {}
-			response_obj['status'] = False
-			response_obj['error'] = "Cannot process chemical"
-			response_obj['request_post'] = request_post
-			return response_obj
+		filtered_smiles = self.make_smilesfilter_request(ccte_results["data"]["orig_smiles"], request_post)
+		if "error" in filtered_smiles:
+			return filtered_smiles
 
 		logging.info("Filtered SMILES: {}".format(filtered_smiles))
 
+		# Gets detailed chem info from CCTE using dtxsid:
 		ccte_detail_results = self.ccte_obj.make_details_request(ccte_results["data"]["dtxsid"])
 
-		ccte_detail_results_curated = {}
-
-		# remaps keys to cts key names:
+		final_results = {}
 		for key, val in ccte_detail_results.items():
+			# remaps keys to cts key names
 			cts_key = self.ccte_obj.chemid_keys_map.get(key)
 			if not cts_key:
 				continue
-			ccte_detail_results_curated[cts_key] = val
+			final_results[cts_key] = val
 
 		# Returns dsstox substance ID if that's all that's needed,
 		# which is used as the DB key for the chem-info document:
 		if only_dsstox:
-			# return dsstox_results.get('data', {})
 			return ccte_detail_results.get('data', {})
 
 		cas_list = self.make_cas_request(filtered_smiles)  # gets CAS from cactus.nci.nih.gov (deprecated in jchemws)
 
-		ccte_detail_results_curated['smiles'] = filtered_smiles
-		ccte_detail_results_curated['cas'] = cas_list
-		ccte_detail_results_curated['chemical'] = chemical
-		ccte_detail_results_curated['orig_smiles'] = orig_smiles
-
+		final_results['smiles'] = filtered_smiles
+		final_results['cas'] = cas_list
+		final_results['chemical'] = chemical
+		final_results['orig_smiles'] = ccte_results["data"]["orig_smiles"]
 
 		has_carbon = self.smiles_filter_obj.check_for_carbon(filtered_smiles)
 		if not has_carbon and is_node:
-			ccte_detail_results_curated['has_carbon'] = False
+			final_results['has_carbon'] = False
 		else:
-			ccte_detail_results_curated['has_carbon'] = True
+			final_results['has_carbon'] = True
 
 		# Adds popup image with cheminfo table if it's a gentrans product (i.e., node):
 		if is_node:
-			ccte_detail_results_curated.update({'node_image': self.calc_obj.nodeWrapper(filtered_smiles, self.calc_obj.tree_image_height, self.calc_obj.tree_image_width, self.calc_obj.image_scale, self.calc_obj.metID,'svg', True)})
-			ccte_detail_results_curated.update({
+			final_results.update({'node_image': self.calc_obj.nodeWrapper(filtered_smiles, self.calc_obj.tree_image_height, self.calc_obj.tree_image_width, self.calc_obj.image_scale, self.calc_obj.metID,'svg', True)})
+			final_results.update({
 				'popup_image': self.calc_obj.popupBuilder(
 					{"smiles": filtered_smiles}, 
 					self.calc_obj.metabolite_keys, 
@@ -254,72 +193,10 @@ class ChemInfo(object):
 
 		wrapped_post = {}
 		wrapped_post['status'] = True  # 'metadata': '',
-		wrapped_post['data'] = ccte_detail_results_curated
+		wrapped_post['data'] = final_results
 		wrapped_post['request_post'] = request_post
 
 		return wrapped_post
-
-	def handle_no_chemaxon(self, chemical, request_post):
-		"""
-		Returns data for ACTORWS only if chemaxon
-		isn't available or can't recognize the chemical.
-		"""
-		molecule_obj = {}
-		chemid_results = self.get_chemid_from_actorws(chemical)
-		if not chemid_results or not chemid_results.get('smiles'):
-			response_obj = {}
-			response_obj['status'] = False
-			response_obj['request_post'] = request_post
-			response_obj['error'] = "Cannot find data for chemical"
-			return response_obj
-		# remaps keys to cts key names:
-		for key, val in chemid_results.items():
-			cts_key = self.actorws_obj.chemid_keys_map.get(key)
-			if not cts_key:
-				continue
-			molecule_obj[cts_key] = val
-		return molecule_obj
-
-	def smiles_name_check(self, chemical):
-		"""
-		Known as "the PFOS problem," which is an example chemical of
-		an issue where the chemical name is interpretted by JchemWS
-		as a SMILES. It tries to convert the chemical into a SMILES, which
-		should trigger an error if it actually is one.
-
-		Returns: (True, actual SMILES from JchemWS) if chemical was actual a name,
-		(False, original smiles from input) if chemical was actually a smiles.
-		"""
-		converted_name_response = self.calc_obj.get_smiles_from_name(chemical)
-
-		logging.info("smiles_name_check converted_name_response: {}".format(converted_name_response))
-
-		if converted_name_response.get('smiles') and not 'error' in converted_name_response:
-			# if valid, assume chemical was intended to be 'name' instead of 'smiles'..
-			# return True
-			logging.info("Received valid response, assuming chemical was intended to be a name instead of smiles.")
-			return converted_name_response['smiles']
-		else:
-			# if an error was thrown, it was actually smiles so returns original version:
-			# return None
-			logging.info("Assuming chemical was actually smiles and not intended to be a name. Returning original chemical.")
-			return chemical
-
-	def get_chemid_from_actorws(self, chemical, chem_type_name=None):
-		_gsid = None
-		_smiles_from_mrv = False
-		_name_or_smiles = chem_type_name in ['name', 'common', 'smiles', 'systematic']  # bool for chemical in name/common or smiles format
-		# If user drew a chemical, get SMILES of chemical from Jchem WS..
-		if chem_type_name == 'mrv':
-			logging.info("Getting SMILES from jchem web services..")
-			response = self.calc_obj.convertToSMILES({'chemical': chemical})
-			chemical = response['structure']
-			logging.info("SMILES of drawn chemical: {}".format(chemical))
-			_smiles_from_mrv = True
-		# NOTE: Should be name or smiles, but tries to anyway in case chem type was unknown:
-		logging.info("Getting gsid from actorws chemicalIdentifier..")
-		chemid_results = self.actorws_obj.get_chemid_results(chemical)  # obj w/ keys calc, prop, data
-		return chemid_results
 
 	def make_cas_request(self, smiles):
 		"""
@@ -348,6 +225,58 @@ class ChemInfo(object):
 		else:
 			return chemical
 
+	def make_smilesfilter_request(self, orig_smiles, request_post):
+		try:
+			filtered_smiles = self.smiles_filter_obj.filterSMILES(orig_smiles, is_node=request_post.get('is_node'))			
+			if isinstance(filtered_smiles, dict) and 'error' in filtered_smiles:
+				response_obj = {}
+				response_obj['status'] = False
+				response_obj['request_post'] = request_post
+				response_obj['error'] = filtered_smiles['error']
+				return response_obj
+			else:
+				return filtered_smiles
+		except Exception as e:
+			logging.warning("Error filtering SMILES: {}".format(e))
+			response_obj = {}
+			response_obj['status'] = False
+			response_obj['error'] = "Cannot process chemical"
+			response_obj['request_post'] = request_post
+			return response_obj
+
+	def get_initial_ccte_data(self, chemical, chem_type, request_post):
+		if chem_type in ["cas", "dtxsid", "name"]:
+			ccte_results = self.ccte_obj.make_search_request(chemical)
+			logging.info("ccte_results from make_search_request: {}".format(ccte_results))
+			ccte_results["data"]["orig_smiles"] = ccte_results["data"]["smiles"]
+			return ccte_results
+		elif chem_type == "smiles":
+			ccte_results = self.ccte_obj.make_smiles_request(chemical)
+			logging.info("ccte_results from make_smiles_request: {}".format(ccte_results))
+			ccte_results["data"]["smiles"] = chemical
+			ccte_results["data"]["orig_smiles"] = chemical
+			return ccte_results
+		else:
+			logging.error("Chemical type not recognized: {}".format(e))
+			response_obj = {}
+			response_obj['status'] = False
+			response_obj['error'] = "Cannot process chemical"
+			response_obj['request_post'] = request_post
+			return response_obj
+
+	def determine_chem_type(self, chemical):
+		if self.is_cas(chemical):
+			logging.info("chem_type: cas")
+			return "cas"
+		if self.is_dtxsid(chemical):
+			logging.info("chem_type: dtxsid")
+			return "dtxsid"
+		if self.is_valid_smiles(chemical):
+			logging.info("chem_type: smiles")
+			return "smiles"
+		logging.info("chem_type: name")
+		return "name"
+
 	def is_valid_smiles(self, chemical):
 		try:
 			mol = Chem.MolFromSmiles(chemical)
@@ -360,18 +289,17 @@ class ChemInfo(object):
 			logging.warning("is_valid_smiles exception: {}.\nNot a valid SMILES.".format(e))
 			return False
 		
-
 	def is_cas(self, chemical):
-	    chemical = chemical.strip()
-	    if not re.fullmatch(r"\d{2,7}-\d{2}-\d", chemical):
-	        return False
-	    digits = chemical.replace("-", "")
-	    body = digits[:-1]
-	    check_digit = int(digits[-1])
-	    total = 0
-	    for position, digit in enumerate(reversed(body), start=1):
-	        total += position * int(digit)
-	    return total % 10 == check_digit
+		chemical = chemical.strip()
+		if not re.fullmatch(r"\d{2,7}-\d{2}-\d", chemical):
+			return False
+		digits = chemical.replace("-", "")
+		body = digits[:-1]
+		check_digit = int(digits[-1])
+		total = 0
+		for position, digit in enumerate(reversed(body), start=1):
+			total += position * int(digit)
+		return total % 10 == check_digit
 
 	def is_dtxsid(self, chemical):
 		chemical = chemical.strip()
