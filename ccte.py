@@ -237,33 +237,6 @@ class CCTE:
 			logging.warning("ccte make_propery_request exception, url: {}: {}".format(url, e))
 			return False
 
-	def get_property_results(self, response):
-		"""
-		Gets chemical property results with propType 'experimental'.
-		Example response:
-		[{
-		    "name": "Water Solubility",
-		    "value": 0.0245471,
-		    "id": 985066,
-		    "source": "Tetko et al. J. Chem. Inf. and Comp. Sci.\xc2\xa041.6 (2001): 1488-1493",
-		    "description": "Tetko, Igor V., et al. \\"Estimation of aqueous solubility of chemical compounds using E-state indices.\\"\xc2\xa0. <a href=\'https://pubs.acs.org/doi/10.1021/ci000392t\'target=\'_blank\'>J. Chem. Inf. and Comp. Sci.\xc2\xa041.6 (2001): 1488-1493</a>",
-		    "dtxsid": "DTXSID5020108",
-		    "dtxcid": "DTXCID50108",
-		    "propType": "experimental",
-		    "unit": "mol/L",
-		    "propertyId": "water-solubility"
-		}]
-		"""
-		if not isinstance(response, list):
-			return False
-		
-		prop_data = []
-		for data_obj in response:
-			if data_obj.get("propType") != "experimental":
-				continue
-			prop_data.append(data_obj)
-		return prop_data
-
 	def make_fate_request(self, dtxsid):
 		"""
 		Makes a chemical search request using DTXSID as the
@@ -278,12 +251,6 @@ class CCTE:
 		# except Exception as e:
 		# 	logging.warning("ccte make_fate_request exception, url: {}: {}".format(url, e))
 		# 	return False
-
-	def get_fate_results(self, response):
-		"""
-		Gets chemical fate results.
-		"""
-		pass
 
 	def get_measured_db_data(self, db_results):
 		"""

@@ -79,13 +79,17 @@ class MeasuredCalc(Calculator, CCTE):
 
 		# ccte propertyId to CTS prop map:
 		self.ccte_prop_map = {
-			"melting-point": "melting_point",
-			"boiling-point": "boiling_point",
-			"water-solubility": "water_sol",
-			"vapor-pressure": "vapor_press",
-			"henrys-law": "henrys_law_con",
-			"logkow-octanol-water": "kow_no_ph"
+			"Melting Point": "melting_point",
+			"Boiling Point": "boiling_point",
+			"Water Solubility": "water_sol",
+			"Vapor Pressure": "vapor_press",
+			"Henry's Law Constant": "henrys_law_con",
+			"LogKow: Octanol-Water": "kow_no_ph",
+			"Soil Adsorp. Coeff. (Koc)": "koc",
+			"Bioconcentration Factor": "log_bcf"
 		}
+
+		self.source_keys = ["lsName", "briefCitation", "sourceName"]
 
 		self.ccte_fate_map = {
 			"Soil Adsorp. Coeff. (Koc)": "koc",
@@ -158,13 +162,16 @@ class MeasuredCalc(Calculator, CCTE):
 		"""
 		new_results = []
 		for data_obj in results:
-			if not data_obj["propType"] == "experimental" \
-				or not data_obj["propertyId"] in list(self.ccte_prop_map.keys()):
-					continue
+			if not data_obj["propName"] in list(self.ccte_prop_map.keys()):
+				continue
+			print("data_obj: {}".format(data_obj))
 			new_data_obj = dict(data_obj)
-			new_data_obj["prop"] = self.ccte_prop_map[data_obj["propertyId"]]
-			new_data_obj["method"] = self.convert_to_acronym(data_obj["source"])
-			new_data_obj["data"] = data_obj["value"]
+			new_data_obj["prop"] = self.ccte_prop_map[data_obj["propName"]]
+
+			method = next((data_obj[k] for k in self.source_keys if data_obj.get(k) is not None), None)
+
+			new_data_obj["method"] = self.convert_to_acronym(method)
+			new_data_obj["data"] = data_obj["propValue"]
 			new_results.append(new_data_obj)
 		return new_results
 
@@ -174,16 +181,38 @@ class MeasuredCalc(Calculator, CCTE):
 		Curates prop data from CCTE into keys that CTS understands,
 		e.g., 'prop', 'data', 'method', 'chemical'.
 		"""
+
+		# logging.warning("add_cts_keys_fate_data results: {}".format(results))
+
 		new_results = []
 		for data_obj in results:
-			if not data_obj["valueType"] == "experimental" \
-				or not data_obj["endpointName"] in list(self.ccte_fate_map.keys()):
-					continue
+
+			# logging.warning("data_obj: {}".format(data_obj))
+
+			# if not data_obj["valueType"] == "experimental" \
+			# 	or not data_obj["endpointName"] in list(self.ccte_fate_map.keys()):
+			# 		continue
+
+			if not data_obj.get("propName") in list(self.ccte_fate_map.keys()):
+				logging.info("Data object propName, {}, not in ccte_fate_map list".format(data_obj.get("propName")))
+				continue
+
+			if not "experimentalFateData" in data_obj or data_obj["experimentalFateData"] == "None":
+				logging.info("No experimentalFateData found for data object.")
+				continue
+
 			new_data_obj = dict(data_obj)
-			new_data_obj["prop"] = self.ccte_fate_map[data_obj["endpointName"]]
-			new_data_obj["method"] = self.convert_to_acronym(data_obj["modelSource"])
-			new_data_obj["data"] = data_obj["resultValue"]
+			# new_data_obj["prop"] = self.ccte_fate_map[data_obj["endpointName"]]
+			new_data_obj["prop"] = self.ccte_fate_map[data_obj["propName"]]
+
+			# TODO: Test this with SMILES with experimentalFateData returned:
+			# new_data_obj["method"] = self.convert_to_acronym(data_obj["modelSource"])
+
+			# TODO: Test this with SMILES with experimentalFateData returned:
+			# new_data_obj["data"] = data_obj["resultValue"]
+
 			new_results.append(new_data_obj)
+		
 		return new_results
 
 
@@ -192,24 +221,16 @@ class MeasuredCalc(Calculator, CCTE):
 		Consolidates data objects with the same prop and method
 		into one object and concatenates data into a comma-separated string.
 		"""
+
+		# print("group_by_acronym, props_list: {}, data_type: {}".format(props_list, data_type))
+
 		new_list = []
 		new_dict = {}
-
-		data_key = None
-		data_map_keys = None
-
-		if data_type == "prop":
-			data_key = "propertyId"
-			data_map_keys = list(self.ccte_prop_map.keys())
-		elif data_type == "fate":
-			data_key = "endpointName"
-			data_map_keys = list(self.ccte_fate_map.keys())
-
 
 		# Process each entry in the data list
 		for item in props_list:
 
-			if not item[data_key] in data_map_keys:
+			if not item["propName"] in list(self.ccte_prop_map.keys()):
 				continue
 
 			match_key = (item['method'], item['prop'])
@@ -432,35 +453,49 @@ class MeasuredCalc(Calculator, CCTE):
 		prop_response = None
 		_response_dict.update({"prop_results": []})
 
-		if any(prop in request_props for prop in self.props):
-			# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW using DTXSID:
-			logging.warning("calculator_measured CCTE make_propery_request, dtxsid: {}".format(dtxsid))
-			prop_response = self.make_propery_request(dtxsid)
-			if not prop_response:
-				logging.warning("Cannot retrieve properties from CCTE.")
-				_response_dict.update({
-					'data': "N/A",
-					'valid': False
-				})
-				return _response_dict
-			prop_results = self.get_property_results(prop_response)
-			curated_results = self.add_cts_keys_prop_data(prop_results)
-			final_prop_results = self.group_by_acronym(curated_results, "prop")
-			_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
+		# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW using DTXSID:
+		logging.warning("calculator_measured CCTE make_propery_request, dtxsid: {}".format(dtxsid))
+		prop_response = self.make_propery_request(dtxsid)
+		if not prop_response or not isinstance(prop_response, list) or len(prop_response) < 1:
+			logging.warning("Cannot retrieve properties from CCTE.")
+			_response_dict.update({
+				'data': "N/A",
+				'valid': False
+			})
+			return _response_dict
+		curated_results = self.add_cts_keys_prop_data(prop_response)
+		final_prop_results = self.group_by_acronym(curated_results, "prop")
+		_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
 
-		if any(fate in request_props for fate in self.fate):
-			# Makes fate request to CCTE for KOC, BCF, and BAF.
-			fate_response = self.make_fate_request(dtxsid)
-			if not fate_response:
-				logging.warning("Cannot retrieve fate data from CCTE.")
-				_response_dict.update({
-					'data': "N/A",
-					'valid': False
-				})
-				return _response_dict		
-			fate_results = self.add_cts_keys_fate_data(fate_response)
-			final_fate_results = self.group_by_acronym(fate_results, "fate")
-			_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
+		# if any(prop in request_props for prop in self.props):
+		# 	# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW using DTXSID:
+		# 	logging.warning("calculator_measured CCTE make_propery_request, dtxsid: {}".format(dtxsid))
+		# 	prop_response = self.make_propery_request(dtxsid)
+		# 	if not prop_response:
+		# 		logging.warning("Cannot retrieve properties from CCTE.")
+		# 		_response_dict.update({
+		# 			'data': "N/A",
+		# 			'valid': False
+		# 		})
+		# 		return _response_dict
+		# 	prop_results = self.get_property_results(prop_response)
+		# 	curated_results = self.add_cts_keys_prop_data(prop_results)
+		# 	final_prop_results = self.group_by_acronym(curated_results, "prop")
+		# 	_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
+
+		# if any(fate in request_props for fate in self.fate):
+		# 	# Makes fate request to CCTE for KOC, BCF, and BAF.
+		# 	fate_response = self.make_fate_request(dtxsid)
+		# 	if not fate_response:
+		# 		logging.warning("Cannot retrieve fate data from CCTE.")
+		# 		_response_dict.update({
+		# 			'data': "N/A",
+		# 			'valid': False
+		# 		})
+		# 		return _response_dict		
+		# 	fate_results = self.add_cts_keys_fate_data(fate_response)
+		# 	final_fate_results = self.group_by_acronym(fate_results, "fate")
+		# 	_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
 
 		_response_dict["prop_results"] = self.average_results(_response_dict["prop_results"])
 
