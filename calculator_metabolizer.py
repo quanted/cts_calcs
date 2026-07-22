@@ -128,7 +128,7 @@ class MetabolizerCalc(Calculator):
         self.metID += 1
         _products_dict = {}
 
-        logging.info("metabolites: {}".format(self.metID))
+        # logging.info("metabolites: {}".format(self.metID))
 
         if self.metID == 1:
 
@@ -199,8 +199,6 @@ class MetabolizerCalc(Calculator):
 
     def data_request_handler(self, request_dict):
 
-        logging.warning("calculator_metabolizer called, request_dict: {}".format(request_dict))
-
         _data_dict = request_dict.get('metabolizer_post')
         _data_dict.update({'structure': request_dict.get('chemical'), 'excludeCondition': 'hasValenceError()'})
 
@@ -216,8 +214,6 @@ class MetabolizerCalc(Calculator):
 
         response = self.getTransProducts(_data_dict)
 
-        logging.warning("Response: {}".format(response))
-
         if "error" in response:
             _response_obj["error"] = response["error"]
             return _response_obj
@@ -226,8 +222,6 @@ class MetabolizerCalc(Calculator):
             return _response_obj
 
         _results = self.recursive(response, int(request_dict['gen_limit']), unranked)
-
-        logging.warning("Curated results: {}".format(_results))
 
         _products_data = json.loads(_results)
 
@@ -278,8 +272,8 @@ class MetabolizerCalc(Calculator):
         url = self.efs_server_url + self.efs_metabolizer_endpoint
         self.request_timeout = 120
 
-        logging.warning("URL: {}".format(url))
-        logging.warning("POST: {}".format(request_obj))
+        # logging.warning("URL: {}".format(url))
+        # logging.warning("POST: {}".format(request_obj))
 
         return self.web_call(url, request_obj)
 

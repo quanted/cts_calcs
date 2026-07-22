@@ -164,7 +164,6 @@ class MeasuredCalc(Calculator, CCTE):
 		for data_obj in results:
 			if not data_obj["propName"] in list(self.ccte_prop_map.keys()):
 				continue
-			print("data_obj: {}".format(data_obj))
 			new_data_obj = dict(data_obj)
 			new_data_obj["prop"] = self.ccte_prop_map[data_obj["propName"]]
 
@@ -463,40 +462,11 @@ class MeasuredCalc(Calculator, CCTE):
 				'valid': False
 			})
 			return _response_dict
+
 		curated_results = self.add_cts_keys_prop_data(prop_response)
+
 		final_prop_results = self.group_by_acronym(curated_results, "prop")
 		_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
-
-		# if any(prop in request_props for prop in self.props):
-		# 	# Makes property request to CCTE for MP, BP, WS, VP, HL, and KOW using DTXSID:
-		# 	logging.warning("calculator_measured CCTE make_propery_request, dtxsid: {}".format(dtxsid))
-		# 	prop_response = self.make_propery_request(dtxsid)
-		# 	if not prop_response:
-		# 		logging.warning("Cannot retrieve properties from CCTE.")
-		# 		_response_dict.update({
-		# 			'data': "N/A",
-		# 			'valid': False
-		# 		})
-		# 		return _response_dict
-		# 	prop_results = self.get_property_results(prop_response)
-		# 	curated_results = self.add_cts_keys_prop_data(prop_results)
-		# 	final_prop_results = self.group_by_acronym(curated_results, "prop")
-		# 	_response_dict["prop_results"] = _response_dict["prop_results"] + final_prop_results
-
-		# if any(fate in request_props for fate in self.fate):
-		# 	# Makes fate request to CCTE for KOC, BCF, and BAF.
-		# 	fate_response = self.make_fate_request(dtxsid)
-		# 	if not fate_response:
-		# 		logging.warning("Cannot retrieve fate data from CCTE.")
-		# 		_response_dict.update({
-		# 			'data': "N/A",
-		# 			'valid': False
-		# 		})
-		# 		return _response_dict		
-		# 	fate_results = self.add_cts_keys_fate_data(fate_response)
-		# 	final_fate_results = self.group_by_acronym(fate_results, "fate")
-		# 	_response_dict["prop_results"] = _response_dict["prop_results"] + final_fate_results
-
 		_response_dict["prop_results"] = self.average_results(_response_dict["prop_results"])
 
 		return _response_dict

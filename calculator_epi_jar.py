@@ -245,16 +245,15 @@ class EpiCalcJar(Calculator):
 			else:
 				self.melting_point = None
 
-			logging.warning("Making data request\nURL: {}\nSMILES: {}\n".format(self.baseUrl, _filtered_smiles))
+			# logging.info("Making data request\nURL: {}\nSMILES: {}\n".format(self.baseUrl, _filtered_smiles))
 
 			_result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc']) # make call for data!
 
-			logging.warning("makeDataRequest result: {}".format(_result_obj))
+			# logging.info("makeDataRequest result: {}".format(_result_obj))
 
 			_result_obj = self.parse_api_results(_result_obj, _filtered_smiles)
 
-			logging.warning("parsed result: {}".format(_result_obj))
-
+			# logging.info("parsed result: {}".format(_result_obj))
 
 			################################################
 			# # TODO: Update MP request for new EPI API.
@@ -264,9 +263,6 @@ class EpiCalcJar(Calculator):
 			#     # and requesting data again with set MP..
 			#     self.melting_point = self.get_mp_from_results(_result_obj)
 			#     _result_obj = self.makeDataRequest(self.baseUrl, _filtered_smiles, request_dict['calc'])  # Make request using MP
-
-
-
 
 			_response_dict.update(_result_obj)
 			_response_dict['valid'] = True
