@@ -138,7 +138,6 @@ class MeasuredCalc(Calculator, CCTE):
 		"""
 		for data_obj in results:
 			data_list = data_obj["data"].split(",")
-			logging.warning("data_list: {}".format(data_list))
 			valid_data = []
 			for datum in data_list:
 				try:
@@ -166,10 +165,9 @@ class MeasuredCalc(Calculator, CCTE):
 				continue
 			new_data_obj = dict(data_obj)
 			new_data_obj["prop"] = self.ccte_prop_map[data_obj["propName"]]
-
-			method = next((data_obj[k] for k in self.source_keys if data_obj.get(k) is not None), None)
-
-			new_data_obj["method"] = self.convert_to_acronym(method)
+			# method = next((data_obj[k] for k in self.source_keys if data_obj.get(k) is not None), None)
+			# new_data_obj["method"] = self.convert_to_acronym(method)
+			new_data_obj["method"] = data_obj["sourceName"]  # using sourceName for "method"
 			new_data_obj["data"] = data_obj["propValue"]
 			new_results.append(new_data_obj)
 		return new_results
