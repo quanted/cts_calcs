@@ -385,6 +385,7 @@ class MeasuredCalc(Calculator, CCTE):
 				_response_obj['data'] = db_results
 				_response_obj['chemical'] = request_dict.get('chemical')
 				_response_obj['request_post'] = request_dict
+				_response_obj['status'] = True
 			except Exception as e:
 				logging.error("calculator_measured exception: {}".format(e))
 				_response_obj.update({"valid": False, 'error': "Error getting data from measured"})
