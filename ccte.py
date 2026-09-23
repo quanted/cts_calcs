@@ -144,6 +144,11 @@ class CCTE:
 		"""
 		url = self.ccte_base_url + self.chem_search_equal_url.format(html.escape(chemical))
 		response = None
+
+
+		logging.info("make_search_request url: {}".format(url))
+		logging.info("make_search_request chemical: {}".format(chemical))
+
 		try:
 			response = requests.get(url, headers=self.headers, timeout=self.default_timeout)
 		except Exception as e:
@@ -177,6 +182,10 @@ class CCTE:
 		"""
 		try:
 			url = self.ccte_base_url + self.chem_details_dtxsid_url.format(html.escape(dtxsid))
+
+			logging.info("make_details_request url: {}".format(url))
+			logging.info("make_details_request dtxsid: {}".format(dtxsid))
+
 			response = requests.get(url, headers=self.headers)
 		except Exception as e:
 			logging.warning("CCTE make_details_request exception, url: {}: {}".format(url, e))
@@ -200,6 +209,10 @@ class CCTE:
 		"""
 		try:
 			url = self.ccte_base_url + self.chem_details_smiles
+
+			logging.info("make_smiles_request url: {}".format(url))
+			logging.info("make_smiles_request smiles: {}".format(smiles))
+
 			response = requests.get(url, params={"smiles": smiles}, headers=self.headers)
 			# return json.loads(response.content)
 		except Exception as e:
