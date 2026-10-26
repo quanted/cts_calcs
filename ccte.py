@@ -150,7 +150,7 @@ class CCTE:
 		logging.info("make_search_request chemical: {}".format(chemical))
 
 		try:
-			response = requests.get(url, headers=self.headers, timeout=self.default_timeout)
+			response = requests.get(url, headers=self.headers, timeout=15)
 		except Exception as e:
 			logging.warning("ccte make_search_request exception, url: {}: {}".format(url, e))
 			return False
